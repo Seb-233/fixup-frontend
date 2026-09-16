@@ -1,0 +1,33 @@
+// Layout Mixins and Utilities for FixUp
+
+@use 'tokens' as tokens;
+
+@mixin mobile {
+  @media (max-width: #{tokens.$breakpoint-mobile-max}) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: #{tokens.$breakpoint-tablet-min}) and (max-width: #{tokens.$breakpoint-tablet-max}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{tokens.$breakpoint-desktop-min}) {
+    @content;
+  }
+}
+
+.fixup-container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+
+  @include desktop {
+    max-width: 1200px;
+  }
+}

@@ -1,0 +1,40 @@
+// FixUp Design Tokens
+
+// Color Palette
+$color-primary-dark: #2D2E31;
+$color-neutral-accent: #9A948D;
+$color-gold-accent: #CEAC78;
+$color-background-light: #F8F8F8;
+$color-deep-brown: #423D32;
+$color-earth-brown: #795548;
+
+// CSS Custom Properties (Tokens)
+:root {
+  --fixup-color-primary: #{$color-primary-dark};
+  --fixup-color-neutral: #{$color-neutral-accent};
+  --fixup-color-accent: #{$color-gold-accent};
+  --fixup-color-bg: #{$color-background-light};
+  --fixup-color-deep-brown: #{$color-deep-brown};
+  --fixup-color-earth-brown: #{$color-earth-brown};
+
+  --fixup-font-heading: 'Comfortaa', cursive, sans-serif;
+  --fixup-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --fixup-radius-sm: 4px;
+  --fixup-radius-md: 8px;
+  --fixup-radius-lg: 16px;
+
+  --fixup-shadow-sm: 0 1px 3px rgba(45, 46, 49, 0.1);
+  --fixup-shadow-md: 0 4px 6px -1px rgba(45, 46, 49, 0.1);
+  --fixup-shadow-lg: 0 10px 15px -3px rgba(45, 46, 49, 0.1);
+
+  --fixup-header-height: 60px;
+  --fixup-sidebar-width: 260px;
+  --fixup-bottom-nav-height: 64px;
+}
+
+// Breakpoints
+$breakpoint-mobile-max: 767.98px;
+$breakpoint-tablet-min: 768px;
+$breakpoint-tablet-max: 1023.98px;
+$breakpoint-desktop-min: 1024px;

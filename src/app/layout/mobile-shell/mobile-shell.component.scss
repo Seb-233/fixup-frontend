@@ -1,0 +1,13 @@
+.mobile-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--fixup-color-bg, #F8F8F8);
+  padding-bottom: var(--fixup-bottom-nav-height, 64px);
+
+  .mobile-content {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+}
