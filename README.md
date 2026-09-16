@@ -53,8 +53,10 @@ Para más detalles, consulta [docs/architecture/frontend-architecture.md](docs/a
 
 - **Node.js**: `>= 20.x` (Recomendado Node.js 22 LTS).
 - **npm**: `>= 10.x`.
+- **Java Development Kit**: JDK 21 recomendado para Gradle y Android.
+- `JAVA_HOME` debe apuntar a una instalación válida de JDK 21.
+- **Android Studio y Android SDK**: Son necesarios para compilaciones Android locales.
 - **Docker** (Opcional, para ejecución en contenedores).
-- **Android Studio y Android SDK** (Requerido únicamente para compilación del paquete nativo Android).
 
 ---
 
