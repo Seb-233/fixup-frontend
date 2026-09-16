@@ -1,213 +1,195 @@
 # FixUp Frontend
 
-Frontend oficial de la plataforma **FixUp**. Desarrollado con una arquitectura responsive unificada en **Angular Standalone**, preparada para operar simultáneamente como:
-- **Aplicación Web Responsive** (Desktop y Móvil).
-- **PWA (Progressive Web App)** instalable con soporte offline y Service Worker.
-- **Aplicación Android Nativa** empaquetada mediante **Capacitor**.
-
-> **Nota de Fase FRONT-000:** Esta versión contiene exclusivamente la estructura base, convenciones, herramientas de compilación, linteo, pruebas, integración de Capacitor Android y contenedor Docker/Nginx. No contiene casos de uso, lógica de negocio ni integración con un tenant real de autenticación.
+Plataforma frontend unificada para el ecosistema **FixUp**. Diseñada con una arquitectura responsive en **Angular Standalone**, orientada a servir como aplicación web de escritorio y móvil, Progressive Web App (PWA) instalable y aplicación empaquetada para dispositivos Android mediante Capacitor.
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 1. Descripción del Proyecto
 
-- **Framework**: Angular 22 (Standalone Components, Signals, Router, Control Flow syntax).
-- **Lenguaje**: TypeScript 6 (Modo estricto activado).
-- **Estilos**: SCSS modular con sistema de tokens de diseño y tipografías locales.
-- **Componentes Móviles**: Ionic Angular 9 (Standalone).
-- **Runtime Nativo**: Capacitor 8 (Plataforma Android).
-- **PWA & Offline**: Angular Service Worker (`@angular/service-worker`) con `manifest.webmanifest`.
-- **Autenticación**: `@auth0/auth0-angular` (Arquitectura desacoplada, configurada con placeholders).
+FixUp es una plataforma integral orientada a conectar propietarios, residentes y administradores de inmuebles con técnicos y profesionales especializados en reparaciones, mantenimiento preventivo y adecuaciones del hogar y comercio. Este repositorio contiene el código fuente de la interfaz de usuario y las capas de presentación de la plataforma.
+
+---
+
+## 2. Alcance del Frontend
+
+El frontend de FixUp abarca:
+- **Aplicación Web Responsive**: Interfaz adaptativa optimizada tanto para pantallas de escritorio como para navegadores móviles.
+- **PWA (Progressive Web App)**: Experiencia web progresiva con capacidad de instalación en dispositivos compatibles y soporte offline con Service Worker.
+- **Aplicación híbrida para Android mediante Capacitor**: Empaquetado como contenedor nativo Android sin código de pantallas Kotlin ni soporte para iOS.
+- **Consumo de API REST**: Comunicación con microservicios backend autenticados mediante Auth0.
+
+---
+
+## 3. Arquitectura
+
+La base de código sigue un patrón modular desacoplado en capas:
+- **`core/`**: Servicios transversales, adaptadores de autenticación Auth0, configuración global, interceptores y manejo de errores.
+- **`layout/`**: Shells responsive (`desktop-shell`, `mobile-shell`), barra superior, barra lateral y navegación inferior.
+- **`shared/`**: Componentes visuales reutilizables sin lógica de negocio, directivas, pipes, modelos genéricos y validadores.
+- **`api/`**: Clientes generados a partir de especificaciones OpenAPI y servicios de acceso a datos.
+- **`features/`**: Módulos funcionales organizados por dominio de negocio con aislamiento estricto entre sí.
+
+Para más detalles, consulta [docs/architecture/frontend-architecture.md](docs/architecture/frontend-architecture.md).
+
+---
+
+## 4. Tecnologías
+
+- **Framework**: Angular 22 (Standalone Components, Signals, Router, Control Flow).
+- **Lenguaje**: TypeScript 6 (Modo estricto habilitado).
+- **Estilos**: SCSS modular estructurado en tokens de diseño, tipografía y mixins responsive.
+- **Componentes UI Móviles**: Ionic Angular 9 (Standalone).
+- **Runtime Híbrido**: Capacitor 8 (Plataforma Android).
+- **PWA**: Angular Service Worker (`@angular/service-worker`) y Web App Manifest.
+- **Autenticación**: Auth0 Angular SDK (`@auth0/auth0-angular`).
 - **Linter**: ESLint con `@angular-eslint`.
-- **Pruebas Unitarias**: Vitest (`ng test --watch=false`).
-- **Contenedores**: Docker (Multi-stage build) y Nginx (Servidor SPA con compresión y headers de seguridad).
-- **CI/CD**: GitHub Actions (`.github/workflows/frontend-ci.yml`).
+- **Pruebas Unitarias**: Vitest.
+- **Contenedores**: Docker (Multi-stage build) y Nginx (Servidor SPA de producción).
+- **Integración Continua**: GitHub Actions.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 5. Requisitos
+
+- **Node.js**: `>= 20.x` (Recomendado Node.js 22 LTS).
+- **npm**: `>= 10.x`.
+- **Docker** (Opcional, para ejecución en contenedores).
+- **Android Studio y Android SDK** (Requerido únicamente para compilación del paquete nativo Android).
+
+---
+
+## 6. Instalación
+
+Clona el repositorio e instala las dependencias del proyecto:
+
+```bash
+git clone https://github.com/Seb-233/fixup-frontend.git
+cd fixup-frontend
+npm ci
+```
+
+---
+
+## 7. Ejecución Local
+
+Para iniciar el servidor de desarrollo local:
+
+```bash
+npm start
+# o alternativamente
+ng serve
+```
+
+Navega a `http://localhost:4200/`. La aplicación se recargará automáticamente al detectar cambios en el código.
+
+---
+
+## 8. Pruebas
+
+Para ejecutar la suite de pruebas unitarias en modo no interactivo (adecuado para entornos de CI):
+
+```bash
+npm run test -- --watch=false
+```
+
+Para ejecutar el linter y validar reglas de estilo de código:
+
+```bash
+npm run lint
+```
+
+---
+
+## 9. Build Web
+
+Para compilar la aplicación para producción con optimizaciones de empaquetado:
+
+```bash
+npm run build
+```
+
+Los artefactos compilados se generarán en el directorio `dist/fixup-frontend/browser`.
+
+---
+
+## 10. PWA (Progressive Web App)
+
+La aplicación incluye soporte para Progressive Web App configurado en `ngsw-config.json` y `src/manifest.webmanifest`. El Service Worker se activa automáticamente en compilaciones de producción (`!isDevMode()`), permitiendo almacenamiento en caché de activos estáticos y funcionamiento sin conexión.
+
+---
+
+## 11. Capacitor Android
+
+La aplicación está preparada para ejecutarse como contenedor híbrido en Android:
+
+```bash
+# Compilar la aplicación web y sincronizar activos nativos
+npm run build
+npx cap sync android
+
+# Abrir el proyecto en Android Studio
+npx cap open android
+```
+
+---
+
+## 12. Docker y Nginx
+
+Para construir y desplegar la aplicación mediante Docker utilizando la configuración de Nginx optimizada para SPA:
+
+```bash
+# Construir la imagen Docker
+docker build -t fixup-frontend .
+
+# Ejecutar el contenedor en el puerto 8080
+docker run -d -p 8080:80 --name fixup-app fixup-frontend
+```
+
+Accede a la aplicación desde `http://localhost:8080/`.
+
+---
+
+## 13. Estructura del Proyecto
 
 ```text
 fixup-frontend/
 ├── src/
 │   ├── app/
-│   │   ├── core/                    # Servicios globales y transversales
-│   │   │   ├── auth/                # Arquitectura de autenticación Auth0 (stubs/adapters)
-│   │   │   ├── config/              # Configuraciones de la aplicación
-│   │   │   ├── guards/              # Route guards globales
-│   │   │   ├── interceptors/        # Interceptores HTTP
-│   │   │   ├── errors/              # Manejo global de errores
-│   │   │   └── services/            # Servicios transversales
-│   │   ├── layout/                  # Shell visual y navegación responsiva
-│   │   │   ├── desktop-shell/       # Contenedor de vista de escritorio
-│   │   │   ├── mobile-shell/        # Contenedor de vista móvil
-│   │   │   ├── sidebar/             # Barra de navegación lateral (escritorio)
-│   │   │   ├── topbar/              # Barra superior global
-│   │   │   └── bottom-navigation/   # Navegación inferior (móvil)
-│   │   ├── shared/                  # Componentes y utilidades reutilizables (sin lógica de negocio)
-│   │   │   ├── components/          # Componentes tontos (dumb/presentational)
-│   │   │   ├── directives/          # Directivas compartidas
-│   │   │   ├── models/              # Modelos e interfaces comunes
-│   │   │   ├── pipes/               # Pipes personalizados
-│   │   │   ├── validators/          # Validadores reactivos
-│   │   │   └── utilities/           # Helpers puros desacoplados
-│   │   ├── api/
-│   │   │   └── generated/           # Clientes generados por OpenAPI (futuras fases)
+│   │   ├── core/                    # Servicios globales, Auth0, interceptores
+│   │   ├── layout/                  # Shells de escritorio y móvil, barras de navegación
+│   │   ├── shared/                  # Componentes y utilidades reutilizables
+│   │   ├── api/                     # Clientes generados para servicios REST
 │   │   └── features/                # Módulos organizados por dominio de negocio
-│   │       ├── authentication/
-│   │       ├── dashboard/
-│   │       ├── properties/
-│   │       ├── fixers/
-│   │       ├── requests/
-│   │       ├── quotations/
-│   │       ├── jobs/
-│   │       ├── notifications/
-│   │       ├── messaging/
-│   │       ├── payments/
-│   │       ├── contracts/
-│   │       ├── analytics/
-│   │       └── administration/
-│   ├── assets/                      # Recursos estáticos locales
-│   │   ├── icons/                   # Iconos SVG y gráficos
-│   │   ├── images/                  # Imágenes del sistema
-│   │   └── fonts/                   # Fuentes locales (Comfortaa e Inter)
-│   ├── environments/                # Configuración por ambientes
-│   │   ├── environment.ts           # Configuración de desarrollo local (placeholders)
-│   │   └── environment.example.ts   # Plantilla de referencia
-│   ├── styles/                      # Sistema de diseño SCSS
-│   │   ├── _tokens.scss             # Paleta de color, radios, sombras y breakpoints
-│   │   ├── _typography.scss         # Fuentes locales y jerarquía tipográfica
-│   │   ├── _layout.scss             # Mixins responsive y contenedores
-│   │   └── styles.scss              # Hoja de estilos global consolidada
-│   ├── app.config.ts                # Proveedores y bootstrap standalone
-│   ├── app.routes.ts                # Rutas y placeholders de navegación
-│   └── manifest.webmanifest         # Manifiesto de aplicación PWA
-├── android/                         # Proyecto contenedor nativo Android de Capacitor
+│   ├── assets/                      # Iconos e imágenes estáticas
+│   ├── environments/                # Configuración de entornos
+│   └── styles/                      # Sistema de diseño, tokens SCSS y tipografía
+├── android/                         # Proyecto contenedor nativo de Capacitor
 ├── e2e/                             # Pruebas End-to-End
-│   ├── web/
-│   └── android/
-├── nginx/
-│   └── nginx.conf                   # Configuración del servidor Nginx SPA
-├── scripts/
-│   ├── build-web.sh                 # Script de compilación web
-│   ├── sync-android.sh              # Script de sincronización con Capacitor Android
-│   └── test.sh                      # Script de pruebas y linteo
-├── .github/
-│   └── workflows/
-│       └── frontend-ci.yml          # Pipeline de integración continua
-├── Dockerfile                       # Construcción multi-stage Docker
-├── capacitor.config.ts              # Configuración de Capacitor Android
-├── angular.json                     # Configuración de Angular CLI y Service Worker
-└── package.json                     # Dependencias y scripts
+├── nginx/                           # Configuración de servidor Nginx para SPA
+├── scripts/                         # Scripts de compilación, sincronización y pruebas
+├── .github/workflows/               # Pipelines de Integración Continua (CI)
+├── Dockerfile                       # Construcción multi-stage de producción
+├── capacitor.config.ts              # Configuración de Capacitor
+├── angular.json                     # Configuración del espacio de trabajo Angular
+└── package.json                     # Manifiesto de dependencias y scripts
 ```
 
 ---
 
-## 🎨 Sistema de Diseño y Tipografía
+## 14. Documentación Adicional
 
-### Paleta Oficial de Colores
-- `#2D2E31`: Primario oscuro (Charcoal).
-- `#9A948D`: Acento neutro / Gris cálido.
-- `#CEAC78`: Acento dorado / Beige arena.
-- `#F8F8F8`: Fondo claro (Off-white).
-- `#423D32`: Secundario café profundo.
-- `#795548`: Secundario marrón tierra.
-
-### Tipografías Locales
-Para garantizar privacidad, soporte PWA offline y evitar dependencias de internet en runtime:
-- **Títulos**: `Comfortaa` (Cargada localmente mediante `@fontsource/comfortaa` y `src/assets/fonts/`).
-- **Contenido**: `Inter` (Cargada localmente mediante `@fontsource/inter` y `src/assets/fonts/`).
+- [Arquitectura Detallada](docs/architecture/frontend-architecture.md): Principios técnicos y diseño en capas.
+- [Guía de Contribución](CONTRIBUTING.md): Estrategia de ramas, convención de commits y flujo de Pull Requests.
+- [Política de Seguridad](SECURITY.md): Manejo seguro de credenciales, archivos restringidos y protocolo de incidentes.
 
 ---
 
-## 🚀 Entorno Local y Comandos
+## 15. Contribución
 
-### Requisitos Previos
-- Node.js versión `>= 20.x` (Recomendado Node 22).
-- npm versión `>= 10.x`.
-- Android Studio / SDK (requerido únicamente para compilar APK en fases posteriores).
-
-### Instalación de dependencias
-```bash
-npm ci
-```
-
-### Servidor de Desarrollo
-```bash
-npm start
-# o
-ng serve
-```
-Disponible en `http://localhost:4200/`.
-
-### Compilación Web
-```bash
-npm run build
-```
-Los archivos optimizados se generan en `dist/fixup-frontend/browser`.
-
-### Ejecución de Pruebas Unitarias
-El proyecto utiliza Vitest en modo no interactivo (compatible con CI):
-```bash
-npm run test -- --watch=false
-```
-
-### Verificación de Linteo
-```bash
-npm run lint
-```
-
-### Sincronización con Capacitor Android
-```bash
-npx cap sync android
-```
-Copia los artefactos web de `dist/fixup-frontend/browser` a `android/app/src/main/assets/public` y actualiza plugins.
-
-### Ejecución con Docker y Nginx
-```bash
-# Construir imagen
-docker build -t fixup-frontend .
-
-# Ejecutar contenedor
-docker run -d -p 8080:80 --name fixup-app fixup-frontend
-```
-Acceder mediante `http://localhost:8080/`.
+Todo desarrollo y corrección debe integrarse mediante Pull Requests hacia la rama `develop` siguiendo los lineamientos detallados en [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## 🔒 Políticas de Seguridad y Manejo de Secretos
+## 16. Equipo
 
-### Archivos Estrictamente Prohibidos en el Repositorio
-Está terminantemente prohibido versionar:
-- Archivos de entorno: `.env`, `.env.local`, `.env.*` (única excepción autorizada: `.env.example`).
-- Configuraciones locales: `environment.local.ts`, `android/local.properties`, `android/key.properties`.
-- Llaves de firma: `*.jks`, `*.keystore`, `*.p12`, `*.pfx`, `upload-keystore.*`, `release-keystore.*`.
-- Credenciales de servicios: `google-services.json`, `GoogleService-Info.plist`, `service-account*.json`.
-- Artefactos compilados: `dist/`, `www/`, `*.apk`, `*.aab`.
-
-### Reglas de Autenticación con Auth0
-- Las aplicaciones cliente (SPA y Android Capacitor) son clientes públicos sin backend seguro; **nunca** deben incluir `Client Secret`, `Management API Token` ni claves privadas.
-- `domain`, `clientId` y `audience` se manejan por ambiente mediante variables y en esta fase utilizan placeholders.
-- El interceptor HTTP de autenticación está configurado para **adjuntar tokens únicamente a las rutas autorizadas de la API FixUp** (`environment.apiBaseUrl`), evitando filtraciones hacia URLs de terceros.
-
-### Protocolo ante Exposición Accidental de Secretos
-En caso de detectar la inclusión accidental de cualquier credencial o secreto:
-1. **Detener inmediatamente el trabajo** y notificar al equipo técnico.
-2. **No limitarse a borrar el archivo** en un commit posterior; el secreto permanece en el historial de Git.
-3. **Revocar y rotar la credencial expuesta de inmediato** en el proveedor correspondiente.
-4. Seguir las instrucciones del orquestador para depurar el historial con herramientas especializadas (`git-filter-repo` / BFG).
-
----
-
-## 🌿 Convenciones de Git y Flujo de Trabajo
-
-- **Rama principal**: `main` (protegida; no se permiten pushes directos).
-- **Rama de trabajo**: `chore/frontend-project-structure`.
-- **Commits**: Seguir el estándar de Conventional Commits:
-  - `chore(frontend): initialize Angular project`
-  - `chore(ionic): configure Ionic and Capacitor`
-  - `chore(structure): create feature-based folders`
-  - `chore(pwa): configure service worker`
-  - `ci(frontend): add verification workflow`
-  - `docs(frontend): document setup and security rules`
-- **Entregas**: Todo cambio se entrega mediante Pull Request hacia `main` y requiere aprobación previa.
+Desarrollado y mantenido por el equipo de arquitectura y desarrollo de **FixUp**.
