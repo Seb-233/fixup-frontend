@@ -16,7 +16,7 @@ El frontend de FixUp abarca:
 - **Aplicación Web Responsive**: Interfaz adaptativa optimizada tanto para pantallas de escritorio como para navegadores móviles.
 - **PWA (Progressive Web App)**: Experiencia web progresiva con capacidad de instalación en dispositivos compatibles y soporte offline con Service Worker.
 - **Aplicación híbrida para Android mediante Capacitor**: Empaquetado como contenedor nativo Android sin código de pantallas Kotlin ni soporte para iOS.
-- **Consumo de API REST**: Comunicación con microservicios backend autenticados mediante Auth0.
+- **Consumo de API REST**: Comunicación con backend modular mediante API REST autenticado mediante Auth0.
 
 ---
 
@@ -180,7 +180,6 @@ fixup-frontend/
 
 - [Arquitectura Detallada](docs/architecture/frontend-architecture.md): Principios técnicos y diseño en capas.
 - [Guía de Contribución](CONTRIBUTING.md): Estrategia de ramas, convención de commits y flujo de Pull Requests.
-- [Política de Seguridad](SECURITY.md): Manejo seguro de credenciales, archivos restringidos y protocolo de incidentes.
 
 ---
 

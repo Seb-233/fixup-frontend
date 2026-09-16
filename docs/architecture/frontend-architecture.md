@@ -81,11 +81,17 @@ Cada funcionalidad se aísla en su propio dominio. Una feature no debe importar 
 - Contenedor nativo configurado en `capacitor.config.ts` con ID `com.fixup.app`.
 - El directorio `android/` forma parte del repositorio como contenedor puente nativo, pero excluye configuraciones locales (`local.properties`), llaves de firma y artefactos de compilación (`build/`, `*.apk`).
 - No se incorporan pantallas en Kotlin ni configuraciones de la plataforma iOS.
+- **Estado de Autenticación en Android**: La existencia del contenedor nativo de Capacitor en esta fase establece exclusivamente la estructura del proyecto compilable; **no** significa que la autenticación en Android esté terminada. El manejo de callback y deep linking nativo para Auth0 en Android se implementará formalmente en el caso de uso `FR-UC-21`.
 
-### Autenticación con Auth0
-- Arquitectura desacoplada mediante `@auth0/auth0-angular`.
-- La aplicación frontend actúa como cliente público (SPA): bajo ninguna circunstancia contiene `Client Secret`, `Management API Token` ni contraseñas.
-- El interceptor `auth.interceptor.ts` delega el Bearer Token de manera restringida únicamente a las peticiones dirigidas a `environment.apiBaseUrl`, previniendo fugas de tokens a terceros.
+### Autenticación con Auth0 y Autorización Backend
+- **Rol de Auth0**: Auth0 actúa exclusivamente como proveedor de identidad externa, inicio/cierre de sesión federado y emisor de Access Tokens criptográficos.
+- **Validación en el Backend**: El backend modular de FixUp es la única entidad autorizada para verificar la firma, expiración y claims de los Access Tokens emitidos por Auth0.
+- **Fuente de Autoridad para Perfil y Roles**: Los roles y la información del usuario no se toman de claims personalizados de Auth0. La fuente autorizada y definitiva es el endpoint del backend:
+  `GET /users/me`
+  Dicho endpoint valida el token y devuelve el ID interno, rol de negocio, estado y permisos del usuario.
+- **Autorización por Recurso**: Toda autorización sobre datos y operaciones se valida estricta y exclusivamente en el backend en cada petición. Los guards del frontend (`authGuard`, `roleGuard`) cumplen únicamente una función de control de navegación y experiencia de usuario (UX); `roleGuard` no se considera funcional hasta integrar el consumo de `/users/me`.
+- **Seguridad en Clientes Públicos**: La aplicación frontend actúa como cliente público (SPA/Capacitor): bajo ninguna circunstancia contiene `Client Secret`, `Management API Token` ni contraseñas. Los tokens se mantienen en memoria y nunca se persisten en `localStorage`.
+- **Restricción de Tokens**: El interceptor `auth.interceptor.ts` delega el Bearer Token de manera restringida únicamente a las peticiones dirigidas a `environment.apiBaseUrl`, previniendo fugas hacia URLs de terceros.
 
 ### Adaptabilidad Responsive
 - El diseño responde automáticamente al dispositivo del usuario mediante variables y mixins SCSS en `src/styles/` y detección reactiva de pantalla en `AppComponent`, renderizando el shell de escritorio o móvil según corresponda sin duplicar salidas del enrutador (`RouterOutlet`).
