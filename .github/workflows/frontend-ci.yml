@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - main
-      - 'chore/**'
+      - develop
+      - 'setup/**'
       - 'feature/**'
+      - 'fix/**'
+      - 'test/**'
+      - 'docs/**'
+      - 'release/**'
+      - 'hotfix/**'
   pull_request:
     branches:
+      - develop
       - main
 
 jobs:
