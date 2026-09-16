@@ -1,10 +1,17 @@
 import { Injectable, computed, signal } from '@angular/core';
 
+/**
+ * Represents the authenticated user profile.
+ * Roles and internal permissions are authoritative ONLY from the FixUp backend
+ * (via GET /users/me) and never from Auth0 claims.
+ */
 export interface UserProfile {
   id: string;
+  externalId: string;
   email: string;
   name: string;
   roles: string[];
+  status?: string;
 }
 
 @Injectable({
@@ -21,6 +28,13 @@ export class CurrentUserStore {
 
   setUser(user: UserProfile | null): void {
     this.userState.set(user);
+  }
+
+  setRoles(roles: string[]): void {
+    const current = this.userState();
+    if (current) {
+      this.userState.set({ ...current, roles });
+    }
   }
 
   setLoading(loading: boolean): void {

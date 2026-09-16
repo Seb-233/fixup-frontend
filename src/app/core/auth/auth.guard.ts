@@ -1,11 +1,14 @@
 import { inject } from '@angular/core';
 import { CanActivateFn } from '@angular/router';
-import { AuthService } from '@auth0/auth0-angular';
 import { tap } from 'rxjs/operators';
+import { AuthService } from './auth.service';
 
 /**
- * Route guard that requires the user to be authenticated via Auth0.
- * Redirects unauthenticated users to the Auth0 login page.
+ * Route guard that requires the user to be authenticated.
+ * Uses the local AuthService adapter and redirects unauthenticated users to login.
+ * 
+ * Notice: Frontend route guards serve only for navigation control and user experience.
+ * Real authorization is strictly enforced by the backend on every request.
  */
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
