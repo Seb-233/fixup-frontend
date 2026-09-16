@@ -1,0 +1,27 @@
+// Typography System for FixUp
+// Uses locally bundled self-hosted fonts from @fontsource for PWA offline support and privacy
+
+@use 'tokens' as tokens;
+@import '@fontsource/comfortaa/index.css';
+@import '@fontsource/inter/index.css';
+
+body {
+  font-family: var(--fixup-font-body);
+  color: var(--fixup-color-primary);
+  background-color: var(--fixup-color-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--fixup-font-heading);
+  color: var(--fixup-color-primary);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 0;
+}
+
+p, span, div, a, button, input, textarea, select {
+  font-family: var(--fixup-font-body);
+}

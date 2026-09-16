@@ -1,0 +1,30 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--fixup-header-height, 60px);
+  padding: 0 1.5rem;
+  background-color: var(--fixup-color-primary, #2D2E31);
+  color: #FFFFFF;
+  box-shadow: var(--fixup-shadow-sm);
+
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+
+    .brand-name {
+      font-family: var(--fixup-font-heading);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--fixup-color-accent, #CEAC78);
+      letter-spacing: 0.5px;
+    }
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--fixup-color-neutral, #9A948D);
+  }
+}
