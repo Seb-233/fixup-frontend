@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+
+# Angular
+dist/
+.angular/
+coverage/
+test-results/
+
+# Capacitor output
+www/
+
+# Environment
+.env
+.env.*
+!.env.example
+src/environments/environment.local.ts
+src/environments/environment.production.local.ts
+
+# Package manager credentials
+.npmrc
+
+# Android generated files
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/key.properties
+android/keystore.properties
+*.apk
+*.aab
+
+# Signing keys
+*.jks
+*.keystore
+*.p12
+*.pfx
+upload-keystore.*
+release-keystore.*
+key.properties
+keystore.properties
+
+# Firebase and service credentials
+service-account*.json
+firebase-admin*.json
+google-services.json
+GoogleService-Info.plist
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Operating system
+.DS_Store
+Thumbs.db
