@@ -1,6 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, NavigationEnd, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 
 export interface NavItem {
@@ -16,7 +18,10 @@ export interface NavItem {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <aside class="sidebar floating-sidebar">
+    <aside
+      class="sidebar floating-sidebar"
+      [class.expanded]="isExpanded()"
+    >
       <!-- Encabezado de la barra lateral -->
       <div class="sidebar-header">
         <div class="brand-container">
@@ -40,7 +45,16 @@ export interface NavItem {
       <nav class="sidebar-nav" aria-label="Navegación principal">
         <span class="nav-section-title">MÓDULOS DE PLATAFORMA</span>
         <ul class="nav-list">
-          @for (item of visibleItems(); track item.path) {
+          <!-- Sombreado deslizante que se mueve por las opciones hasta la seleccionada -->
+          @if (visibleItems().length > 0) {
+            <li
+              class="sliding-highlight"
+              aria-hidden="true"
+              [style.transform]="'translateY(calc(' + activeIndex() + ' * (46px + 0.45rem)))'"
+            ></li>
+          }
+
+          @for (item of visibleItems(); track item.path; let idx = $index) {
             <li class="nav-item">
               <a
                 [routerLink]="item.path"
@@ -48,6 +62,7 @@ export interface NavItem {
                 [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
                 [attr.title]="item.label"
                 class="nav-link"
+                (click)="onSelectNav(item.path)"
               >
                 <!-- Íconos Vectoriales Propios según Ruta -->
                 <span class="nav-icon-wrapper" aria-hidden="true">
@@ -113,8 +128,17 @@ export interface NavItem {
   `,
   styleUrls: ['./sidebar.component.scss']
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnDestroy {
   readonly userStore = inject(CurrentUserStore);
+  private readonly router = inject(Router);
+
+  // Estado de expansión y temporizador de 3 segundos
+  readonly isExpanded = signal<boolean>(false);
+  private collapseTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Ruta activa para controlar el deslizamiento fluido del sombreado
+  readonly currentUrl = signal<string>(this.router.url);
+  private readonly routerSubscription: Subscription;
 
   private readonly allItems: NavItem[] = [
     { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard' },
@@ -124,9 +148,62 @@ export class SidebarComponent {
     { path: '/profile', label: 'Mi Perfil', icon: 'profile' }
   ];
 
+  constructor() {
+    this.routerSubscription = this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        this.currentUrl.set(event.urlAfterRedirects || event.url);
+      });
+  }
+
   readonly visibleItems = computed(() => {
     const activeRole = this.userStore.activeRole();
     if (!activeRole) return [];
     return this.allItems.filter((item) => !item.roles || item.roles.includes(activeRole));
   });
+
+  readonly activeIndex = computed<number>(() => {
+    const items = this.visibleItems();
+    const url = this.currentUrl();
+    const index = items.findIndex((item) => {
+      if (item.path === '/dashboard') {
+        return url === '/dashboard' || url === '/' || url.startsWith('/dashboard');
+      }
+      return url.startsWith(item.path);
+    });
+    return index >= 0 ? index : 0;
+  });
+
+  @HostListener('mouseenter')
+  onMouseEnter(): void {
+    if (this.collapseTimeout) {
+      clearTimeout(this.collapseTimeout);
+      this.collapseTimeout = null;
+    }
+    this.isExpanded.set(true);
+  }
+
+  @HostListener('mouseleave')
+  onMouseLeave(): void {
+    if (this.collapseTimeout) {
+      clearTimeout(this.collapseTimeout);
+    }
+    // Permanece abierto al menos 3 segundos antes de colapsar suavemente
+    this.collapseTimeout = setTimeout(() => {
+      this.isExpanded.set(false);
+      this.collapseTimeout = null;
+    }, 3000);
+  }
+
+  onSelectNav(path: string): void {
+    // Inicia inmediatamente la animación del sombreado hacia la opción seleccionada
+    this.currentUrl.set(path);
+  }
+
+  ngOnDestroy(): void {
+    if (this.collapseTimeout) {
+      clearTimeout(this.collapseTimeout);
+    }
+    this.routerSubscription.unsubscribe();
+  }
 }
