@@ -46,6 +46,7 @@ export interface NavItem {
                 [routerLink]="item.path"
                 routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+                [attr.title]="item.label"
                 class="nav-link"
               >
                 <!-- Íconos Vectoriales Propios según Ruta -->

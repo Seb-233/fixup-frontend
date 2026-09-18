@@ -11,7 +11,8 @@
 
     .desktop-content {
       flex: 1;
-      padding: 1.25rem 1.5rem 1.5rem 1.25rem;
+      min-width: 0;
+      padding: 1.25rem 1.75rem 1.5rem 1.5rem;
       overflow-y: auto;
       max-height: calc(100vh - var(--fixup-header-height, 72px));
     }

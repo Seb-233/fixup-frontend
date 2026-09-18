@@ -28,7 +28,7 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
             <div class="cover-grid"></div>
           </div>
 
-          <div class="hero-content">
+          <div class="hero-body">
             <div class="avatar-wrapper">
               <div class="avatar-circle">
                 {{ userInitials() }}
@@ -339,31 +339,32 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
         }
       }
 
-      .hero-content {
+      .hero-body {
         padding: 0 2rem 1.75rem 2rem;
         display: flex;
-        align-items: flex-end;
+        align-items: flex-start;
         gap: 1.5rem;
-        margin-top: -45px;
         position: relative;
-        flex-wrap: wrap;
+        background: #FFFFFF;
 
         .avatar-wrapper {
           position: relative;
+          margin-top: -48px;
+          flex-shrink: 0;
 
           .avatar-circle {
-            width: 90px;
-            height: 90px;
+            width: 96px;
+            height: 96px;
             border-radius: 50%;
             background: linear-gradient(135deg, #CEAC78 0%, #A8864B 100%);
             color: #2D2E31;
-            font-size: 2rem;
+            font-size: 2.1rem;
             font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 4px solid #FFFFFF;
-            box-shadow: 0 6px 16px rgba(45, 46, 49, 0.18);
+            box-shadow: 0 8px 20px rgba(45, 46, 49, 0.2);
             letter-spacing: 1px;
           }
 
@@ -371,8 +372,8 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
             position: absolute;
             bottom: 2px;
             right: 2px;
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             background: #2D2E31;
             color: #FFFFFF;
@@ -383,7 +384,7 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
             cursor: pointer;
             transition: all 0.2s ease;
 
-            svg { width: 14px; height: 14px; }
+            svg { width: 15px; height: 15px; }
             &:hover { background: #CEAC78; color: #2D2E31; }
           }
         }
@@ -393,6 +394,7 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
           display: flex;
           flex-direction: column;
           gap: 0.35rem;
+          padding-top: 0.85rem;
 
           .name-status-row {
             display: flex;
@@ -403,7 +405,8 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
             .user-full-name {
               font-family: var(--fixup-font-heading);
               color: var(--fixup-color-primary, #2D2E31);
-              font-size: 1.6rem;
+              font-size: 1.65rem;
+              font-weight: 700;
               margin: 0;
               letter-spacing: -0.02em;
             }
