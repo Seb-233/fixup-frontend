@@ -103,4 +103,48 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({ status: 'UP' });
   });
+
+  it('15. FR-UC-18: debe adjuntar el token a /requests y a sus subrutas con identificador', async () => {
+    const targets = [
+      apiUrl(API_ROUTES.requests.base),
+      apiUrl(API_ROUTES.requests.open),
+      apiUrl(API_ROUTES.requests.detail('11111111-1111-1111-1111-111111111111'))
+    ];
+
+    for (const target of targets) {
+      http.get(target).subscribe();
+      await Promise.resolve();
+
+      const req = httpMock.expectOne(target);
+      expect(req.request.headers.get('Authorization')).toBe('Bearer valid-auth0-test-token');
+      req.flush([]);
+    }
+  });
+
+  it('15. FR-UC-18: debe adjuntar el token a /quotations y a sus subrutas con identificador', async () => {
+    const targets = [
+      apiUrl(API_ROUTES.quotations.base),
+      apiUrl(API_ROUTES.quotations.mine),
+      apiUrl(API_ROUTES.quotations.accept('33333333-3333-3333-3333-333333333333'))
+    ];
+
+    for (const target of targets) {
+      http.get(target).subscribe();
+      await Promise.resolve();
+
+      const req = httpMock.expectOne(target);
+      expect(req.request.headers.get('Authorization')).toBe('Bearer valid-auth0-test-token');
+      req.flush([]);
+    }
+  });
+
+  it('15. el prefijo autorizado no debe filtrar el token a rutas que solo empiezan parecido', async () => {
+    const lookAlike = 'http://localhost:8081/requests-export';
+    http.get(lookAlike).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(lookAlike);
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
 });
