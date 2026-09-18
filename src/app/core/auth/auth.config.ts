@@ -1,18 +1,9 @@
 import { EnvironmentProviders } from '@angular/core';
 import { provideAuth0 } from '@auth0/auth0-angular';
 import { environment } from '../../../environments/environment';
+import { API_ROUTES, apiUrl } from '../../api/api.routes';
 
-export interface FixUpAuthConfig {
-  domain: string;
-  clientId: string;
-  audience: string;
-  apiBaseUrl: string;
-}
-
-/**
- * Provides Auth0 configuration with explicit allowed list of API endpoints.
- * Never includes client secrets or private tokens.
- */
+// Configura Auth0 autorizando exclusivamente los tres endpoints exactos del backend
 export function provideFixUpAuth(): EnvironmentProviders {
   return provideAuth0({
     domain: environment.auth0.domain,
@@ -24,7 +15,26 @@ export function provideFixUpAuth(): EnvironmentProviders {
     httpInterceptor: {
       allowedList: [
         {
-          uri: `${environment.apiBaseUrl}/*`,
+          uri: apiUrl(API_ROUTES.auth.bootstrap),
+          httpMethod: 'POST',
+          tokenOptions: {
+            authorizationParams: {
+              audience: environment.auth0.audience
+            }
+          }
+        },
+        {
+          uri: apiUrl(API_ROUTES.auth.me),
+          httpMethod: 'GET',
+          tokenOptions: {
+            authorizationParams: {
+              audience: environment.auth0.audience
+            }
+          }
+        },
+        {
+          uri: apiUrl(API_ROUTES.auth.selectRole),
+          httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
               audience: environment.auth0.audience

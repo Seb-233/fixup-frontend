@@ -1,23 +1,29 @@
 import { inject } from '@angular/core';
-import { CanActivateFn } from '@angular/router';
-import { tap } from 'rxjs/operators';
+import { CanActivateFn, Router } from '@angular/router';
+import { map, take } from 'rxjs';
 import { AuthService } from './auth.service';
+import { CurrentUserStore } from './current-user.store';
 
-/**
- * Route guard that requires the user to be authenticated.
- * Uses the local AuthService adapter and redirects unauthenticated users to login.
- * 
- * Notice: Frontend route guards serve only for navigation control and user experience.
- * Real authorization is strictly enforced by the backend on every request.
- */
+// Guard de navegación para proteger rutas privadas
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
+  const userStore = inject(CurrentUserStore);
+  const router = inject(Router);
 
-  return auth.isAuthenticated$.pipe(
-    tap((loggedIn) => {
-      if (!loggedIn) {
-        auth.loginWithRedirect();
+  // Si el perfil ya está cargado y autenticado, permitir acceso inmediato
+  if (userStore.profileLoaded() && userStore.authenticated()) {
+    return true;
+  }
+
+  // Esperar la resolución de la sesión compartida
+  return auth.sessionReady$.pipe(
+    take(1),
+    map((profile) => {
+      if (profile) {
+        return true;
       }
+      router.navigate(['/auth/login']);
+      return false;
     })
   );
 };

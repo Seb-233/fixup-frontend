@@ -60,7 +60,7 @@ Para más detalles, consulta [docs/architecture/frontend-architecture.md](docs/a
 
 ---
 
-## 6. Instalación
+## 6. Instalación y Configuración de Entornos
 
 Clona el repositorio e instala las dependencias del proyecto:
 
@@ -69,6 +69,28 @@ git clone https://github.com/Seb-233/fixup-frontend.git
 cd fixup-frontend
 npm ci
 ```
+
+### Configuración de Variables de Entorno
+
+> **Nota de Arquitectura**:
+> Angular compila la aplicación a artefactos estáticos y **no lee automáticamente archivos `.env` en tiempo de ejecución**.
+> La configuración se suministra a través de los archivos de entorno en `src/environments/environment.ts`.
+
+Puertos y orígenes recomendados para desarrollo:
+- **Frontend Angular**: `http://localhost:4200`
+- **Backend API**: `http://localhost:8081` (`apiOrigin: 'http://localhost:8081'`)
+
+Rutas de autenticación backend autorizadas:
+- `POST /auth/bootstrap`
+- `GET /auth/me`
+- `POST /auth/select-role`
+
+Configuración requerida en Auth0 Dashboard para desarrollo:
+- **Allowed Callback URLs**: `http://localhost:4200`
+- **Allowed Logout URLs**: `http://localhost:4200`
+- **Allowed Web Origins**: `http://localhost:4200`
+
+> **Aviso de Seguridad**: Los valores en `src/environments/environment.ts` son plantillas de desarrollo (placeholders). Para pruebas reales de inicio de sesión se requiere configurar un tenant activo de Auth0. NUNCA incluir secretos de cliente ni contraseñas.
 
 ---
 

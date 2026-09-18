@@ -6,12 +6,14 @@ import { provideIonicAngular } from '@ionic/angular';
 import { routes } from './app.routes';
 import { provideFixUpAuth } from './core/auth/auth.config';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 
+// Configuración global de la aplicación Angular Standalone
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideFixUpAuth(),
     provideIonicAngular({}),
     provideServiceWorker('ngsw-worker.js', {

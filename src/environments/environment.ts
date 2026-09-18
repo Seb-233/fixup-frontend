@@ -1,9 +1,10 @@
-// Default development environment configuration (Placeholders only)
-// NEVER commit real credentials, secrets, or tokens to version control.
+// Configuración de entorno de desarrollo
+// AVISO: Los valores de Auth0 son plantillas de desarrollo (placeholders).
+// La integración funcional requiere un tenant real configurado fuera del repositorio.
 
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://localhost:8080/api/v1',
+  apiOrigin: 'http://localhost:8081',
   auth0: {
     domain: 'example.auth0.com',
     clientId: 'example-client-id',
