@@ -1,41 +1,225 @@
 .sidebar {
-  width: var(--fixup-sidebar-width, 260px);
-  background-color: #FFFFFF;
-  border-right: 1px solid rgba(154, 148, 141, 0.2);
-  height: calc(100vh - var(--fixup-header-height, 60px));
-  overflow-y: auto;
-  padding: 1.5rem 1rem;
+  width: var(--fixup-sidebar-width, 270px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(206, 172, 120, 0.28);
+  border-radius: 20px;
+  margin: 1.25rem 0 1.25rem 1.25rem;
+  height: calc(100vh - var(--fixup-header-height, 68px) - 2.5rem);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 
+    0 18px 40px -12px rgba(45, 46, 49, 0.10),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  padding: 1.25rem 1rem;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .sidebar-header {
+    padding: 0.5rem 0.5rem 0.75rem 0.5rem;
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+
+      .brand-emblem {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #2D2E31 0%, #1E1F22 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #FFFFFF;
+        box-shadow: 0 4px 10px rgba(45, 46, 49, 0.2);
+        flex-shrink: 0;
+
+        svg {
+          width: 22px;
+          height: 22px;
+        }
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+
+        .brand-name {
+          font-family: var(--fixup-font-heading);
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--fixup-color-primary, #2D2E31);
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+
+        .brand-category {
+          font-size: 0.75rem;
+          color: #7A756D;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(206, 172, 120, 0.3) 50%, transparent);
+    margin: 0.5rem 0 1rem 0;
+  }
 
   .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+
+    .nav-section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #9A948D;
+      padding: 0 0.75rem 0.6rem 0.75rem;
+      text-transform: uppercase;
+    }
+
     .nav-list {
       list-style: none;
       padding: 0;
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
     .nav-link {
+      position: relative;
       display: flex;
       align-items: center;
-      padding: 0.75rem 1rem;
-      border-radius: var(--fixup-radius-md, 8px);
-      color: var(--fixup-color-primary, #2D2E31);
+      gap: 0.9rem;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      color: #4A463F;
       text-decoration: none;
       font-weight: 500;
-      transition: background-color 0.2s ease, color 0.2s ease;
+      font-size: 0.94rem;
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+
+      .nav-icon-wrapper {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #837C72;
+        transition: color 0.2s ease, transform 0.2s ease;
+        flex-shrink: 0;
+
+        svg {
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .nav-label {
+        flex: 1;
+        letter-spacing: -0.01em;
+      }
+
+      .item-badge {
+        background: #F1EDE6;
+        color: #B9975B;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.15rem 0.45rem;
+        border-radius: 8px;
+      }
 
       &:hover {
-        background-color: rgba(206, 172, 120, 0.15);
-        color: var(--fixup-color-deep-brown, #423D32);
+        background: rgba(206, 172, 120, 0.10);
+        color: #2D2E31;
+        transform: translateX(4px);
+
+        .nav-icon-wrapper {
+          color: #B9975B;
+          transform: scale(1.08);
+        }
       }
 
       &.active {
-        background-color: var(--fixup-color-accent, #CEAC78);
-        color: var(--fixup-color-primary, #2D2E31);
-        font-weight: 600;
+        background: linear-gradient(135deg, rgba(206, 172, 120, 0.22) 0%, rgba(206, 172, 120, 0.08) 100%);
+        color: #2D2E31;
+        font-weight: 700;
+        border-color: rgba(206, 172, 120, 0.35);
+        box-shadow: 0 4px 12px rgba(206, 172, 120, 0.15);
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 22%;
+          bottom: 22%;
+          width: 3.5px;
+          background: #B9975B;
+          border-radius: 0 4px 4px 0;
+          box-shadow: 0 0 10px rgba(206, 172, 120, 0.7);
+        }
+
+        .nav-icon-wrapper {
+          color: #A37E3E;
+        }
       }
     }
   }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 0.75rem;
+
+    .system-status-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: #F9F7F4;
+      border: 1px solid rgba(206, 172, 120, 0.25);
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+
+      .status-pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #10B981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+        flex-shrink: 0;
+        animation: pulseStatus 2.2s infinite ease-in-out;
+      }
+
+      .status-texts {
+        display: flex;
+        flex-direction: column;
+
+        .status-title {
+          font-size: 0.76rem;
+          font-weight: 600;
+          color: #2D2E31;
+          line-height: 1.2;
+        }
+
+        .status-role {
+          font-size: 0.7rem;
+          color: #7A756D;
+        }
+      }
+    }
+  }
+}
+
+@keyframes pulseStatus {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
