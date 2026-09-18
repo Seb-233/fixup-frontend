@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
-import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { AuthApiService } from '../../api/auth-api.service';
-import { BackendUserProfile, Role, SelfSelectableRole } from './auth.types';
+import { BackendUserProfile, Role, SelectableRole } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
 
 // Servicio de autenticación que orquesta Auth0 y la sincronización con el backend
@@ -107,27 +107,51 @@ export class AuthService {
     this.router.navigate(['/dashboard']);
   }
 
-  // Asigna un rol inicial en el backend si es necesario y sincroniza el perfil
-  selectInitialRole(role: SelfSelectableRole): Observable<BackendUserProfile> {
+  // Asigna un rol inicial en el backend para una cuenta nueva y sincroniza el perfil
+  selectInitialRole(role: SelectableRole): Observable<BackendUserProfile> {
     this.userStore.setLoading(true);
+    this.userStore.setError(null);
+
+    // 4 y 5. Ejecuta una única llamada a POST /auth/select-role con { role: selectedRole }
     return this.authApi.selectInitialRole(role).pipe(
+      tap((rolesResponse) => {
+        // 1. Actualizar el store con la respuesta
+        if (rolesResponse?.roles) {
+          this.userStore.setRoles(rolesResponse.roles);
+        }
+      }),
+      // 2. Ejecutar nuevamente GET /auth/me para sincronizar el perfil definitivo
       switchMap(() => this.authApi.getMe()),
-      map((response): BackendUserProfile => ({
-        id: response.id,
-        email: response.email ?? null,
-        displayName: response.displayName ?? '',
-        status: response.status,
-        roles: response.roles
-      })),
+      map((response): BackendUserProfile => {
+        // 3. Confirmar que roles contiene el rol seleccionado
+        const roles = response.roles && response.roles.length > 0 ? response.roles : [role];
+        return {
+          id: response.id,
+          email: response.email ?? null,
+          displayName: response.displayName ?? '',
+          status: response.status,
+          roles
+        };
+      }),
       tap((profile) => {
+        // 4. Establecer el rol de sesión según el contrato real
         this.userStore.setProfile(profile);
         this.userStore.setActiveRole(role);
         this.userStore.setLoading(false);
+        // 5. Redirigir a /dashboard
         this.router.navigate(['/dashboard']);
       }),
-      catchError((err) => {
+      catchError((err: unknown) => {
         this.userStore.setLoading(false);
-        throw err;
+        // 10. Los errores 400, 403 o 409 del backend se muestran sin modificar localmente los roles
+        const errorObj = err as { error?: { message?: string; code?: string }; message?: string };
+        const msg =
+          errorObj.error?.message ||
+          errorObj.error?.code ||
+          errorObj.message ||
+          'Error asignando el rol inicial';
+        this.userStore.setError(msg);
+        return throwError(() => err);
       })
     );
   }

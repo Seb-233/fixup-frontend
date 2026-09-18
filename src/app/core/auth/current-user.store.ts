@@ -29,10 +29,12 @@ export class CurrentUserStore {
     this.profileLoadedState.set(true);
     this.errorState.set(null);
 
-    // Si el rol activo previamente seleccionado ya no pertenece a los roles, restablecer a null
+    // Si el rol activo previamente seleccionado ya no pertenece a los roles, o no existía pero hay roles disponibles
     const currentActive = this.activeRoleState();
     if (currentActive && !profile.roles.includes(currentActive)) {
-      this.activeRoleState.set(null);
+      this.activeRoleState.set(profile.roles.length > 0 ? profile.roles[0] : null);
+    } else if (!currentActive && profile.roles.length > 0) {
+      this.activeRoleState.set(profile.roles[0]);
     }
   }
 
@@ -55,6 +57,10 @@ export class CurrentUserStore {
         roles
       });
       this.profileLoadedState.set(true);
+    }
+
+    if (!this.activeRoleState() && roles.length > 0) {
+      this.activeRoleState.set(roles[0]);
     }
   }
 

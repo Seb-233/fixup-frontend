@@ -5,7 +5,7 @@ import {
   BootstrapResponse,
   RoleRequest,
   RolesResponse,
-  SelfSelectableRole,
+  SelectableRole,
   UserResponse
 } from '../core/auth/auth.types';
 import { API_ROUTES, apiUrl } from './api.routes';
@@ -28,7 +28,7 @@ export class AuthApiService {
   }
 
   // Solicita la asignación del rol inicial aceptando únicamente OWNER, TENANT o FIXER
-  selectInitialRole(role: SelfSelectableRole): Observable<RolesResponse> {
+  selectInitialRole(role: SelectableRole): Observable<RolesResponse> {
     const body: RoleRequest = { role };
     return this.http.post<RolesResponse>(apiUrl(API_ROUTES.auth.selectRole), body);
   }

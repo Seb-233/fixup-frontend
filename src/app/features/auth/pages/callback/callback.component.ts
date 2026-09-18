@@ -61,17 +61,20 @@ export class CallbackComponent implements OnInit {
           return;
         }
 
-        // Si no existen roles o aún no se ha seleccionado activeRole, redirigir a select-role
-        if (profile.roles.length === 0 || this.userStore.activeRole() === null) {
+        // Si no existen roles (cuenta nueva), redirigir a select-role para onboarding inicial
+        if (profile.roles.length === 0) {
           this.router.navigate(['/auth/select-role'], { replaceUrl: true });
           return;
         }
 
-        // Recuperar appState o returnUrl interno sanitizado
+        // Si ya cuenta con roles asignados, continuar al target seguro (dashboard)
         this.auth.appState$.pipe(take(1)).subscribe((appState) => {
           const rawTarget = appState?.target || this.route.snapshot.queryParamMap.get('returnUrl');
           const safeTarget =
-            rawTarget && rawTarget.startsWith('/') && !rawTarget.startsWith('//')
+            rawTarget &&
+            rawTarget.startsWith('/') &&
+            !rawTarget.startsWith('//') &&
+            rawTarget !== '/auth/select-role'
               ? rawTarget
               : '/dashboard';
 

@@ -78,15 +78,15 @@ describe('CallbackComponent (Requerimientos 4 y 16)', () => {
     });
   });
 
-  it('debe redirigir a /auth/select-role si el usuario no tiene roles o activeRole es null', () => {
-    const mockProfile: BackendUserProfile = {
-      id: 'uuid-1',
-      email: 'user@fixup.com',
-      displayName: 'User',
+  it('debe redirigir a /auth/select-role para onboarding inicial si el usuario tiene roles vacíos (roles: [])', () => {
+    const mockNewUserProfile: BackendUserProfile = {
+      id: 'uuid-new',
+      email: 'newuser@fixup.com',
+      displayName: 'Nuevo Usuario',
       status: 'ACTIVE',
-      roles: ['OWNER']
+      roles: []
     };
-    authServiceMock.sessionReady$ = of(mockProfile);
+    authServiceMock.sessionReady$ = of(mockNewUserProfile);
 
     fixture.detectChanges();
 
@@ -95,22 +95,23 @@ describe('CallbackComponent (Requerimientos 4 y 16)', () => {
     });
   });
 
-  it('debe navegar al target seguro de appState cuando activeRole está seleccionado', () => {
+  it('no debe redirigir a /auth/select-role si el usuario ya tiene roles asignados, navegando al target seguro', () => {
     const userStore = TestBed.inject(CurrentUserStore);
-    userStore.setProfile({
+    const mockExistingProfile: BackendUserProfile = {
       id: 'uuid-1',
       email: 'user@fixup.com',
       displayName: 'User',
       status: 'ACTIVE',
       roles: ['OWNER']
-    });
-    userStore.setActiveRole('OWNER');
+    };
+    userStore.setProfile(mockExistingProfile);
 
-    authServiceMock.sessionReady$ = of(userStore.user());
+    authServiceMock.sessionReady$ = of(mockExistingProfile);
     authServiceMock.appState$ = of({ target: '/properties' });
 
     fixture.detectChanges();
 
+    expect(routerNavigateSpy).not.toHaveBeenCalledWith(['/auth/select-role'], expect.anything());
     expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/properties', {
       replaceUrl: true
     });

@@ -127,7 +127,7 @@ describe('Guards de Autenticación y Roles', () => {
       expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/access-denied']);
     });
 
-    it('debe redirigir a /auth/select-role si el usuario tiene roles pero activeRole es null', () => {
+    it('un usuario con roles asignados (roles > 0) continúa con el rol de su contrato y no es enviado a select-role', () => {
       userStore.setProfile({
         id: 'uuid-1',
         email: 'owner@fixup.com',
@@ -135,7 +135,6 @@ describe('Guards de Autenticación y Roles', () => {
         status: 'ACTIVE',
         roles: ['OWNER', 'TENANT']
       });
-      userStore.setActiveRole(null);
 
       const routeWithRoles = {
         data: { roles: ['OWNER'] }
@@ -144,8 +143,8 @@ describe('Guards de Autenticación y Roles', () => {
       const canActivate = TestBed.runInInjectionContext(() =>
         roleGuard(routeWithRoles, mockState)
       );
-      expect(canActivate).toBe(false);
-      expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/select-role']);
+      expect(canActivate).toBe(true);
+      expect(routerNavigateSpy).not.toHaveBeenCalledWith(['/auth/select-role']);
     });
 
     it('debe redirigir a /auth/select-role si el usuario autenticado tiene lista de roles vacía', () => {

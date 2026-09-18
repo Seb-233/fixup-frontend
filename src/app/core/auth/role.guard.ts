@@ -14,10 +14,15 @@ function evaluateRolePermission(
     return false;
   }
 
-  // Si no tiene roles o no ha seleccionado activeRole, enviar a select-role
-  if (userStore.roles().length === 0 || userStore.activeRole() === null) {
+  // Si no tiene roles (cuenta nueva), enviar a select-role para selección inicial
+  if (userStore.roles().length === 0) {
     router.navigate(['/auth/select-role']);
     return false;
+  }
+
+  // Si cuenta con roles pero activeRole no estaba fijado, activar el primer rol disponible
+  if (userStore.activeRole() === null && userStore.roles().length > 0) {
+    userStore.setActiveRole(userStore.roles()[0]);
   }
 
   // Verificación del rol activo contra los roles permitidos

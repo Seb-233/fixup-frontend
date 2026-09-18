@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { AuthApiService } from '../../api/auth-api.service';
 import { AuthService } from './auth.service';
@@ -132,27 +132,57 @@ describe('AuthService', () => {
     expect(authApiMock.getMe).toHaveBeenCalledTimes(1);
   });
 
-  it('9. la selección de rol inicial debe consumir POST /auth/select-role', () => {
-    const mockRolesResponse: RolesResponse = { roles: ['TENANT'] };
+  it('4, 5, 6, 7 y 8. la selección de rol ejecuta una única llamada a select-role, re-consulta me, actualiza el store y redirige a dashboard', () => {
+    const mockRolesResponse: RolesResponse = { roles: ['OWNER'] };
     const mockMeResponse: UserResponse = {
       id: 'uuid-1',
-      email: 'tenant@fixup.com',
-      displayName: 'Inquilino',
+      email: 'owner@fixup.com',
+      displayName: 'Propietario Nuevo',
       status: 'ACTIVE',
-      roles: ['TENANT']
+      roles: ['OWNER']
     };
 
     authApiMock.selectInitialRole.mockReturnValue(of(mockRolesResponse));
     authApiMock.getMe.mockReturnValue(of(mockMeResponse));
 
-    service.selectInitialRole('TENANT').subscribe((profile) => {
-      expect(profile.roles).toEqual(['TENANT']);
-      expect(userStore.roles()).toEqual(['TENANT']);
-      expect(userStore.activeRole()).toBe('TENANT');
+    service.selectInitialRole('OWNER').subscribe((profile) => {
+      // 7. El store se actualiza con el rol retornado
+      expect(profile.roles).toEqual(['OWNER']);
+      expect(userStore.roles()).toEqual(['OWNER']);
+      expect(userStore.activeRole()).toBe('OWNER');
+      // 8. El usuario es redirigido a /dashboard
       expect(routerNavigateSpy).toHaveBeenCalledWith(['/dashboard']);
     });
 
-    expect(authApiMock.selectInitialRole).toHaveBeenCalledWith('TENANT');
+    // 4. La selección ejecuta una única llamada a select-role
+    expect(authApiMock.selectInitialRole).toHaveBeenCalledTimes(1);
+    // 5. El valor coincide con el rol seleccionado
+    expect(authApiMock.selectInitialRole).toHaveBeenCalledWith('OWNER');
+    // 6. Después del éxito se consulta nuevamente /auth/me
+    expect(authApiMock.getMe).toHaveBeenCalledTimes(1);
+  });
+
+  it('10. los errores 400, 403 o 409 de selectInitialRole preservan los roles locales sin modificar', () => {
+    userStore.setRoles([]);
+    authApiMock.selectInitialRole.mockReturnValue(
+      throwError(() => ({
+        status: 409,
+        error: { code: 'CONFLICT', message: 'Rol ya asignado previamente' }
+      }))
+    );
+
+    let caughtError: unknown = null;
+    service.selectInitialRole('TENANT').subscribe({
+      error: (err) => {
+        caughtError = err;
+      }
+    });
+
+    expect(caughtError).toBeTruthy();
+    expect(userStore.roles()).toEqual([]);
+    expect(userStore.error()).toBe('Rol ya asignado previamente');
+    expect(authApiMock.getMe).not.toHaveBeenCalled();
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
   });
 
   it('debe activar un rol existente mediante selectRole() sin llamar al backend', () => {

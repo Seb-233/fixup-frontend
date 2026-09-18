@@ -6,11 +6,46 @@ export type Role =
   | 'REAL_ESTATE_MANAGER'
   | 'PLATFORM_ADMIN';
 
-// Roles que el usuario puede autoasignarse en el registro inicial
-export type SelfSelectableRole = 'OWNER' | 'TENANT' | 'FIXER';
+// Roles que el usuario puede autoasignarse en el registro inicial según el contrato del backend
+export type SelectableRole = 'OWNER' | 'TENANT' | 'FIXER';
+export type SelfSelectableRole = SelectableRole;
 
-// Estados posibles de la cuenta
-export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
+export const INITIAL_ROLE_OPTIONS: readonly SelectableRole[] = [
+  'OWNER',
+  'TENANT',
+  'FIXER'
+] as const;
+
+export interface InitialRoleDetail {
+  role: SelectableRole;
+  name: string;
+  tag: string;
+  description: string;
+}
+
+export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
+  {
+    role: 'OWNER',
+    name: 'Propietario',
+    tag: 'Inmuebles',
+    description: 'Propietario que publica inmuebles, crea solicitudes y contrata servicios.'
+  },
+  {
+    role: 'TENANT',
+    name: 'Arrendatario',
+    tag: 'Hogar',
+    description: 'Arrendatario o buscador que consulta inmuebles y reporta solicitudes autorizadas.'
+  },
+  {
+    role: 'FIXER',
+    name: 'Técnico / Fixer',
+    tag: 'Servicios',
+    description: 'Técnico que registra su perfil, cotiza solicitudes y ejecuta trabajos.'
+  }
+] as const;
+
+// Estados posibles de la cuenta (incluye PENDING para perfiles en verificación como FIXER)
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED' | 'PENDING';
 
 // Perfil de usuario interno consumido por la aplicación frontend
 export interface BackendUserProfile {
@@ -23,7 +58,7 @@ export interface BackendUserProfile {
 
 // Solicitud de asignación de rol inicial
 export interface RoleRequest {
-  role: SelfSelectableRole;
+  role: SelectableRole;
 }
 
 // Respuesta de consulta y asignación de roles

@@ -1,103 +1,59 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
-import { Role } from '../../../../core/auth/auth.types';
+import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth.types';
 
-// Pantalla de selección inicial de rol para usuarios registrados sin roles previos
+// Pantalla de selección inicial de rol para cuentas nuevas recién registradas
 @Component({
   selector: 'app-select-role',
   standalone: true,
   imports: [CommonModule],
   template: `
     <div class="role-selection-card">
-      @if (availableRoles().length === 0) {
-        <h1 class="title">Cuenta sin roles asignados</h1>
-        <p class="subtitle">Tu cuenta está autenticada pero actualmente no cuenta con roles disponibles en el sistema.</p>
+      <h1 class="title">Selecciona tu rol en FixUp</h1>
+      <p class="subtitle">Elige con cuál de los roles permitidos deseas iniciar tu experiencia en la plataforma.</p>
 
-        <div class="warning-banner" role="alert">
-          <strong>Aviso:</strong> No es posible seleccionar un rol no asignado por el backend. Por favor ponte en contacto con el administrador de la plataforma para obtener acceso.
-        </div>
-
-        <div class="actions">
-          <button type="button" class="submit-btn" (click)="logout()">
-            Cerrar sesión
-          </button>
-        </div>
-      } @else {
-        <h1 class="title">Selecciona tu rol en FixUp</h1>
-        <p class="subtitle">Elige con cuál de tus roles asignados deseas operar en la plataforma.</p>
-
-        @if (errorMessage()) {
-          <div class="error-banner" role="alert">
-            {{ errorMessage() }}
-          </div>
-        }
-
-        <div class="roles-grid">
-          @if (availableRoles().includes('OWNER')) {
-            <button
-              type="button"
-              class="role-option"
-              [class.selected]="selectedRole() === 'OWNER'"
-              (click)="selectRole('OWNER')"
-            >
-              <div class="role-header">
-                <h3>Propietario</h3>
-                <span class="role-tag">Inmuebles</span>
-              </div>
-              <p>Publica y gestiona el mantenimiento de tus propiedades residenciales o comerciales.</p>
-            </button>
-          }
-
-          @if (availableRoles().includes('TENANT')) {
-            <button
-              type="button"
-              class="role-option"
-              [class.selected]="selectedRole() === 'TENANT'"
-              (click)="selectRole('TENANT')"
-            >
-              <div class="role-header">
-                <h3>Arrendatario / Residente</h3>
-                <span class="role-tag">Hogar</span>
-              </div>
-              <p>Solicita asistencia, reparaciones y seguimiento de solicitudes en tu vivienda.</p>
-            </button>
-          }
-
-          @if (availableRoles().includes('FIXER')) {
-            <button
-              type="button"
-              class="role-option"
-              [class.selected]="selectedRole() === 'FIXER'"
-              (click)="selectRole('FIXER')"
-            >
-              <div class="role-header">
-                <h3>Técnico / Fixer</h3>
-                <span class="role-tag">Servicios</span>
-              </div>
-              <p>Ofrece tus habilidades profesionales y servicios de reparación especializada.</p>
-            </button>
-          }
-        </div>
-
-        @if (selectedRole() === 'FIXER') {
-          <div class="warning-banner" role="note">
-            <strong>Aviso importante:</strong> Al operar como Técnico/Fixer, tu perfil requiere validación de credenciales para la asignación formal de servicios.
-          </div>
-        }
-
-        <div class="actions">
-          <button
-            type="button"
-            class="submit-btn"
-            [disabled]="!selectedRole() || userStore.loading()"
-            (click)="confirmSelection()"
-          >
-            {{ userStore.loading() ? 'Configurando cuenta...' : 'Continuar al panel' }}
-          </button>
+      @if (errorMessage()) {
+        <div class="error-banner" role="alert">
+          {{ errorMessage() }}
         </div>
       }
+
+      <div class="roles-grid">
+        @for (option of roleOptions; track option.role) {
+          <button
+            type="button"
+            class="role-option"
+            [class.selected]="selectedRole() === option.role"
+            (click)="selectRole(option.role)"
+          >
+            <div class="role-header">
+              <h3>{{ option.name }}</h3>
+              <span class="role-tag">{{ option.tag }}</span>
+            </div>
+            <p>{{ option.description }}</p>
+          </button>
+        }
+      </div>
+
+      @if (selectedRole() === 'FIXER') {
+        <div class="warning-banner" role="note">
+          <strong>Aviso de verificación:</strong> Al registrarte como Técnico/Fixer, tu estado de verificación comenzará como PENDING hasta la validación de tus credenciales profesionales.
+        </div>
+      }
+
+      <div class="actions">
+        <button
+          type="button"
+          class="submit-btn"
+          [disabled]="!selectedRole() || userStore.loading()"
+          (click)="confirmSelection()"
+        >
+          {{ userStore.loading() ? 'Guardando rol inicial...' : 'Continuar al panel' }}
+        </button>
+      </div>
     </div>
   `,
   styles: [`
@@ -225,16 +181,25 @@ import { Role } from '../../../../core/auth/auth.types';
     }
   `]
 })
-export class SelectRoleComponent {
+export class SelectRoleComponent implements OnInit {
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   readonly userStore = inject(CurrentUserStore);
 
-  readonly availableRoles = this.userStore.roles;
-  readonly selectedRole = signal<Role | null>(null);
+  readonly roleOptions = INITIAL_ROLE_DETAILS;
+  readonly selectedRole = signal<SelectableRole | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
-  selectRole(role: Role): void {
+  ngOnInit(): void {
+    // 9. Un usuario con roles existentes no vuelve a seleccionar un rol inicial
+    if (this.userStore.roles().length > 0) {
+      this.router.navigate(['/dashboard'], { replaceUrl: true });
+    }
+  }
+
+  selectRole(role: SelectableRole): void {
     this.selectedRole.set(role);
+    this.errorMessage.set(null);
   }
 
   confirmSelection(): void {
@@ -242,7 +207,16 @@ export class SelectRoleComponent {
     if (!role) return;
 
     this.errorMessage.set(null);
-    this.auth.selectRole(role);
+    this.auth.selectInitialRole(role).subscribe({
+      error: (err) => {
+        const message =
+          err?.error?.message ||
+          err?.error?.code ||
+          err?.message ||
+          'No se pudo asignar el rol inicial';
+        this.errorMessage.set(message);
+      }
+    });
   }
 
   logout(): void {

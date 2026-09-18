@@ -36,6 +36,7 @@ describe('CurrentUserStore', () => {
     expect(store.authenticated()).toBe(true);
     expect(store.profileLoaded()).toBe(true);
     expect(store.roles()).toEqual(['OWNER', 'TENANT']);
+    expect(store.activeRole()).toBe('OWNER');
     expect(store.status()).toBe('ACTIVE');
     expect(store.isActive()).toBe(true);
   });
