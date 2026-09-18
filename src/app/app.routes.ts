@@ -70,7 +70,8 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        component: PlaceholderComponent,
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
         data: { title: 'Panel Principal' }
       },
       {
