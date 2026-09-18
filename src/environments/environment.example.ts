@@ -5,11 +5,8 @@ export const environmentExample = {
   production: false,
   apiOrigin: 'http://localhost:8081',
   auth0: {
-    domain: 'example.auth0.com',
-    clientId: 'example-client-id',
-    authorizationParams: {
-      audience: 'https://api.example.com',
-      redirect_uri: 'http://localhost:4200'
-    }
+    domain: 'your-tenant.us.auth0.com',
+    clientId: 'your-client-id',
+    audience: 'urn:fixup:api'
   }
 };

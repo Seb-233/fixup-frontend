@@ -7,12 +7,15 @@ import { BackendUserProfile, Role, UserStatus } from './auth.types';
 })
 export class CurrentUserStore {
   private readonly userState = signal<BackendUserProfile | null>(null);
+  private readonly activeRoleState = signal<Role | null>(null);
   private readonly loadingState = signal<boolean>(false);
   private readonly profileLoadedState = signal<boolean>(false);
   private readonly errorState = signal<string | null>(null);
 
   readonly user = this.userState.asReadonly();
+  readonly activeRole = this.activeRoleState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
+  readonly initialized = this.profileLoadedState.asReadonly();
   readonly profileLoaded = this.profileLoadedState.asReadonly();
   readonly error = this.errorState.asReadonly();
 
@@ -25,13 +28,33 @@ export class CurrentUserStore {
     this.userState.set(profile);
     this.profileLoadedState.set(true);
     this.errorState.set(null);
+
+    // Si el rol activo previamente seleccionado ya no pertenece a los roles, restablecer a null
+    const currentActive = this.activeRoleState();
+    if (currentActive && !profile.roles.includes(currentActive)) {
+      this.activeRoleState.set(null);
+    }
   }
 
-  // Actualiza el conjunto de roles tras la asignación inicial
+  // Establece el rol actualmente activo
+  setActiveRole(role: Role | null): void {
+    this.activeRoleState.set(role);
+  }
+
+  // Actualiza el conjunto de roles tras asignación
   setRoles(roles: Role[]): void {
     const current = this.userState();
     if (current) {
       this.userState.set({ ...current, roles });
+    } else {
+      this.userState.set({
+        id: 'temp-user',
+        email: null,
+        displayName: '',
+        status: 'ACTIVE',
+        roles
+      });
+      this.profileLoadedState.set(true);
     }
   }
 
@@ -58,6 +81,7 @@ export class CurrentUserStore {
   // Limpia completamente el estado al cerrar sesión
   clear(): void {
     this.userState.set(null);
+    this.activeRoleState.set(null);
     this.loadingState.set(false);
     this.profileLoadedState.set(false);
     this.errorState.set(null);

@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 // Pantalla de inicio de sesión con redirección segura hacia Auth0
@@ -11,6 +12,12 @@ import { AuthService } from '../../../../core/auth/auth.service';
     <div class="auth-card">
       <h1 class="auth-title">Bienvenido a FixUp</h1>
       <p class="auth-subtitle">Inicia sesión de forma segura para gestionar tus propiedades y servicios.</p>
+
+      @if (errorMessage()) {
+        <div class="auth-error-alert" role="alert">
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
 
       <button
         type="button"
@@ -27,7 +34,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 70vh;
+      min-height: 80vh;
       padding: 1.5rem;
     }
     .auth-card {
@@ -48,8 +55,18 @@ import { AuthService } from '../../../../core/auth/auth.service';
     .auth-subtitle {
       color: #666666;
       font-size: 0.95rem;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       line-height: 1.4;
+    }
+    .auth-error-alert {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #f87171;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
     }
     .auth-btn-primary {
       background-color: var(--fixup-color-primary);
@@ -76,8 +93,22 @@ import { AuthService } from '../../../../core/auth/auth.service';
 })
 export class LoginComponent {
   readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+
+  readonly errorMessage = computed(() => {
+    return this.route.snapshot.queryParamMap.get('error');
+  });
+
+  readonly safeReturnUrl = computed(() => {
+    const rawUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    // Sanitización estricta: sólo URLs relativas internas que comiencen con / y no con //
+    if (rawUrl && rawUrl.startsWith('/') && !rawUrl.startsWith('//')) {
+      return rawUrl;
+    }
+    return '/dashboard';
+  });
 
   login(): void {
-    this.auth.loginWithRedirect();
+    this.auth.loginWithRedirect(this.safeReturnUrl());
   }
 }

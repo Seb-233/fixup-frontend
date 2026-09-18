@@ -5,17 +5,19 @@ import { API_ROUTES, apiUrl } from '../../api/api.routes';
 
 // Configura Auth0 autorizando exclusivamente los tres endpoints exactos del backend
 export function provideFixUpAuth(): EnvironmentProviders {
-  const auth0Params = environment.auth0.authorizationParams;
-  const audience = auth0Params.audience;
+  const audience = environment.auth0.audience;
   const redirectUri =
-    auth0Params.redirect_uri || (typeof window !== 'undefined' ? window.location.origin : '');
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : 'http://localhost:4200/auth/callback';
 
   return provideAuth0({
     domain: environment.auth0.domain,
     clientId: environment.auth0.clientId,
     authorizationParams: {
       redirect_uri: redirectUri,
-      audience
+      audience,
+      scope: 'openid profile email access:fixup'
     },
     httpInterceptor: {
       allowedList: [
@@ -24,7 +26,8 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
-              audience
+              audience,
+              scope: 'openid profile email access:fixup'
             }
           }
         },
@@ -33,7 +36,8 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'GET',
           tokenOptions: {
             authorizationParams: {
-              audience
+              audience,
+              scope: 'openid profile email access:fixup'
             }
           }
         },
@@ -42,7 +46,8 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
-              audience
+              audience,
+              scope: 'openid profile email access:fixup'
             }
           }
         }

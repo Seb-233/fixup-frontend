@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
-import { SelfSelectableRole } from '../../../../core/auth/auth.types';
+import { Role } from '../../../../core/auth/auth.types';
 
 // Pantalla de selección inicial de rol para usuarios registrados sin roles previos
 @Component({
@@ -11,72 +11,93 @@ import { SelfSelectableRole } from '../../../../core/auth/auth.types';
   imports: [CommonModule],
   template: `
     <div class="role-selection-card">
-      <h1 class="title">Selecciona tu rol en FixUp</h1>
-      <p class="subtitle">Elige cómo deseas participar en la plataforma. Tu perfil se configurará de acuerdo a esta elección.</p>
+      @if (availableRoles().length === 0) {
+        <h1 class="title">Cuenta sin roles asignados</h1>
+        <p class="subtitle">Tu cuenta está autenticada pero actualmente no cuenta con roles disponibles en el sistema.</p>
 
-      @if (errorMessage()) {
-        <div class="error-banner" role="alert">
-          {{ errorMessage() }}
+        <div class="warning-banner" role="alert">
+          <strong>Aviso:</strong> No es posible seleccionar un rol no asignado por el backend. Por favor ponte en contacto con el administrador de la plataforma para obtener acceso.
+        </div>
+
+        <div class="actions">
+          <button type="button" class="submit-btn" (click)="logout()">
+            Cerrar sesión
+          </button>
+        </div>
+      } @else {
+        <h1 class="title">Selecciona tu rol en FixUp</h1>
+        <p class="subtitle">Elige con cuál de tus roles asignados deseas operar en la plataforma.</p>
+
+        @if (errorMessage()) {
+          <div class="error-banner" role="alert">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="roles-grid">
+          @if (availableRoles().includes('OWNER')) {
+            <button
+              type="button"
+              class="role-option"
+              [class.selected]="selectedRole() === 'OWNER'"
+              (click)="selectRole('OWNER')"
+            >
+              <div class="role-header">
+                <h3>Propietario</h3>
+                <span class="role-tag">Inmuebles</span>
+              </div>
+              <p>Publica y gestiona el mantenimiento de tus propiedades residenciales o comerciales.</p>
+            </button>
+          }
+
+          @if (availableRoles().includes('TENANT')) {
+            <button
+              type="button"
+              class="role-option"
+              [class.selected]="selectedRole() === 'TENANT'"
+              (click)="selectRole('TENANT')"
+            >
+              <div class="role-header">
+                <h3>Arrendatario / Residente</h3>
+                <span class="role-tag">Hogar</span>
+              </div>
+              <p>Solicita asistencia, reparaciones y seguimiento de solicitudes en tu vivienda.</p>
+            </button>
+          }
+
+          @if (availableRoles().includes('FIXER')) {
+            <button
+              type="button"
+              class="role-option"
+              [class.selected]="selectedRole() === 'FIXER'"
+              (click)="selectRole('FIXER')"
+            >
+              <div class="role-header">
+                <h3>Técnico / Fixer</h3>
+                <span class="role-tag">Servicios</span>
+              </div>
+              <p>Ofrece tus habilidades profesionales y servicios de reparación especializada.</p>
+            </button>
+          }
+        </div>
+
+        @if (selectedRole() === 'FIXER') {
+          <div class="warning-banner" role="note">
+            <strong>Aviso importante:</strong> Al operar como Técnico/Fixer, tu perfil requiere validación de credenciales para la asignación formal de servicios.
+          </div>
+        }
+
+        <div class="actions">
+          <button
+            type="button"
+            class="submit-btn"
+            [disabled]="!selectedRole() || userStore.loading()"
+            (click)="confirmSelection()"
+          >
+            {{ userStore.loading() ? 'Configurando cuenta...' : 'Continuar al panel' }}
+          </button>
         </div>
       }
-
-      <div class="roles-grid">
-        <button
-          type="button"
-          class="role-option"
-          [class.selected]="selectedRole() === 'OWNER'"
-          (click)="selectRole('OWNER')"
-        >
-          <div class="role-header">
-            <h3>Propietario</h3>
-            <span class="role-tag">Inmuebles</span>
-          </div>
-          <p>Publica y gestiona el mantenimiento de tus propiedades residenciales o comerciales.</p>
-        </button>
-
-        <button
-          type="button"
-          class="role-option"
-          [class.selected]="selectedRole() === 'TENANT'"
-          (click)="selectRole('TENANT')"
-        >
-          <div class="role-header">
-            <h3>Arrendatario / Residente</h3>
-            <span class="role-tag">Hogar</span>
-          </div>
-          <p>Solicita asistencia, reparaciones y seguimiento de solicitudes en tu vivienda.</p>
-        </button>
-
-        <button
-          type="button"
-          class="role-option"
-          [class.selected]="selectedRole() === 'FIXER'"
-          (click)="selectRole('FIXER')"
-        >
-          <div class="role-header">
-            <h3>Técnico / Fixer</h3>
-            <span class="role-tag">Servicios</span>
-          </div>
-          <p>Ofrece tus habilidades profesionales y servicios de reparación especializada.</p>
-        </button>
-      </div>
-
-      @if (selectedRole() === 'FIXER') {
-        <div class="warning-banner" role="note">
-          <strong>Aviso importante:</strong> Al seleccionar Técnico/Fixer, tu cuenta entrará en estado de verificación. No asumas que podrás ejecutar trabajos inmediatamente hasta completar la validación de credenciales.
-        </div>
-      }
-
-      <div class="actions">
-        <button
-          type="button"
-          class="submit-btn"
-          [disabled]="!selectedRole() || userStore.loading()"
-          (click)="confirmSelection()"
-        >
-          {{ userStore.loading() ? 'Configurando cuenta...' : 'Continuar con rol seleccionado' }}
-        </button>
-      </div>
     </div>
   `,
   styles: [`
@@ -208,10 +229,11 @@ export class SelectRoleComponent {
   private readonly auth = inject(AuthService);
   readonly userStore = inject(CurrentUserStore);
 
-  readonly selectedRole = signal<SelfSelectableRole | null>(null);
+  readonly availableRoles = this.userStore.roles;
+  readonly selectedRole = signal<Role | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
-  selectRole(role: SelfSelectableRole): void {
+  selectRole(role: Role): void {
     this.selectedRole.set(role);
   }
 
@@ -220,10 +242,10 @@ export class SelectRoleComponent {
     if (!role) return;
 
     this.errorMessage.set(null);
-    this.auth.selectInitialRole(role).subscribe({
-      error: (err) => {
-        this.errorMessage.set(err?.error?.message ?? 'No fue posible asignar el rol. Inténtalo de nuevo.');
-      }
-    });
+    this.auth.selectRole(role);
+  }
+
+  logout(): void {
+    this.auth.logout().subscribe();
   }
 }

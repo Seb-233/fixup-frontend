@@ -1,52 +1,106 @@
-import { HttpRequest, HttpResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { authHttpInterceptorFn, Auth0ClientService, AuthService as Auth0Service } from '@auth0/auth0-angular';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { apiUrl, API_ROUTES } from '../../api/api.routes';
-import { authInterceptor } from './auth.interceptor';
+import { provideFixUpAuth } from './auth.config';
 
-// Mock del interceptor nativo del SDK de Auth0
-vi.mock('@auth0/auth0-angular', () => ({
-  authHttpInterceptorFn: vi.fn((req: HttpRequest<unknown>, next: (r: HttpRequest<unknown>) => unknown) => next(req))
-}));
+describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
+  let http: HttpClient;
+  let httpMock: HttpTestingController;
 
-import { authHttpInterceptorFn } from '@auth0/auth0-angular';
+  const mockAuth0Service = {
+    isLoading$: of(false),
+    getAccessTokenSilently: () => of('valid-auth0-test-token')
+  };
 
-describe('authInterceptor', () => {
-  const nextFn = vi.fn(() => of(new HttpResponse<unknown>({ status: 200 })));
+  const mockAuth0Client = {
+    getTokenSilently: vi.fn().mockReturnValue(Promise.resolve('valid-auth0-test-token'))
+  };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    TestBed.configureTestingModule({
+      providers: [
+        provideFixUpAuth(),
+        provideHttpClient(withInterceptors([authHttpInterceptorFn])),
+        provideHttpClientTesting(),
+        { provide: Auth0Service, useValue: mockAuth0Service },
+        { provide: Auth0ClientService, useValue: mockAuth0Client }
+      ]
+    });
+
+    http = TestBed.inject(HttpClient);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  it('debe delegar a authHttpInterceptorFn para POST /auth/bootstrap', () => {
-    const req = new HttpRequest('POST', apiUrl(API_ROUTES.auth.bootstrap), {});
-    authInterceptor(req, nextFn);
-    expect(authHttpInterceptorFn).toHaveBeenCalledWith(req, nextFn);
+  afterEach(() => {
+    httpMock.verify();
   });
 
-  it('debe delegar a authHttpInterceptorFn para GET /auth/me', () => {
-    const req = new HttpRequest('GET', apiUrl(API_ROUTES.auth.me));
-    authInterceptor(req, nextFn);
-    expect(authHttpInterceptorFn).toHaveBeenCalledWith(req, nextFn);
+  it('13. debe adjuntar un único encabezado Authorization para POST /auth/bootstrap', async () => {
+    const targetUrl = apiUrl(API_ROUTES.auth.bootstrap);
+    http.post(targetUrl, {}).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(targetUrl);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.headers.has('Authorization')).toBe(true);
+
+    const authHeaders = req.request.headers.getAll('Authorization');
+    expect(authHeaders?.length).toBe(1);
+    expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+    req.flush({ id: '1', displayName: 'User', status: 'ACTIVE', roles: [] });
   });
 
-  it('debe delegar a authHttpInterceptorFn para POST /auth/select-role', () => {
-    const req = new HttpRequest('POST', apiUrl(API_ROUTES.auth.selectRole), { role: 'OWNER' });
-    authInterceptor(req, nextFn);
-    expect(authHttpInterceptorFn).toHaveBeenCalledWith(req, nextFn);
+  it('13. debe adjuntar un único encabezado Authorization para GET /auth/me', async () => {
+    const targetUrl = apiUrl(API_ROUTES.auth.me);
+    http.get(targetUrl).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(targetUrl);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBe(true);
+
+    const authHeaders = req.request.headers.getAll('Authorization');
+    expect(authHeaders?.length).toBe(1);
+    expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+    req.flush({ id: '1', displayName: 'User', status: 'ACTIVE', roles: ['OWNER'] });
   });
 
-  it('no debe adjuntar tokens a servicios externos de terceros', () => {
-    const req = new HttpRequest('GET', 'https://api.external.com/tiles/osm');
-    authInterceptor(req, nextFn);
-    expect(authHttpInterceptorFn).not.toHaveBeenCalled();
-    expect(nextFn).toHaveBeenCalledWith(req);
+  it('13. debe adjuntar un único encabezado Authorization para POST /auth/select-role', async () => {
+    const targetUrl = apiUrl(API_ROUTES.auth.selectRole);
+    http.post(targetUrl, { role: 'OWNER' }).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(targetUrl);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.headers.has('Authorization')).toBe(true);
+
+    const authHeaders = req.request.headers.getAll('Authorization');
+    expect(authHeaders?.length).toBe(1);
+    expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+    req.flush({ roles: ['OWNER'] });
   });
 
-  it('no debe adjuntar tokens si el método HTTP no coincide con la ruta autorizada', () => {
-    const req = new HttpRequest('GET', apiUrl(API_ROUTES.auth.bootstrap));
-    authInterceptor(req, nextFn);
-    expect(authHttpInterceptorFn).not.toHaveBeenCalled();
-    expect(nextFn).toHaveBeenCalledWith(req);
+  it('14. ninguna petición externa ni servicio de terceros debe recibir el Bearer token', async () => {
+    const externalUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places/bogota.json';
+    http.get(externalUrl).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(externalUrl);
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
+
+  it('14. no debe adjuntar tokens a rutas internas no autorizadas expresamente', async () => {
+    const internalUnprotected = 'http://localhost:8081/public/health';
+    http.get(internalUnprotected).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(internalUnprotected);
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({ status: 'UP' });
   });
 });

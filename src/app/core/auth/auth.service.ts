@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
-import { BehaviorSubject, Observable, catchError, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { AuthApiService } from '../../api/auth-api.service';
-import { BackendUserProfile, SelfSelectableRole } from './auth.types';
+import { BackendUserProfile, Role, SelfSelectableRole } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
 
 // Servicio de autenticación que orquesta Auth0 y la sincronización con el backend
@@ -19,48 +19,49 @@ export class AuthService {
   readonly isAuthenticated$: Observable<boolean> = this.auth0.isAuthenticated$;
   readonly user$: Observable<User | null | undefined> = this.auth0.user$;
   readonly isLoading$: Observable<boolean> = this.auth0.isLoading$;
+  readonly error$: Observable<Error> = this.auth0.error$;
+  readonly appState$: Observable<{ target?: string } | undefined> = this.auth0.appState$;
 
   // Gatillo reiniciable para la sesión compartida
   private readonly initTrigger$ = new BehaviorSubject<void>(undefined);
 
   // Flujo observable compartido y reactivo para la inicialización y bootstrap con el backend
   readonly sessionReady$: Observable<BackendUserProfile | null> = this.initTrigger$.pipe(
-    switchMap(() => this.auth0.isAuthenticated$),
-    switchMap((authenticated) => {
-      if (!authenticated) {
-        this.userStore.clear();
-        return of(null);
-      }
-
-      this.userStore.setLoading(true);
-
-      return this.authApi.bootstrap().pipe(
-        switchMap(() => this.authApi.getMe()),
-        map((response): BackendUserProfile => ({
-          id: response.id,
-          email: response.email ?? null,
-          displayName: response.displayName ?? '',
-          status: response.status,
-          roles: response.roles
-        })),
-        tap((profile) => {
-          this.userStore.setProfile(profile);
-          this.userStore.setLoading(false);
-
-          // Navegar a selección de rol solo si el usuario no tiene roles asignados
-          if (profile.roles.length === 0) {
-            this.router.navigate(['/auth/select-role']);
-          } else if (profile.status === 'SUSPENDED' || profile.status === 'DISABLED') {
-            this.router.navigate(['/auth/account-restricted']);
+    switchMap(() =>
+      combineLatest([this.auth0.isLoading$, this.auth0.isAuthenticated$]).pipe(
+        filter(([loading]) => !loading),
+        map(([, authenticated]) => authenticated),
+        distinctUntilChanged(),
+        switchMap((authenticated) => {
+          if (!authenticated) {
+            this.userStore.clear();
+            return of(null);
           }
-        }),
-        catchError((error) => {
-          this.userStore.setLoading(false);
-          this.userStore.setError(error?.message ?? 'Error inicializando sesión');
-          return of(null);
+
+          this.userStore.setLoading(true);
+
+          return this.authApi.bootstrap().pipe(
+            switchMap(() => this.authApi.getMe()),
+            map((response): BackendUserProfile => ({
+              id: response.id,
+              email: response.email ?? null,
+              displayName: response.displayName ?? '',
+              status: response.status,
+              roles: response.roles
+            })),
+            tap((profile) => {
+              this.userStore.setProfile(profile);
+              this.userStore.setLoading(false);
+            }),
+            catchError((error) => {
+              this.userStore.setLoading(false);
+              this.userStore.setError(error?.message ?? 'Error inicializando sesión');
+              return of(null);
+            })
+          );
         })
-      );
-    }),
+      )
+    ),
     shareReplay({ bufferSize: 1, refCount: false })
   );
 
@@ -68,17 +69,30 @@ export class AuthService {
     this.sessionReady$.subscribe();
   }
 
-  loginWithRedirect(): Observable<void> {
-    return this.auth0.loginWithRedirect();
+  // Redirige al login de Auth0 preservando un target interno validado
+  loginWithRedirect(targetUrl?: string): Observable<void> {
+    const safeTarget =
+      targetUrl && targetUrl.startsWith('/') && !targetUrl.startsWith('//')
+        ? targetUrl
+        : '/dashboard';
+
+    return this.auth0.loginWithRedirect({
+      appState: { target: safeTarget }
+    });
   }
 
-  // Cierra sesión limpiando el store local y reiniciando el flujo observable
+  // Cierra sesión limpiando el store local, reiniciando el flujo observable y regresando a /auth/login
   logout(): Observable<void> {
     this.userStore.clear();
     this.initTrigger$.next();
+    const returnTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/login`
+        : 'http://localhost:4200/auth/login';
+
     return this.auth0.logout({
       logoutParams: {
-        returnTo: typeof window !== 'undefined' ? window.location.origin : ''
+        returnTo
       }
     });
   }
@@ -87,7 +101,13 @@ export class AuthService {
     return this.auth0.getAccessTokenSilently();
   }
 
-  // Asigna el rol inicial y sincroniza inmediatamente el perfil actualizado
+  // Selecciona y activa uno de los roles disponibles devueltos por el backend
+  selectRole(role: Role): void {
+    this.userStore.setActiveRole(role);
+    this.router.navigate(['/dashboard']);
+  }
+
+  // Asigna un rol inicial en el backend si es necesario y sincroniza el perfil
   selectInitialRole(role: SelfSelectableRole): Observable<BackendUserProfile> {
     this.userStore.setLoading(true);
     return this.authApi.selectInitialRole(role).pipe(
@@ -101,6 +121,7 @@ export class AuthService {
       })),
       tap((profile) => {
         this.userStore.setProfile(profile);
+        this.userStore.setActiveRole(role);
         this.userStore.setLoading(false);
         this.router.navigate(['/dashboard']);
       }),

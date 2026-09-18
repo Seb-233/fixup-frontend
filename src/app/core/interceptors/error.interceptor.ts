@@ -19,13 +19,24 @@ export const errorInterceptor: HttpInterceptorFn = (
         userStore.clear();
         router.navigate(['/auth/login']);
       } else if (error.status === 403) {
-        // 403 Forbidden: cuenta inactiva o falta de permiso
+        // 403 Forbidden: discriminar cuenta inactiva vs usuario sin permisos según código estructurado
         const code = error.error?.code;
-        if (code === 'ACCESS_DENIED' && (userStore.status() === 'SUSPENDED' || userStore.status() === 'DISABLED')) {
+        const isAccountRestricted =
+          code === 'ACCOUNT_RESTRICTED' ||
+          code === 'ACCOUNT_SUSPENDED' ||
+          code === 'ACCOUNT_DISABLED' ||
+          userStore.status() === 'SUSPENDED' ||
+          userStore.status() === 'DISABLED';
+
+        if (isAccountRestricted) {
           router.navigate(['/auth/account-restricted']);
         } else {
           router.navigate(['/auth/access-denied']);
         }
+      } else if (error.status === 409) {
+        userStore.setError(error.error?.message ?? 'Conflicto informado por el backend');
+      } else if (error.status === 0) {
+        userStore.setError('El servicio backend de FixUp no se encuentra disponible');
       }
 
       return throwError(() => error);

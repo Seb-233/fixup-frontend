@@ -12,6 +12,10 @@
     display: flex;
     align-items: center;
 
+    .brand-link {
+      text-decoration: none;
+    }
+
     .brand-name {
       font-family: var(--fixup-font-heading);
       font-size: 1.25rem;
@@ -24,7 +28,44 @@
   .topbar-actions {
     display: flex;
     align-items: center;
+    gap: 1rem;
     font-size: 0.875rem;
-    color: var(--fixup-color-neutral, #9A948D);
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .user-greeting {
+      color: #FFFFFF;
+      font-weight: 500;
+    }
+
+    .role-badge {
+      background: var(--fixup-color-accent, #CEAC78);
+      color: var(--fixup-color-primary, #2D2E31);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #FFFFFF;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: #FFFFFF;
+      }
+    }
   }
 }

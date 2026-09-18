@@ -21,6 +21,8 @@ describe('AuthService', () => {
     isAuthenticated$: BehaviorSubject<boolean>;
     user$: BehaviorSubject<User | null>;
     isLoading$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<Error>;
+    appState$: BehaviorSubject<{ target?: string } | undefined>;
     loginWithRedirect: ReturnType<typeof vi.fn>;
     logout: ReturnType<typeof vi.fn>;
     getAccessTokenSilently: ReturnType<typeof vi.fn>;
@@ -31,6 +33,8 @@ describe('AuthService', () => {
       isAuthenticated$: new BehaviorSubject<boolean>(false),
       user$: new BehaviorSubject<User | null>(null),
       isLoading$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<Error>(new Error()),
+      appState$: new BehaviorSubject<{ target?: string } | undefined>(undefined),
       loginWithRedirect: vi.fn().mockReturnValue(of(undefined)),
       logout: vi.fn().mockReturnValue(of(undefined)),
       getAccessTokenSilently: vi.fn().mockReturnValue(of('mock-token'))
@@ -58,12 +62,19 @@ describe('AuthService', () => {
     userStore = TestBed.inject(CurrentUserStore);
   });
 
-  it('debe iniciar la redirección hacia Auth0 al invocar loginWithRedirect()', () => {
-    service.loginWithRedirect();
-    expect(auth0Mock.loginWithRedirect).toHaveBeenCalled();
+  it('5. debe enviar appState con target sanitizado en loginWithRedirect()', () => {
+    service.loginWithRedirect('/properties');
+    expect(auth0Mock.loginWithRedirect).toHaveBeenCalledWith({
+      appState: { target: '/properties' }
+    });
+
+    service.loginWithRedirect('//evil.com');
+    expect(auth0Mock.loginWithRedirect).toHaveBeenCalledWith({
+      appState: { target: '/dashboard' }
+    });
   });
 
-  it('debe ejecutar el flujo bootstrap -> getMe cuando Auth0 indica isAuthenticated = true', () => {
+  it('7. debe ejecutar bootstrap y luego me cuando Auth0 autentica', () => {
     const mockBootstrap: BootstrapResponse = {
       id: 'uuid-1',
       displayName: 'Usuario Existente',
@@ -81,7 +92,8 @@ describe('AuthService', () => {
     authApiMock.bootstrap.mockReturnValue(of(mockBootstrap));
     authApiMock.getMe.mockReturnValue(of(mockMe));
 
-    // Emitir sesión autenticada
+    // Emitir fin de carga y autenticación exitosa
+    auth0Mock.isLoading$.next(false);
     auth0Mock.isAuthenticated$.next(true);
 
     expect(authApiMock.bootstrap).toHaveBeenCalled();
@@ -90,30 +102,37 @@ describe('AuthService', () => {
     expect(userStore.roles()).toEqual(['OWNER']);
   });
 
-  it('debe redirigir a /auth/select-role si el usuario autenticado tiene roles vacío', () => {
+  it('8. la inicialización compartida no debe duplicar solicitudes ante múltiples suscriptores', () => {
     const mockBootstrap: BootstrapResponse = {
-      id: 'uuid-new',
-      displayName: 'Nuevo Usuario',
+      id: 'uuid-1',
+      displayName: 'Usuario Existente',
       status: 'ACTIVE',
-      roles: []
+      roles: ['OWNER']
     };
     const mockMe: UserResponse = {
-      id: 'uuid-new',
-      email: 'nuevo@fixup.com',
-      displayName: 'Nuevo Usuario',
+      id: 'uuid-1',
+      email: 'owner@fixup.com',
+      displayName: 'Usuario Existente',
       status: 'ACTIVE',
-      roles: []
+      roles: ['OWNER']
     };
 
     authApiMock.bootstrap.mockReturnValue(of(mockBootstrap));
     authApiMock.getMe.mockReturnValue(of(mockMe));
 
+    auth0Mock.isLoading$.next(false);
     auth0Mock.isAuthenticated$.next(true);
 
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/select-role']);
+    // Múltiples suscriptores concurrentes a sessionReady$
+    service.sessionReady$.subscribe();
+    service.sessionReady$.subscribe();
+    service.sessionReady$.subscribe();
+
+    expect(authApiMock.bootstrap).toHaveBeenCalledTimes(1);
+    expect(authApiMock.getMe).toHaveBeenCalledTimes(1);
   });
 
-  it('debe asignar el rol inicial mediante selectInitialRole y actualizar el store', () => {
+  it('9. la selección de rol inicial debe consumir POST /auth/select-role', () => {
     const mockRolesResponse: RolesResponse = { roles: ['TENANT'] };
     const mockMeResponse: UserResponse = {
       id: 'uuid-1',
@@ -129,13 +148,29 @@ describe('AuthService', () => {
     service.selectInitialRole('TENANT').subscribe((profile) => {
       expect(profile.roles).toEqual(['TENANT']);
       expect(userStore.roles()).toEqual(['TENANT']);
+      expect(userStore.activeRole()).toBe('TENANT');
       expect(routerNavigateSpy).toHaveBeenCalledWith(['/dashboard']);
     });
 
     expect(authApiMock.selectInitialRole).toHaveBeenCalledWith('TENANT');
   });
 
-  it('debe limpiar el CurrentUserStore y delegar el cierre a Auth0 en logout()', () => {
+  it('debe activar un rol existente mediante selectRole() sin llamar al backend', () => {
+    userStore.setProfile({
+      id: 'uuid-1',
+      email: 'c@fixup.com',
+      displayName: 'Carlos',
+      status: 'ACTIVE',
+      roles: ['OWNER', 'TENANT']
+    });
+
+    service.selectRole('OWNER');
+
+    expect(userStore.activeRole()).toBe('OWNER');
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('15. logout debe limpiar completamente el store y reiniciar el flujo compartido', () => {
     userStore.setProfile({
       id: 'uuid-1',
       email: 'c@fixup.com',
@@ -143,10 +178,13 @@ describe('AuthService', () => {
       status: 'ACTIVE',
       roles: ['OWNER']
     });
+    userStore.setActiveRole('OWNER');
 
     service.logout();
 
     expect(userStore.user()).toBeNull();
+    expect(userStore.activeRole()).toBeNull();
+    expect(userStore.roles()).toEqual([]);
     expect(auth0Mock.logout).toHaveBeenCalled();
   });
 });
