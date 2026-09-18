@@ -7,6 +7,9 @@ export const environmentExample = {
   auth0: {
     domain: 'example.auth0.com',
     clientId: 'example-client-id',
-    audience: 'https://api.example.com'
+    authorizationParams: {
+      audience: 'https://api.example.com',
+      redirect_uri: 'http://localhost:4200'
+    }
   }
 };

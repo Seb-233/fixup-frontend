@@ -5,12 +5,17 @@ import { API_ROUTES, apiUrl } from '../../api/api.routes';
 
 // Configura Auth0 autorizando exclusivamente los tres endpoints exactos del backend
 export function provideFixUpAuth(): EnvironmentProviders {
+  const auth0Params = environment.auth0.authorizationParams;
+  const audience = auth0Params.audience;
+  const redirectUri =
+    auth0Params.redirect_uri || (typeof window !== 'undefined' ? window.location.origin : '');
+
   return provideAuth0({
     domain: environment.auth0.domain,
     clientId: environment.auth0.clientId,
     authorizationParams: {
-      redirect_uri: typeof window !== 'undefined' ? window.location.origin : '',
-      audience: environment.auth0.audience
+      redirect_uri: redirectUri,
+      audience
     },
     httpInterceptor: {
       allowedList: [
@@ -19,7 +24,7 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
-              audience: environment.auth0.audience
+              audience
             }
           }
         },
@@ -28,7 +33,7 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'GET',
           tokenOptions: {
             authorizationParams: {
-              audience: environment.auth0.audience
+              audience
             }
           }
         },
@@ -37,7 +42,7 @@ export function provideFixUpAuth(): EnvironmentProviders {
           httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
-              audience: environment.auth0.audience
+              audience
             }
           }
         }
