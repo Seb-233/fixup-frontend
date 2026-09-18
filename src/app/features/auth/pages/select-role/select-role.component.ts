@@ -12,11 +12,19 @@ import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth
   imports: [CommonModule],
   template: `
     <div class="onboarding-wrapper">
-      <!-- Orbes difuminados de ambientación de marca -->
-      <div class="ambient-orb orb-1" aria-hidden="true"></div>
-      <div class="ambient-orb orb-2" aria-hidden="true"></div>
+      <!-- 1. Rejilla Blueprint Arquitectónica de Precisión -->
+      <div class="blueprint-grid" aria-hidden="true"></div>
+
+      <!-- 2. Orbes de Luz Multitono con Profundidad -->
+      <div class="ambient-orb orb-gold" aria-hidden="true"></div>
+      <div class="ambient-orb orb-slate" aria-hidden="true"></div>
+      <div class="ambient-orb orb-teal" aria-hidden="true"></div>
+      <div class="ambient-orb orb-bronze" aria-hidden="true"></div>
 
       <main class="role-selection-card">
+        <!-- Barra de acento dorada superior -->
+        <div class="card-accent-bar" aria-hidden="true"></div>
+
         <!-- Indicador de progreso de incorporación -->
         <div class="step-indicator">
           <span class="step-badge">Paso 1 de 1 • Configuración Inicial</span>
@@ -141,64 +149,123 @@ import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth
       justify-content: center;
       align-items: center;
       padding: 2rem 1.25rem;
-      background: #faf8f5;
+      background: radial-gradient(ellipse at 50% 10%, #ffffff 0%, #f6f2ec 35%, #eae1d2 75%, #dbcfbd 100%);
       overflow: hidden;
     }
 
-    /* Orbes difuminados de fondo */
+    /* 1. Rejilla Blueprint Arquitectónica */
+    .blueprint-grid {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(206, 172, 120, 0.35) 1.5px, transparent 1.5px),
+        linear-gradient(to right, rgba(45, 46, 49, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(45, 46, 49, 0.06) 1px, transparent 1px);
+      background-size: 32px 32px, 64px 64px, 64px 64px;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.9;
+    }
+
+    /* 2. Orbes de Luz Multitono */
     .ambient-orb {
       position: absolute;
       border-radius: 50%;
       pointer-events: none;
-      z-index: 0;
-      opacity: 0.65;
+      z-index: 2;
+      filter: blur(65px);
     }
 
-    .orb-1 {
-      width: 500px;
-      height: 500px;
-      top: -120px;
-      right: -80px;
-      background: radial-gradient(circle, rgba(206, 172, 120, 0.4) 0%, rgba(206, 172, 120, 0) 70%);
-      filter: blur(90px);
-      animation: floatSlow 22s ease-in-out infinite alternate;
-    }
-
-    .orb-2 {
-      width: 450px;
-      height: 450px;
-      bottom: -100px;
+    .orb-gold {
+      width: 520px;
+      height: 520px;
+      top: -100px;
       left: -80px;
-      background: radial-gradient(circle, rgba(45, 46, 49, 0.25) 0%, rgba(45, 46, 49, 0) 70%);
-      filter: blur(85px);
-      animation: floatSlow 26s ease-in-out infinite alternate-reverse;
+      background: radial-gradient(circle, rgba(206, 172, 120, 0.55) 0%, rgba(206, 172, 120, 0.08) 65%, transparent 100%);
+      animation: floatOrbGold 20s ease-in-out infinite alternate;
     }
 
-    @keyframes floatSlow {
+    .orb-slate {
+      width: 540px;
+      height: 540px;
+      bottom: -120px;
+      right: -100px;
+      background: radial-gradient(circle, rgba(30, 34, 42, 0.28) 0%, rgba(30, 34, 42, 0.04) 65%, transparent 100%);
+      animation: floatOrbSlate 24s ease-in-out infinite alternate;
+    }
+
+    .orb-teal {
+      width: 440px;
+      height: 440px;
+      top: 15%;
+      right: 8%;
+      background: radial-gradient(circle, rgba(43, 83, 102, 0.35) 0%, rgba(43, 83, 102, 0.05) 65%, transparent 100%);
+      animation: floatOrbTeal 22s ease-in-out infinite alternate;
+    }
+
+    .orb-bronze {
+      width: 420px;
+      height: 420px;
+      bottom: 12%;
+      left: 6%;
+      background: radial-gradient(circle, rgba(194, 125, 68, 0.32) 0%, rgba(194, 125, 68, 0.04) 65%, transparent 100%);
+      animation: floatOrbBronze 19s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatOrbGold {
       0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(25px, -20px) scale(1.05); }
-      100% { transform: translate(-20px, 25px) scale(0.96); }
+      50% { transform: translate(40px, 30px) scale(1.06); }
+      100% { transform: translate(-20px, 60px) scale(0.95); }
+    }
+
+    @keyframes floatOrbSlate {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-50px, -40px) scale(1.08); }
+      100% { transform: translate(30px, -60px) scale(0.94); }
+    }
+
+    @keyframes floatOrbTeal {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-35px, 35px) scale(1.05); }
+      100% { transform: translate(25px, -30px) scale(0.96); }
+    }
+
+    @keyframes floatOrbBronze {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(45px, -30px) scale(1.07); }
+      100% { transform: translate(-30px, 20px) scale(0.93); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .ambient-orb { animation: none; }
+      .ambient-orb { animation: none !important; transform: none !important; }
     }
 
     /* Tarjeta principal Glassmorphic */
     .role-selection-card {
       position: relative;
-      z-index: 1;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.85);
-      border-radius: 20px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.90);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
       box-shadow:
-        0 20px 50px -12px rgba(45, 46, 49, 0.12),
-        0 0 0 1px rgba(255, 255, 255, 0.6) inset;
-      padding: 2.75rem 2.25rem;
-      max-width: 660px;
+        0 25px 60px -15px rgba(45, 46, 49, 0.20),
+        0 0 0 1px rgba(206, 172, 120, 0.32),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      padding: 3rem 2.5rem;
+      max-width: 680px;
       width: 100%;
+    }
+
+    .card-accent-bar {
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #ceac78 30%, #e6c995 50%, #ceac78 70%, transparent);
+      border-radius: 3px;
     }
 
     .step-indicator {
