@@ -1,0 +1,16 @@
+export * from './auth-controller.service';
+import { AuthControllerService } from './auth-controller.service';
+export * from './auth-controller.serviceInterface';
+export * from './current-user-controller.service';
+import { CurrentUserControllerService } from './current-user-controller.service';
+export * from './current-user-controller.serviceInterface';
+export * from './fixer-verification-controller.service';
+import { FixerVerificationControllerService } from './fixer-verification-controller.service';
+export * from './fixer-verification-controller.serviceInterface';
+export * from './market-indicators-controller.service';
+import { MarketIndicatorsControllerService } from './market-indicators-controller.service';
+export * from './market-indicators-controller.serviceInterface';
+export * from './portfolio-controller.service';
+import { PortfolioControllerService } from './portfolio-controller.service';
+export * from './portfolio-controller.serviceInterface';
+export const APIS = [AuthControllerService, CurrentUserControllerService, FixerVerificationControllerService, MarketIndicatorsControllerService, PortfolioControllerService];

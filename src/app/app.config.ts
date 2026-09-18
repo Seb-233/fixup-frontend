@@ -7,6 +7,8 @@ import { routes } from './app.routes';
 import { authHttpInterceptorFn } from '@auth0/auth0-angular';
 import { provideFixUpAuth } from './core/auth/auth.config';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { provideApi } from './api/generated';
+import { environment } from '../environments/environment';
 
 // Configuración global de la aplicación Angular Standalone
 export const appConfig: ApplicationConfig = {
@@ -15,6 +17,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authHttpInterceptorFn, errorInterceptor])),
     provideFixUpAuth(),
+    // El cliente de src/app/api/generated se genera desde docs/openapi.json del backend.
+    provideApi(environment.apiOrigin),
     provideIonicAngular({}),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

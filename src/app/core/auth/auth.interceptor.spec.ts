@@ -5,6 +5,7 @@ import { authHttpInterceptorFn, Auth0ClientService, AuthService as Auth0Service 
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { apiUrl, API_ROUTES } from '../../api/api.routes';
+import { environment } from '../../../environments/environment';
 import { provideFixUpAuth } from './auth.config';
 
 describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
@@ -95,7 +96,9 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
   });
 
   it('14. no debe adjuntar tokens a rutas internas no autorizadas expresamente', async () => {
-    const internalUnprotected = 'http://localhost:8081/public/health';
+    // Mismo origen que la API pero fuera de los prefijos protegidos: el health publico
+    // del backend es permitAll y no debe recibir el token.
+    const internalUnprotected = `${environment.apiOrigin}/actuator/health`;
     http.get(internalUnprotected).subscribe();
     await Promise.resolve();
 

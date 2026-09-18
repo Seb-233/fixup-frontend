@@ -78,7 +78,9 @@ npm ci
 
 Puertos y orígenes recomendados para desarrollo:
 - **Frontend Angular**: `http://localhost:4200`
-- **Backend API**: `http://localhost:8081` (`apiOrigin: 'http://localhost:8081'`)
+- **Backend API**: `http://localhost:8080` (`apiOrigin: 'http://localhost:8080'`)
+  El backend publica 8080 y `compose.local.yml` lo mapea a `127.0.0.1:${BACKEND_PORT:-8080}`.
+  Si cambias `BACKEND_PORT` en tu `.env` local, ajusta también `apiOrigin`.
 
 Rutas de autenticación backend autorizadas:
 - `POST /auth/bootstrap`
