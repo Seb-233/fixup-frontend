@@ -1,33 +1,53 @@
 import { EnvironmentProviders } from '@angular/core';
 import { provideAuth0 } from '@auth0/auth0-angular';
 import { environment } from '../../../environments/environment';
+import { API_ROUTES, apiUrl } from '../../api/api.routes';
 
-export interface FixUpAuthConfig {
-  domain: string;
-  clientId: string;
-  audience: string;
-  apiBaseUrl: string;
-}
-
-/**
- * Provides Auth0 configuration with explicit allowed list of API endpoints.
- * Never includes client secrets or private tokens.
- */
+// Configura Auth0 autorizando exclusivamente los tres endpoints exactos del backend
 export function provideFixUpAuth(): EnvironmentProviders {
+  const audience = environment.auth0.audience;
+  const redirectUri =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : 'http://localhost:4200/auth/callback';
+
   return provideAuth0({
     domain: environment.auth0.domain,
     clientId: environment.auth0.clientId,
     authorizationParams: {
-      redirect_uri: typeof window !== 'undefined' ? window.location.origin : '',
-      audience: environment.auth0.audience
+      redirect_uri: redirectUri,
+      audience,
+      scope: 'openid profile email access:fixup'
     },
     httpInterceptor: {
       allowedList: [
         {
-          uri: `${environment.apiBaseUrl}/*`,
+          uri: apiUrl(API_ROUTES.auth.bootstrap),
+          httpMethod: 'POST',
           tokenOptions: {
             authorizationParams: {
-              audience: environment.auth0.audience
+              audience,
+              scope: 'openid profile email access:fixup'
+            }
+          }
+        },
+        {
+          uri: apiUrl(API_ROUTES.auth.me),
+          httpMethod: 'GET',
+          tokenOptions: {
+            authorizationParams: {
+              audience,
+              scope: 'openid profile email access:fixup'
+            }
+          }
+        },
+        {
+          uri: apiUrl(API_ROUTES.auth.selectRole),
+          httpMethod: 'POST',
+          tokenOptions: {
+            authorizationParams: {
+              audience,
+              scope: 'openid profile email access:fixup'
             }
           }
         }

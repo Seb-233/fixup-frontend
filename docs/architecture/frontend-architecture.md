@@ -87,11 +87,11 @@ Cada funcionalidad se aísla en su propio dominio. Una feature no debe importar 
 - **Rol de Auth0**: Auth0 actúa exclusivamente como proveedor de identidad externa, inicio/cierre de sesión federado y emisor de Access Tokens criptográficos.
 - **Validación en el Backend**: El backend modular de FixUp es la única entidad autorizada para verificar la firma, expiración y claims de los Access Tokens emitidos por Auth0.
 - **Fuente de Autoridad para Perfil y Roles**: Los roles y la información del usuario no se toman de claims personalizados de Auth0. La fuente autorizada y definitiva es el endpoint del backend:
-  `GET /users/me`
+  `GET /auth/me`
   Dicho endpoint valida el token y devuelve el ID interno, rol de negocio, estado y permisos del usuario.
-- **Autorización por Recurso**: Toda autorización sobre datos y operaciones se valida estricta y exclusivamente en el backend en cada petición. Los guards del frontend (`authGuard`, `roleGuard`) cumplen únicamente una función de control de navegación y experiencia de usuario (UX); `roleGuard` no se considera funcional hasta integrar el consumo de `/users/me`.
+- **Autorización por Recurso**: Toda autorización sobre datos y operaciones se valida estricta y exclusivamente en el backend en cada petición. Los guards del frontend (`authGuard`, `roleGuard`) cumplen únicamente una función de control de navegación y experiencia de usuario (UX); `roleGuard` se apoya en los roles obtenidos de `/auth/me`.
 - **Seguridad en Clientes Públicos**: La aplicación frontend actúa como cliente público (SPA/Capacitor): bajo ninguna circunstancia contiene `Client Secret`, `Management API Token` ni contraseñas. Los tokens se mantienen en memoria y nunca se persisten en `localStorage`.
-- **Restricción de Tokens**: El interceptor `auth.interceptor.ts` delega el Bearer Token de manera restringida únicamente a las peticiones dirigidas a `environment.apiBaseUrl`, previniendo fugas hacia URLs de terceros.
+- **Restricción de Tokens**: El interceptor `auth.interceptor.ts` y la lista de permitidos (`allowedList`) delegan el Bearer Token de manera restringida únicamente a las rutas autorizadas (`/auth/bootstrap`, `/auth/me`, `/auth/select-role`) en `environment.apiOrigin`, previniendo fugas hacia URLs de terceros.
 
 ### Adaptabilidad Responsive
 - El diseño responde automáticamente al dispositivo del usuario mediante variables y mixins SCSS en `src/styles/` y detección reactiva de pantalla en `AppComponent`, renderizando el shell de escritorio o móvil según corresponda sin duplicar salidas del enrutador (`RouterOutlet`).

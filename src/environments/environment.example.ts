@@ -1,12 +1,12 @@
-// Environment configuration template (Placeholders only)
-// NEVER commit real credentials, secrets, or tokens to version control.
+// Plantilla de configuración de entorno (Placeholders)
+// NUNCA incluir secretos ni tokens reales en control de versiones.
 
 export const environmentExample = {
   production: false,
-  apiBaseUrl: 'http://localhost:8080/api/v1',
+  apiOrigin: 'http://localhost:8081',
   auth0: {
-    domain: 'example.auth0.com',
-    clientId: 'example-client-id',
-    audience: 'https://api.example.com'
+    domain: 'your-tenant.us.auth0.com',
+    clientId: 'your-client-id',
+    audience: 'urn:fixup:api'
   }
 };

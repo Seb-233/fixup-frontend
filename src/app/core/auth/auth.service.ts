@@ -1,59 +1,98 @@
 import { Injectable, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { AuthApiService } from '../../api/auth-api.service';
+import { BackendUserProfile, Role, SelectableRole } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
 
-/**
- * Authentication service acting as an adapter over Auth0.
- * Responsibilities:
- * - Session login and logout delegation.
- * - External identity integration (Auth0).
- * - Access token acquisition via Auth0 SDK in memory (never in localStorage).
- * 
- * Notice: Authoritative application roles are NOT read from Auth0 claims.
- * They will be fetched from the FixUp backend (GET /users/me).
- */
+// Servicio de autenticación que orquesta Auth0 y la sincronización con el backend
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private readonly auth0 = inject(Auth0Service);
+  private readonly authApi = inject(AuthApiService);
   private readonly userStore = inject(CurrentUserStore);
+  private readonly router = inject(Router);
 
   readonly isAuthenticated$: Observable<boolean> = this.auth0.isAuthenticated$;
   readonly user$: Observable<User | null | undefined> = this.auth0.user$;
   readonly isLoading$: Observable<boolean> = this.auth0.isLoading$;
+  readonly error$: Observable<Error> = this.auth0.error$;
+  readonly appState$: Observable<{ target?: string } | undefined> = this.auth0.appState$;
+
+  // Gatillo reiniciable para la sesión compartida
+  private readonly initTrigger$ = new BehaviorSubject<void>(undefined);
+
+  // Flujo observable compartido y reactivo para la inicialización y bootstrap con el backend
+  readonly sessionReady$: Observable<BackendUserProfile | null> = this.initTrigger$.pipe(
+    switchMap(() =>
+      combineLatest([this.auth0.isLoading$, this.auth0.isAuthenticated$]).pipe(
+        filter(([loading]) => !loading),
+        map(([, authenticated]) => authenticated),
+        distinctUntilChanged(),
+        switchMap((authenticated) => {
+          if (!authenticated) {
+            this.userStore.clear();
+            return of(null);
+          }
+
+          this.userStore.setLoading(true);
+
+          return this.authApi.bootstrap().pipe(
+            switchMap(() => this.authApi.getMe()),
+            map((response): BackendUserProfile => ({
+              id: response.id,
+              email: response.email ?? null,
+              displayName: response.displayName ?? '',
+              status: response.status,
+              roles: response.roles
+            })),
+            tap((profile) => {
+              this.userStore.setProfile(profile);
+              this.userStore.setLoading(false);
+            }),
+            catchError((error) => {
+              this.userStore.setLoading(false);
+              this.userStore.setError(error?.message ?? 'Error inicializando sesión');
+              return of(null);
+            })
+          );
+        })
+      )
+    ),
+    shareReplay({ bufferSize: 1, refCount: false })
+  );
 
   constructor() {
-    this.auth0.user$.subscribe((user) => {
-      if (user) {
-        // Initial state from external identity; roles remain empty until GET /users/me is called
-        this.userStore.setUser({
-          id: '', // Will be populated by backend GET /users/me
-          externalId: user.sub ?? '',
-          email: user.email ?? '',
-          name: user.name ?? '',
-          roles: [] // Authoritative roles sourced strictly from backend
-        });
-      } else {
-        this.userStore.clear();
-      }
-    });
+    this.sessionReady$.subscribe();
+  }
 
-    this.auth0.isLoading$.subscribe((loading) => {
-      this.userStore.setLoading(loading);
+  // Redirige al login de Auth0 preservando un target interno validado
+  loginWithRedirect(targetUrl?: string): Observable<void> {
+    const safeTarget =
+      targetUrl && targetUrl.startsWith('/') && !targetUrl.startsWith('//')
+        ? targetUrl
+        : '/dashboard';
+
+    return this.auth0.loginWithRedirect({
+      appState: { target: safeTarget }
     });
   }
 
-  loginWithRedirect(): Observable<void> {
-    return this.auth0.loginWithRedirect();
-  }
-
+  // Cierra sesión limpiando el store local, reiniciando el flujo observable y regresando a /auth/login
   logout(): Observable<void> {
     this.userStore.clear();
+    this.initTrigger$.next();
+    const returnTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/login`
+        : 'http://localhost:4200/auth/login';
+
     return this.auth0.logout({
       logoutParams: {
-        returnTo: typeof window !== 'undefined' ? window.location.origin : ''
+        returnTo
       }
     });
   }
@@ -62,12 +101,58 @@ export class AuthService {
     return this.auth0.getAccessTokenSilently();
   }
 
-  /**
-   * Stub for backend user profile integration (GET /users/me).
-   * In future phases, this method will query the FixUp API with the Auth0 token
-   * and load the user's internal ID, status, and backend-authorized roles.
-   */
-  loadBackendUserProfile(): void {
-    // Contract to be implemented with backend /users/me client in future phases
+  // Selecciona y activa uno de los roles disponibles devueltos por el backend
+  selectRole(role: Role): void {
+    this.userStore.setActiveRole(role);
+    this.router.navigate(['/dashboard']);
+  }
+
+  // Asigna un rol inicial en el backend para una cuenta nueva y sincroniza el perfil
+  selectInitialRole(role: SelectableRole): Observable<BackendUserProfile> {
+    this.userStore.setLoading(true);
+    this.userStore.setError(null);
+
+    // 4 y 5. Ejecuta una única llamada a POST /auth/select-role con { role: selectedRole }
+    return this.authApi.selectInitialRole(role).pipe(
+      tap((rolesResponse) => {
+        // 1. Actualizar el store con la respuesta
+        if (rolesResponse?.roles) {
+          this.userStore.setRoles(rolesResponse.roles);
+        }
+      }),
+      // 2. Ejecutar nuevamente GET /auth/me para sincronizar el perfil definitivo
+      switchMap(() => this.authApi.getMe()),
+      map((response): BackendUserProfile => {
+        // 3. Confirmar que roles contiene el rol seleccionado
+        const roles = response.roles && response.roles.length > 0 ? response.roles : [role];
+        return {
+          id: response.id,
+          email: response.email ?? null,
+          displayName: response.displayName ?? '',
+          status: response.status,
+          roles
+        };
+      }),
+      tap((profile) => {
+        // 4. Establecer el rol de sesión según el contrato real
+        this.userStore.setProfile(profile);
+        this.userStore.setActiveRole(role);
+        this.userStore.setLoading(false);
+        // 5. Redirigir a /dashboard
+        this.router.navigate(['/dashboard']);
+      }),
+      catchError((err: unknown) => {
+        this.userStore.setLoading(false);
+        // 10. Los errores 400, 403 o 409 del backend se muestran sin modificar localmente los roles
+        const errorObj = err as { error?: { message?: string; code?: string }; message?: string };
+        const msg =
+          errorObj.error?.message ||
+          errorObj.error?.code ||
+          errorObj.message ||
+          'Error asignando el rol inicial';
+        this.userStore.setError(msg);
+        return throwError(() => err);
+      })
+    );
   }
 }

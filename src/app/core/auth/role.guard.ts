@@ -1,26 +1,57 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
+import { Role } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
 
-/**
- * Functional guard factory that verifies if the current user possesses required roles.
- * 
- * IMPORTANT ARCHITECTURAL NOTE:
- * This guard is a client-side navigation and UX helper only and is NOT considered
- * functional until the backend profile (GET /users/me) is integrated in subsequent phases.
- * True data and resource authorization is always enforced strictly on the backend.
- */
-export function roleGuard(allowedRoles: string[]): CanActivateFn {
-  return () => {
-    const userStore = inject(CurrentUserStore);
-    const router = inject(Router);
+function evaluateRolePermission(
+  userStore: CurrentUserStore,
+  router: Router,
+  allowedRoles?: Role[]
+): boolean {
+  // Cuenta inactiva o suspendida
+  if (userStore.status() === 'SUSPENDED' || userStore.status() === 'DISABLED') {
+    router.navigate(['/auth/account-restricted']);
+    return false;
+  }
 
-    const hasPermission = userStore.hasAnyRole(allowedRoles);
+  // Si no tiene roles (cuenta nueva), enviar a select-role para selección inicial
+  if (userStore.roles().length === 0) {
+    router.navigate(['/auth/select-role']);
+    return false;
+  }
+
+  // Si cuenta con roles pero activeRole no estaba fijado, activar el primer rol disponible
+  if (userStore.activeRole() === null && userStore.roles().length > 0) {
+    userStore.setActiveRole(userStore.roles()[0]);
+  }
+
+  // Verificación del rol activo contra los roles permitidos
+  if (allowedRoles && allowedRoles.length > 0) {
+    const active = userStore.activeRole();
+    const hasPermission = active ? allowedRoles.includes(active) : false;
     if (!hasPermission) {
-      router.navigate(['/']);
+      router.navigate(['/auth/access-denied']);
       return false;
     }
+  }
 
-    return true;
-  };
+  return true;
 }
+
+// Guard de navegación que evalúa roles desde route.data['roles'] o por parámetro
+export const roleGuard: CanActivateFn & ((allowedRoles?: Role[]) => CanActivateFn) = Object.assign(
+  (route: ActivatedRouteSnapshot) => {
+    const userStore = inject(CurrentUserStore);
+    const router = inject(Router);
+    const allowedRoles = route.data?.['roles'] as Role[] | undefined;
+    return evaluateRolePermission(userStore, router, allowedRoles);
+  },
+  (allowedRoles?: Role[]): CanActivateFn => {
+    return (route: ActivatedRouteSnapshot) => {
+      const userStore = inject(CurrentUserStore);
+      const router = inject(Router);
+      const roles = allowedRoles ?? (route.data?.['roles'] as Role[] | undefined);
+      return evaluateRolePermission(userStore, router, roles);
+    };
+  }
+);
