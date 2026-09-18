@@ -92,13 +92,68 @@ export const routes: Routes = [
           roles: ['OWNER', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
         }
       },
+      // FR-UC-18: solicitudes de reparación.
+      // La bandeja del Fixer va antes que el detalle para que 'inbox' no se lea como un id.
       {
         path: 'requests',
         canActivate: [roleGuard],
-        component: PlaceholderComponent,
+        loadComponent: () =>
+          import('./features/requests/pages/mine/my-requests.component').then(
+            (m) => m.MyRequestsComponent
+          ),
         data: {
-          title: 'Solicitudes',
+          title: 'Mis Solicitudes',
+          roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER']
+        }
+      },
+      {
+        path: 'requests/inbox',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/requests/pages/inbox/request-inbox.component').then(
+            (m) => m.RequestInboxComponent
+          ),
+        data: {
+          title: 'Solicitudes Disponibles',
+          roles: ['FIXER']
+        }
+      },
+      {
+        path: 'requests/:requestId',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/requests/pages/detail/request-detail.component').then(
+            (m) => m.RequestDetailComponent
+          ),
+        data: {
+          title: 'Detalle de la Solicitud',
           roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
+        }
+      },
+
+      // FR-UC-18: cotizaciones
+      {
+        path: 'quotations/me',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/quotations/pages/mine/my-quotations.component').then(
+            (m) => m.MyQuotationsComponent
+          ),
+        data: {
+          title: 'Mis Cotizaciones',
+          roles: ['FIXER']
+        }
+      },
+      {
+        path: 'quotations/request/:requestId',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/quotations/pages/board/quotation-board.component').then(
+            (m) => m.QuotationBoardComponent
+          ),
+        data: {
+          title: 'Cotizaciones Recibidas',
+          roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER']
         }
       },
       {
