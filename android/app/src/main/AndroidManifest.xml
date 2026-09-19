@@ -22,6 +22,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                FR-UC-21: retorno de Auth0 por deep link.
+                El esquema es el applicationId y el host es el dominio del tenant. Ambos deben
+                coincidir con environment.native.appId, environment.auth0.domain y los Allowed
+                Callback URLs configurados en Auth0, o el navegador no devuelve el control.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="${applicationId}"
+                    android:host="${auth0Domain}" />
+            </intent-filter>
+
         </activity>
 
         <provider
