@@ -78,4 +78,31 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     expect(component.currentUrl()).toBe('/properties');
     expect(component.activeIndex()).toBe(1);
   });
+
+  it('debe incluir /requests/inbox para FIXER', () => {
+    userStore.setRoles(['FIXER']);
+    userStore.setActiveRole('FIXER');
+    fixture.detectChanges();
+    const items = component.visibleItems();
+    const reqItem = items.find(i => i.label === 'Solicitudes');
+    expect(reqItem?.path).toBe('/requests/inbox');
+  });
+
+  it('no debe incluir enlace de Solicitudes para PLATFORM_ADMIN', () => {
+    userStore.setRoles(['PLATFORM_ADMIN']);
+    userStore.setActiveRole('PLATFORM_ADMIN');
+    fixture.detectChanges();
+    const items = component.visibleItems();
+    const reqItem = items.find(i => i.label === 'Solicitudes');
+    expect(reqItem).toBeUndefined();
+  });
+
+  it('debe incluir /requests para OWNER', () => {
+    userStore.setRoles(['OWNER']);
+    userStore.setActiveRole('OWNER');
+    fixture.detectChanges();
+    const items = component.visibleItems();
+    const reqItem = items.find(i => i.label === 'Solicitudes');
+    expect(reqItem?.path).toBe('/requests');
+  });
 });

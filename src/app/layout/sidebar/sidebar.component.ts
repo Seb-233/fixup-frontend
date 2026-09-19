@@ -140,13 +140,19 @@ export class SidebarComponent implements OnDestroy {
   readonly currentUrl = signal<string>(this.router.url);
   private readonly routerSubscription: Subscription;
 
-  private readonly allItems: NavItem[] = [
-    { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard' },
-    { path: '/properties', label: 'Propiedades', icon: 'properties', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-    { path: '/fixers', label: 'Técnicos', icon: 'fixers', roles: ['OWNER', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-    { path: '/requests', label: 'Solicitudes', icon: 'requests', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-    { path: '/profile', label: 'Mi Perfil', icon: 'profile' }
-  ];
+  readonly visibleItems = computed(() => {
+    const activeRole = this.userStore.activeRole();
+    if (!activeRole) return [];
+
+    const items: NavItem[] = [
+      { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard' },
+      { path: '/properties', label: 'Propiedades', icon: 'properties', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
+      { path: '/fixers', label: 'Técnicos', icon: 'fixers', roles: ['OWNER', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
+      { path: activeRole === 'FIXER' ? '/requests/inbox' : '/requests', label: 'Solicitudes', icon: 'requests', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] },
+      { path: '/profile', label: 'Mi Perfil', icon: 'profile' }
+    ];
+    return items.filter((item) => !item.roles || item.roles.includes(activeRole));
+  });
 
   constructor() {
     this.routerSubscription = this.router.events
@@ -155,12 +161,6 @@ export class SidebarComponent implements OnDestroy {
         this.currentUrl.set(event.urlAfterRedirects || event.url);
       });
   }
-
-  readonly visibleItems = computed(() => {
-    const activeRole = this.userStore.activeRole();
-    if (!activeRole) return [];
-    return this.allItems.filter((item) => !item.roles || item.roles.includes(activeRole));
-  });
 
   readonly activeIndex = computed<number>(() => {
     const items = this.visibleItems();

@@ -74,10 +74,23 @@ describe('DashboardComponent (Landing Principal Autenticada)', () => {
     expect(compiled.textContent).toContain('Solicitudes en Zona');
   });
 
-  it('debe incluir accesos directos a solicitudes, inmuebles y técnicos', () => {
+  it('debe enrutar /requests para OWNER', () => {
+    userStore.setActiveRole('OWNER');
     fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    const actionLinks = compiled.querySelectorAll('.action-card');
-    expect(actionLinks.length).toBe(3);
+    expect(component.requestsPath()).toBe('/requests');
+    expect(component.canManageRequests()).toBe(true);
+  });
+
+  it('debe enrutar /requests/inbox para FIXER', () => {
+    userStore.setActiveRole('FIXER');
+    fixture.detectChanges();
+    expect(component.requestsPath()).toBe('/requests/inbox');
+    expect(component.canManageRequests()).toBe(true);
+  });
+
+  it('no debe mostrar gestionar solicitudes para PLATFORM_ADMIN', () => {
+    userStore.setActiveRole('PLATFORM_ADMIN');
+    fixture.detectChanges();
+    expect(component.canManageRequests()).toBe(false);
   });
 });

@@ -27,16 +27,16 @@ interface MobileNavItem {
 export class BottomNavigationComponent {
   private readonly userStore = inject(CurrentUserStore);
 
-  private readonly allItems: MobileNavItem[] = [
-    { path: '/dashboard', label: 'Panel' },
-    { path: '/properties', label: 'Propiedades', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-    { path: '/requests', label: 'Solicitudes', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-    { path: '/profile', label: 'Perfil' }
-  ];
-
   readonly visibleItems = computed(() => {
     const activeRole = this.userStore.activeRole();
     if (!activeRole) return [];
-    return this.allItems.filter((item) => !item.roles || item.roles.includes(activeRole));
+
+    const items: MobileNavItem[] = [
+      { path: '/dashboard', label: 'Panel' },
+      { path: '/properties', label: 'Propiedades', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
+      { path: activeRole === 'FIXER' ? '/requests/inbox' : '/requests', label: 'Solicitudes', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] },
+      { path: '/profile', label: 'Perfil' }
+    ];
+    return items.filter((item) => !item.roles || item.roles.includes(activeRole));
   });
 }

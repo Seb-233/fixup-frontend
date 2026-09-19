@@ -153,4 +153,14 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
       req.flush({});
     }
   });
+
+  it('17. el prefijo autorizado no debe filtrar el token a rutas que solo empiezan parecido', async () => {
+    const lookAlike = `${environment.apiOrigin}/requests-export`;
+    http.get(lookAlike).subscribe();
+    await Promise.resolve();
+
+    const req = httpMock.expectOne(lookAlike);
+    expect(req.request.headers.has('Authorization')).toBe(false);
+    req.flush({});
+  });
 });
