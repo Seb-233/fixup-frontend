@@ -14,6 +14,7 @@ import { Observable }                                        from 'rxjs';
 import { DocumentsRequest } from '../model/models';
 import { ErrorResponse } from '../model/models';
 import { RejectionRequest } from '../model/models';
+import { SpecialtiesRequest } from '../model/models';
 import { VerificationResponse } from '../model/models';
 
 
@@ -47,14 +48,22 @@ export interface FixerVerificationControllerServiceInterface {
      * @param fixerUserId 
      * @param rejectionRequest 
      */
-    reject(fixerUserId: string, rejectionRequest: RejectionRequest, extraHttpRequestParams?: any): Observable<{}>;
+    reject1(fixerUserId: string, rejectionRequest: RejectionRequest, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
      * File the verification documents and open the administrative review
-     * The body carries storage keys only. Files are uploaded by the client against a signed URL, so no document content crosses this API. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its key.
+     * The body carries storage keys only. No document content crosses this API. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its key.
      * @endpoint post /fixers/me/verification/documents
      * @param documentsRequest 
      */
-    submit(documentsRequest: DocumentsRequest, extraHttpRequestParams?: any): Observable<VerificationResponse>;
+    submit1(documentsRequest: DocumentsRequest, extraHttpRequestParams?: any): Observable<VerificationResponse>;
+
+    /**
+     * Update the fixer\&#39;s offered specialties
+     * Configures the trades the fixer can attend. Requires active account and FIXER role.
+     * @endpoint post /fixers/me/specialties
+     * @param specialtiesRequest
+     */
+    updateSpecialties(specialtiesRequest: SpecialtiesRequest, extraHttpRequestParams?: any): Observable<VerificationResponse>;
 
 }

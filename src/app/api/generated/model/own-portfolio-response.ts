@@ -7,11 +7,13 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { PieceResponse } from './piece-response';
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
+export interface OwnPortfolioResponse { 
+    fixerUserId: string;
+    status: string;
+    publishedAt?: string | null;
+    pieces: Array<PieceResponse>;
 }
 

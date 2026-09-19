@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FixerVerificationDocumentType } from '../../../../api/generated';
+import { FixerVerificationDocumentType, Specialty } from '../../../../api/generated';
 import { FixerVerificationStore } from './fixer-verification.store';
 
-// FR-UC-16: carga de documentos y estado de verificación del técnico
+// FR-UC-16: carga de documentos, especialidades y estado de verificación del técnico
 @Component({
   selector: 'app-fixer-verification',
   standalone: true,
@@ -37,6 +37,43 @@ import { FixerVerificationStore } from './fixer-verification.store';
             Motivo del rechazo: {{ verification.rejectionReason }}
           </p>
         }
+
+        <!-- Especialidades del Fixer -->
+        <div class="specialties-section">
+          <h2>Especialidades de servicio</h2>
+          <div class="current-specialties">
+            @for (esp of store.specialties(); track esp) {
+              <span class="spec-badge">{{ nombreEspecialidad(esp) }}</span>
+            } @empty {
+              <span class="empty">No tienes especialidades configuradas. Debes seleccionar al menos una.</span>
+            }
+          </div>
+
+          <form class="specialties-form" (ngSubmit)="guardarEspecialidades()">
+            <p class="label-heading">Seleccionar especialidades que atiendes:</p>
+            <div class="specialties-grid">
+              @for (esp of especialidadesDisponibles; track esp) {
+                <label class="checkbox-card" [class.selected]="estaSeleccionada(esp)">
+                  <input
+                    type="checkbox"
+                    [value]="esp"
+                    [checked]="estaSeleccionada(esp)"
+                    (change)="alternarEspecialidad(esp)"
+                  />
+                  <span>{{ nombreEspecialidad(esp) }}</span>
+                </label>
+              }
+            </div>
+
+            <button
+              type="submit"
+              class="btn-secondary"
+              [disabled]="seleccionadas().length === 0 || store.submitting()"
+            >
+              {{ store.submitting() ? 'Guardando…' : 'Actualizar especialidades' }}
+            </button>
+          </form>
+        </div>
 
         <div class="documents">
           <div class="document-group">
@@ -126,7 +163,8 @@ import { FixerVerificationStore } from './fixer-verification.store';
       }
       .status-badge,
       .review-badge,
-      .doc-badge {
+      .doc-badge,
+      .spec-badge {
         border-radius: 999px;
         padding: 0.25rem 0.75rem;
         font-size: 0.8125rem;
@@ -157,6 +195,56 @@ import { FixerVerificationStore } from './fixer-verification.store';
         color: #9b1c1c;
         padding: 0.75rem 1rem;
         border-radius: 8px;
+      }
+      .specialties-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        background: #fbfbfb;
+      }
+      .specialties-section h2 {
+        font-size: 1rem;
+        margin: 0 0 0.75rem;
+      }
+      .current-specialties {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .spec-badge {
+        background: #eef2ff;
+        color: #3730a3;
+        border: 1px solid #c7d2fe;
+      }
+      .specialties-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.5rem;
+        margin: 0.5rem 0 1rem;
+      }
+      .label-heading {
+        font-weight: 500;
+        font-size: 0.875rem;
+        margin: 0 0 0.5rem;
+        color: #374151;
+      }
+      .checkbox-card {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        user-select: none;
+      }
+      .checkbox-card.selected {
+        background: #eff6ff;
+        border-color: #3b82f6;
       }
       .documents {
         display: grid;
@@ -206,17 +294,25 @@ import { FixerVerificationStore } from './fixer-verification.store';
         border-radius: 8px;
         font: inherit;
       }
-      .btn-primary {
+      .btn-primary,
+      .btn-secondary {
         margin-top: 0.75rem;
         padding: 0.7rem 1.25rem;
         border: 0;
         border-radius: 8px;
-        background: var(--fixup-primary, #1d4ed8);
-        color: #ffffff;
         font-weight: 600;
         cursor: pointer;
       }
-      .btn-primary:disabled {
+      .btn-primary {
+        background: var(--fixup-primary, #1d4ed8);
+        color: #ffffff;
+      }
+      .btn-secondary {
+        background: #4b5563;
+        color: #ffffff;
+      }
+      .btn-primary:disabled,
+      .btn-secondary:disabled {
         opacity: 0.55;
         cursor: not-allowed;
       }
@@ -237,8 +333,28 @@ export class FixerVerificationComponent implements OnInit {
     'INSURANCE'
   ];
 
+  readonly especialidadesDisponibles: Specialty[] = [
+    Specialty.Plumbing,
+    Specialty.Electrical,
+    Specialty.Painting,
+    Specialty.Carpentry,
+    Specialty.Masonry,
+    Specialty.General
+  ];
+
+  readonly seleccionadas = signal<Specialty[]>([]);
+
   private readonly tipoState = signal<FixerVerificationDocumentType>('ID_CARD');
   private readonly claveState = signal('');
+
+  constructor() {
+    effect(() => {
+      const current = this.store.specialties();
+      if (current.length > 0 && this.seleccionadas().length === 0) {
+        this.seleccionadas.set([...current]);
+      }
+    });
+  }
 
   get tipo(): FixerVerificationDocumentType {
     return this.tipoState();
@@ -260,6 +376,25 @@ export class FixerVerificationComponent implements OnInit {
     this.store.load();
   }
 
+  estaSeleccionada(esp: Specialty): boolean {
+    return this.seleccionadas().includes(esp);
+  }
+
+  alternarEspecialidad(esp: Specialty): void {
+    const list = this.seleccionadas();
+    if (list.includes(esp)) {
+      this.seleccionadas.set(list.filter((s) => s !== esp));
+    } else {
+      this.seleccionadas.set([...list, esp]);
+    }
+  }
+
+  guardarEspecialidades(): void {
+    const specs = this.seleccionadas();
+    if (specs.length === 0) return;
+    this.store.updateSpecialties(specs);
+  }
+
   puedeEnviar(): boolean {
     return this.claveState().trim().length > 0;
   }
@@ -270,6 +405,18 @@ export class FixerVerificationComponent implements OnInit {
     }
     this.store.submit([{ type: this.tipoState(), storageKey: this.claveState().trim() }]);
     this.claveState.set('');
+  }
+
+  nombreEspecialidad(esp: Specialty): string {
+    const nombres: Record<Specialty, string> = {
+      PLUMBING: 'Fontanería',
+      ELECTRICAL: 'Electricidad',
+      PAINTING: 'Pintura',
+      CARPENTRY: 'Carpintería',
+      MASONRY: 'Albañilería',
+      GENERAL: 'Servicios Generales'
+    };
+    return nombres[esp] ?? esp;
   }
 
   nombreDocumento(tipo: FixerVerificationDocumentType): string {

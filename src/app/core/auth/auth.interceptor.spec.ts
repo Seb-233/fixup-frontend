@@ -106,4 +106,21 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({ status: 'UP' });
   });
+
+  it('15. no debe adjuntar Authorization a URLs firmadas de almacenamiento (uploadUrl / readUrl en MinIO o S3)', async () => {
+    const signedUploadUrl = 'https://minio.fixup.local:9000/fixup-portfolio/piece-123.webp?X-Amz-Signature=abc';
+    const signedReadUrl = 'https://s3.amazonaws.com/fixup-storage/portfolio/read-456.png?token=xyz';
+
+    http.put(signedUploadUrl, new Blob(['data'], { type: 'image/webp' })).subscribe();
+    http.get(signedReadUrl).subscribe();
+    await Promise.resolve();
+
+    const putReq = httpMock.expectOne(signedUploadUrl);
+    expect(putReq.request.headers.has('Authorization')).toBe(false);
+    putReq.flush(null);
+
+    const getReq = httpMock.expectOne(signedReadUrl);
+    expect(getReq.request.headers.has('Authorization')).toBe(false);
+    getReq.flush(null);
+  });
 });

@@ -9,9 +9,9 @@
  */
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
-}
+export const MediaPurpose = {
+    FixerPortfolio: 'FIXER_PORTFOLIO',
+    RepairRequest: 'REPAIR_REQUEST',
+} as const;
+export type MediaPurpose = typeof MediaPurpose[keyof typeof MediaPurpose];
 

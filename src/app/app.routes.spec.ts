@@ -1,6 +1,6 @@
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
@@ -38,8 +38,20 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
 
   it('2. un usuario anónimo que visita / termina en /auth/login con returnUrl conservado', async () => {
     userStore.clear();
+    const navPromise = new Promise<void>((resolve) => {
+      const sub = router.events.subscribe((event) => {
+        if (event instanceof NavigationEnd && event.urlAfterRedirects.includes('/auth/login')) {
+          sub.unsubscribe();
+          resolve();
+        }
+      });
+    });
+
     await router.navigateByUrl('/');
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await Promise.race([
+      navPromise,
+      new Promise((resolve) => setTimeout(resolve, 500))
+    ]);
 
     // Redirige canónicamente a dashboard, interceptado por authGuard hacia /auth/login?returnUrl=/dashboard
     expect(router.url).toContain('/auth/login');

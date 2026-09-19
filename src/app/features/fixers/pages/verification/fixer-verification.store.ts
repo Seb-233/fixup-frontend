@@ -4,10 +4,11 @@ import {
   DocumentRequest,
   FixerVerificationControllerService,
   FixerVerificationDocumentType,
+  Specialty,
   VerificationResponse
 } from '../../../../api/generated';
 
-// Estado reactivo de la verificación del técnico autenticado (FR-UC-16)
+// Estado reactivo de la verificación y especialidades del técnico autenticado (FR-UC-16)
 @Injectable()
 export class FixerVerificationStore {
   private readonly api = inject(FixerVerificationControllerService);
@@ -28,6 +29,9 @@ export class FixerVerificationStore {
   readonly missingDocuments = computed<FixerVerificationDocumentType[]>(() =>
     Array.from(this.verificationState()?.missingDocuments ?? [])
   );
+  readonly specialties = computed<Specialty[]>(() =>
+    Array.from(this.verificationState()?.specialties ?? [])
+  );
   readonly underReview = computed(() => this.verificationState()?.underReview ?? false);
   readonly verified = computed(() => this.verificationState()?.status === 'VERIFIED');
 
@@ -47,9 +51,32 @@ export class FixerVerificationStore {
   }
 
   submit(documents: DocumentRequest[]): void {
+    if (!documents || documents.length === 0) {
+      this.errorState.set('Debes proporcionar al menos un documento.');
+      return;
+    }
     this.submittingState.set(true);
     this.errorState.set(null);
-    this.api.submit({ documents }).subscribe({
+    this.api.submit1({ documents }).subscribe({
+      next: (verification: VerificationResponse) => {
+        this.verificationState.set(verification);
+        this.submittingState.set(false);
+      },
+      error: (failure: HttpErrorResponse) => {
+        this.errorState.set(this.describe(failure));
+        this.submittingState.set(false);
+      }
+    });
+  }
+
+  updateSpecialties(specialties: Specialty[]): void {
+    if (!specialties || specialties.length === 0) {
+      this.errorState.set('Debes seleccionar al menos una especialidad.');
+      return;
+    }
+    this.submittingState.set(true);
+    this.errorState.set(null);
+    this.api.updateSpecialties({ specialties }).subscribe({
       next: (verification) => {
         this.verificationState.set(verification);
         this.submittingState.set(false);
@@ -61,7 +88,7 @@ export class FixerVerificationStore {
     });
   }
 
-  // Traduce los códigos del backend sin exponer detalles internos al usuario
+  // Traduce códigos de error HTTP y del backend sin exponer detalles internos al usuario
   private describe(failure: HttpErrorResponse): string {
     switch (failure.error?.code) {
       case 'ALREADY_VERIFIED':
@@ -72,8 +99,22 @@ export class FixerVerificationStore {
         return 'Tu cuenta no tiene el rol de técnico activo.';
       case 'INVALID_REQUEST':
         return 'Revisa los datos enviados: falta información o el tipo no es válido.';
-      default:
-        return 'No se pudo completar la operación. Inténtalo de nuevo.';
     }
+    if (failure.status === 401) {
+      return 'Sesión expirada o no autenticada. Inicia sesión nuevamente.';
+    }
+    if (failure.status === 403) {
+      return 'Tu cuenta no tiene el rol de técnico activo.';
+    }
+    if (failure.status === 404) {
+      return 'Perfil de técnico no encontrado.';
+    }
+    if (failure.status === 409) {
+      return failure.error?.message || 'Conflicto de estado en la verificación.';
+    }
+    if (failure.status === 400) {
+      return failure.error?.message || 'Revisa los datos enviados: información incompleta o formato inválido.';
+    }
+    return failure.error?.message || 'No se pudo completar la operación. Inténtalo de nuevo.';
   }
 }

@@ -9,9 +9,9 @@
  */
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
-}
+export const RepairRequestStatus = {
+    Open: 'OPEN',
+    Assigned: 'ASSIGNED',
+} as const;
+export type RepairRequestStatus = typeof RepairRequestStatus[keyof typeof RepairRequestStatus];
 

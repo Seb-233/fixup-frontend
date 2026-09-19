@@ -9,9 +9,9 @@
  */
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
+export interface PortfolioStatusResponse { 
+    fixerUserId?: string;
+    status?: string;
+    publishedAt?: string;
 }
 

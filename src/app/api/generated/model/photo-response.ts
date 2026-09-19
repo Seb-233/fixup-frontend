@@ -9,9 +9,9 @@
  */
 
 
-export interface PieceRequest { 
+export interface PhotoResponse { 
     mediaId: string;
-    title: string;
-    description?: string;
+    readUrl: string;
+    readUrlExpiresAt: string;
 }
 

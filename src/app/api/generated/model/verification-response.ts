@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Specialty } from './specialty';
 import { FixerVerificationDocumentType } from './fixer-verification-document-type';
 
 
@@ -18,6 +19,7 @@ export interface VerificationResponse {
     rejectionReason?: string | null;
     submittedDocuments: Set<FixerVerificationDocumentType>;
     missingDocuments: Set<FixerVerificationDocumentType>;
+    specialties: Set<Specialty>;
 }
 export namespace VerificationResponse {
     export const StatusEnum = {

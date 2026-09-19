@@ -19,9 +19,13 @@ import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 // @ts-ignore
 import { ErrorResponse } from '../model/error-response';
 // @ts-ignore
+import { OwnPortfolioResponse } from '../model/own-portfolio-response';
+// @ts-ignore
 import { PieceRequest } from '../model/piece-request';
 // @ts-ignore
 import { PieceResponse } from '../model/piece-response';
+// @ts-ignore
+import { PortfolioStatusResponse } from '../model/portfolio-status-response';
 
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
@@ -43,8 +47,68 @@ export class PortfolioControllerService extends BaseService implements Portfolio
     }
 
     /**
+     * Delete a piece from the portfolio
+     * Removes the piece, marks media deleted, and triggers secure storage deletion. If remaining visible photos &lt; 3, reverts portfolio to DRAFT. Requires a verified fixer.
+     * @endpoint delete /media/me/portfolio/pieces/{pieceId}
+     * @param pieceId
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public deletePiece(pieceId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
+    public deletePiece(pieceId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
+    public deletePiece(pieceId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public deletePiece(pieceId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (pieceId === null || pieceId === undefined) {
+            throw new Error('Required parameter pieceId was null or undefined when calling deletePiece.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/media/me/portfolio/pieces/${this.configuration.encodeParam({name: "pieceId", value: pieceId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<any>('delete', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Take a piece out of the public portfolio
-     * @endpoint post /media/me/portfolio/{pieceId}/hide
+     * @endpoint post /media/me/portfolio/pieces/{pieceId}/hide
      * @param pieceId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
@@ -86,7 +150,7 @@ export class PortfolioControllerService extends BaseService implements Portfolio
             }
         }
 
-        let localVarPath = `/media/me/portfolio/${this.configuration.encodeParam({name: "pieceId", value: pieceId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/hide`;
+        let localVarPath = `/media/me/portfolio/pieces/${this.configuration.encodeParam({name: "pieceId", value: pieceId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/hide`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<PieceResponse>('post', `${basePath}${localVarPath}`,
             {
@@ -108,9 +172,9 @@ export class PortfolioControllerService extends BaseService implements Portfolio
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public myPortfolio(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<PieceResponse>>;
-    public myPortfolio(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<PieceResponse>>>;
-    public myPortfolio(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<PieceResponse>>>;
+    public myPortfolio(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<OwnPortfolioResponse>;
+    public myPortfolio(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<OwnPortfolioResponse>>;
+    public myPortfolio(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<OwnPortfolioResponse>>;
     public myPortfolio(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarHeaders = this.defaultHeaders;
@@ -143,7 +207,7 @@ export class PortfolioControllerService extends BaseService implements Portfolio
 
         let localVarPath = `/media/me/portfolio`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<Array<PieceResponse>>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<OwnPortfolioResponse>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -158,7 +222,7 @@ export class PortfolioControllerService extends BaseService implements Portfolio
 
     /**
      * Read the public portfolio of a fixer
-     * Returns only the pieces the fixer chose to show, in publication order.
+     * Returns only the pieces the fixer chose to show, in publication order with secure read URLs.
      * @endpoint get /media/fixers/{fixerUserId}/portfolio
      * @param fixerUserId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
@@ -218,8 +282,8 @@ export class PortfolioControllerService extends BaseService implements Portfolio
 
     /**
      * Publish a piece in the fixer\&#39;s own portfolio
-     * The body carries a storage key only. The file is uploaded by the client against a signed URL, so no media content crosses this API. Requires a verified fixer.
-     * @endpoint post /media/me/portfolio
+     * Attaches a confirmed media asset to the portfolio. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/pieces
      * @param pieceRequest 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
@@ -270,7 +334,7 @@ export class PortfolioControllerService extends BaseService implements Portfolio
             }
         }
 
-        let localVarPath = `/media/me/portfolio`;
+        let localVarPath = `/media/me/portfolio/pieces`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<PieceResponse>('post', `${basePath}${localVarPath}`,
             {
@@ -287,8 +351,64 @@ export class PortfolioControllerService extends BaseService implements Portfolio
     }
 
     /**
+     * Publish the fixer\&#39;s portfolio
+     * Requires at least 3 active visible photos. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/publish
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public publishPortfolio(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PortfolioStatusResponse>;
+    public publishPortfolio(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PortfolioStatusResponse>>;
+    public publishPortfolio(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<PortfolioStatusResponse>>;
+    public publishPortfolio(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/media/me/portfolio/publish`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<PortfolioStatusResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Put a hidden piece back in the public portfolio
-     * @endpoint post /media/me/portfolio/{pieceId}/show
+     * @endpoint post /media/me/portfolio/pieces/{pieceId}/show
      * @param pieceId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
@@ -330,9 +450,65 @@ export class PortfolioControllerService extends BaseService implements Portfolio
             }
         }
 
-        let localVarPath = `/media/me/portfolio/${this.configuration.encodeParam({name: "pieceId", value: pieceId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/show`;
+        let localVarPath = `/media/me/portfolio/pieces/${this.configuration.encodeParam({name: "pieceId", value: pieceId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/show`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<PieceResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Unpublish the fixer\&#39;s portfolio back to draft
+     * Reverts portfolio to DRAFT. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/unpublish
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public unpublishPortfolio(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PortfolioStatusResponse>;
+    public unpublishPortfolio(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PortfolioStatusResponse>>;
+    public unpublishPortfolio(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<PortfolioStatusResponse>>;
+    public unpublishPortfolio(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/media/me/portfolio/unpublish`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<PortfolioStatusResponse>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,

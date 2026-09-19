@@ -12,8 +12,10 @@ import { HttpHeaders }                                       from '@angular/comm
 import { Observable }                                        from 'rxjs';
 
 import { ErrorResponse } from '../model/models';
+import { OwnPortfolioResponse } from '../model/models';
 import { PieceRequest } from '../model/models';
 import { PieceResponse } from '../model/models';
+import { PortfolioStatusResponse } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -25,9 +27,17 @@ export interface PortfolioControllerServiceInterface {
     configuration: Configuration;
 
     /**
+     * Delete a piece from the portfolio
+     * Removes the piece, marks media deleted, and triggers secure storage deletion. If remaining visible photos &lt; 3, reverts portfolio to DRAFT. Requires a verified fixer.
+     * @endpoint delete /media/me/portfolio/pieces/{pieceId}
+     * @param pieceId
+     */
+    deletePiece(pieceId: string, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
      * Take a piece out of the public portfolio
      * 
-     * @endpoint post /media/me/portfolio/{pieceId}/hide
+     * @endpoint post /media/me/portfolio/pieces/{pieceId}/hide
      * @param pieceId 
      */
     hide(pieceId: string, extraHttpRequestParams?: any): Observable<PieceResponse>;
@@ -37,11 +47,11 @@ export interface PortfolioControllerServiceInterface {
      * 
      * @endpoint get /media/me/portfolio
      */
-    myPortfolio(extraHttpRequestParams?: any): Observable<Array<PieceResponse>>;
+    myPortfolio(extraHttpRequestParams?: any): Observable<OwnPortfolioResponse>;
 
     /**
      * Read the public portfolio of a fixer
-     * Returns only the pieces the fixer chose to show, in publication order.
+     * Returns only the pieces the fixer chose to show, in publication order with secure read URLs.
      * @endpoint get /media/fixers/{fixerUserId}/portfolio
      * @param fixerUserId 
      */
@@ -49,18 +59,32 @@ export interface PortfolioControllerServiceInterface {
 
     /**
      * Publish a piece in the fixer\&#39;s own portfolio
-     * The body carries a storage key only. The file is uploaded by the client against a signed URL, so no media content crosses this API. Requires a verified fixer.
-     * @endpoint post /media/me/portfolio
+     * Attaches a confirmed media asset to the portfolio. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/pieces
      * @param pieceRequest 
      */
     publish(pieceRequest: PieceRequest, extraHttpRequestParams?: any): Observable<PieceResponse>;
 
     /**
+     * Publish the fixer\&#39;s portfolio
+     * Requires at least 3 active visible photos. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/publish
+     */
+    publishPortfolio(extraHttpRequestParams?: any): Observable<PortfolioStatusResponse>;
+
+    /**
      * Put a hidden piece back in the public portfolio
      * 
-     * @endpoint post /media/me/portfolio/{pieceId}/show
+     * @endpoint post /media/me/portfolio/pieces/{pieceId}/show
      * @param pieceId 
      */
     show(pieceId: string, extraHttpRequestParams?: any): Observable<PieceResponse>;
+
+    /**
+     * Unpublish the fixer\&#39;s portfolio back to draft
+     * Reverts portfolio to DRAFT. Requires a verified fixer.
+     * @endpoint post /media/me/portfolio/unpublish
+     */
+    unpublishPortfolio(extraHttpRequestParams?: any): Observable<PortfolioStatusResponse>;
 
 }

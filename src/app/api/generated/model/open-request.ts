@@ -7,11 +7,16 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Specialty } from './specialty';
 
 
-export interface PieceRequest { 
-    mediaId: string;
+export interface OpenRequest { 
+    specialty: Specialty;
     title: string;
-    description?: string;
+    description: string;
+    mediaIds?: Array<string>;
 }
+export namespace OpenRequest {
+}
+
 

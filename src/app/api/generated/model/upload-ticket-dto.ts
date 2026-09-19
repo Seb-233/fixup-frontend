@@ -9,9 +9,11 @@
  */
 
 
-export interface PieceRequest { 
+export interface UploadTicketDto { 
     mediaId: string;
-    title: string;
-    description?: string;
+    method: string;
+    uploadUrl: string;
+    headers: { [key: string]: string; };
+    expiresAt: string;
 }
 

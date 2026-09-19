@@ -16,7 +16,9 @@ describe('MarketIndicatorsComponent', () => {
     averageDaysOnMarket: 52,
     observedAt: '2026-09-18T09:00:00Z',
     freshness: 'LIVE',
-    degraded: false
+    degraded: false,
+    source: 'EXTERNAL_PROVIDER',
+    synthetic: false
   };
 
   const url = `${environment.apiOrigin}/analytics/zones/CHAPINERO/market-indicators`;

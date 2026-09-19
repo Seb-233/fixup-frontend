@@ -42,7 +42,7 @@ export class MarketIndicatorsControllerService extends BaseService implements Ma
 
     /**
      * Read the real estate market indicators of a zone
-     * freshness says where the value comes from: LIVE from the external source in this request, CACHED from a still fresh cache entry, DEGRADED when the source did not answer and the last known value is served instead. observedAt always carries the moment the source produced the value, so a degraded answer is never presented as a current one.
+     * freshness says how the value was obtained: LIVE in this request, CACHED from a still fresh cache entry, DEGRADED when the source did not answer and the last known value is served instead. source says who produced it: EXTERNAL_PROVIDER is a real market observation, DEVELOPMENT_SYNTHETIC is the development fallback, whose numbers are generated and do not represent the market; synthetic repeats that as a flag. observedAt always carries the moment the source produced the value and is never filled in by the backend, so a degraded or synthetic answer is never presented as a current real one.
      * @endpoint get /analytics/zones/{zone}/market-indicators
      * @param zone 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.

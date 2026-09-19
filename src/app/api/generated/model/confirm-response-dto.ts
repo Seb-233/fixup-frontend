@@ -9,9 +9,8 @@
  */
 
 
-export interface PieceRequest { 
+export interface ConfirmResponseDto { 
     mediaId: string;
-    title: string;
-    description?: string;
+    status: string;
 }
 

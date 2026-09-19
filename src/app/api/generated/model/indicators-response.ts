@@ -17,6 +17,8 @@ export interface IndicatorsResponse {
     observedAt: string;
     freshness: IndicatorsResponse.FreshnessEnum;
     degraded: boolean;
+    source: IndicatorsResponse.SourceEnum;
+    synthetic: boolean;
 }
 export namespace IndicatorsResponse {
     export const FreshnessEnum = {
@@ -25,6 +27,11 @@ export namespace IndicatorsResponse {
         Degraded: 'DEGRADED',
     } as const;
     export type FreshnessEnum = typeof FreshnessEnum[keyof typeof FreshnessEnum];
+    export const SourceEnum = {
+        ExternalProvider: 'EXTERNAL_PROVIDER',
+        DevelopmentSynthetic: 'DEVELOPMENT_SYNTHETIC',
+    } as const;
+    export type SourceEnum = typeof SourceEnum[keyof typeof SourceEnum];
 }
 
 

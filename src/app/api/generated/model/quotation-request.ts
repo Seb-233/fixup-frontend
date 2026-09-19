@@ -9,9 +9,10 @@
  */
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
+export interface QuotationRequest { 
+    requestId: string;
+    amount: number;
+    estimatedDays: number;
+    message?: string;
 }
 

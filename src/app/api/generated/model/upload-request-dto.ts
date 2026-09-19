@@ -7,11 +7,15 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { MediaPurpose } from './media-purpose';
 
 
-export interface PieceRequest { 
-    mediaId: string;
-    title: string;
-    description?: string;
+export interface UploadRequestDto { 
+    purpose: MediaPurpose;
+    contentType: string;
+    sizeBytes: number;
 }
+export namespace UploadRequestDto {
+}
+
 

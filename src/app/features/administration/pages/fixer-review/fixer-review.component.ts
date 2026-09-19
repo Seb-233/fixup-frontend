@@ -176,7 +176,7 @@ export class FixerReviewComponent {
       return;
     }
     this.enviar(
-      this.api.reject(this.fixerState().trim(), { reason: this.motivoState().trim() }),
+      this.api.reject1(this.fixerState().trim(), { reason: this.motivoState().trim() }),
       'La verificación quedó rechazada y el técnico puede volver a enviarla.'
     );
   }

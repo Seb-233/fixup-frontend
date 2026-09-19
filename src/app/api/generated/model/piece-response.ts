@@ -11,20 +11,16 @@
 
 export interface PieceResponse { 
     id: string;
-    kind: PieceResponse.KindEnum;
-    storageKey: string;
+    mediaId: string;
     title: string;
     description?: string | null;
     position: number;
     visibility: PieceResponse.VisibilityEnum;
+    readUrl: string;
+    readUrlExpiresAt: string;
     createdAt?: string;
 }
 export namespace PieceResponse {
-    export const KindEnum = {
-        Photo: 'PHOTO',
-        Video: 'VIDEO',
-    } as const;
-    export type KindEnum = typeof KindEnum[keyof typeof KindEnum];
     export const VisibilityEnum = {
         Public: 'PUBLIC',
         Hidden: 'HIDDEN',
