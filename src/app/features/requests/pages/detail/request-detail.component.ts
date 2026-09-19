@@ -260,7 +260,7 @@ export class RequestDetailComponent implements OnInit {
     message: ['', [Validators.maxLength(MAX_MESSAGE_LENGTH)]]
   });
 
-  readonly isFixer = computed(() => this.users.hasRole('FIXER'));
+  readonly isFixer = computed(() => this.users.activeRole() === 'FIXER');
 
   readonly canViewQuotations = computed(() => {
     const role = this.users.activeRole();

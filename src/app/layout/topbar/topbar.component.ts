@@ -43,12 +43,14 @@ import { AuthService } from '../../core/auth/auth.service';
       <div class="topbar-right">
         @if (userStore.authenticated()) {
           <!-- Atajo 1: Botón de Nueva Solicitud -->
-          <a routerLink="/requests" class="btn-shortcut-action" title="Crear nueva solicitud de servicio">
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            <span class="btn-shortcut-text">Nueva Solicitud</span>
-          </a>
+          @if (canCreateRequest()) {
+            <a routerLink="/requests" class="btn-shortcut-action" title="Crear nueva solicitud de servicio">
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              <span class="btn-shortcut-text">Nueva Solicitud</span>
+            </a>
+          }
 
           <!-- Atajo 2: Campana de Notificaciones -->
           <button type="button" class="btn-icon-shortcut" title="Notificaciones del sistema" aria-label="Notificaciones">
@@ -109,6 +111,11 @@ export class TopbarComponent {
       return user.email.slice(0, 2).toUpperCase();
     }
     return 'FX';
+  });
+
+  readonly canCreateRequest = computed(() => {
+    const role = this.userStore.activeRole();
+    return role === 'OWNER' || role === 'TENANT' || role === 'REAL_ESTATE_MANAGER';
   });
 
   logout(): void {
