@@ -249,6 +249,7 @@ export interface KpiMetric {
 
     .greeting-title {
       font-family: var(--fixup-font-heading);
+      color: #FFFFFF;
       font-size: 1.85rem;
       margin: 0 0 0.5rem 0;
       letter-spacing: -0.02em;

@@ -2,9 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
 import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, map, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthApiService } from '../../api/auth-api.service';
 import { BackendUserProfile, Role, SelectableRole } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
+import { nativeLogoutUrl } from './native-callback';
+import { NativeAuthService } from './native-auth.service';
 
 // Servicio de autenticación que orquesta Auth0 y la sincronización con el backend
 @Injectable({
@@ -15,6 +18,7 @@ export class AuthService {
   private readonly authApi = inject(AuthApiService);
   private readonly userStore = inject(CurrentUserStore);
   private readonly router = inject(Router);
+  private readonly native = inject(NativeAuthService);
 
   readonly isAuthenticated$: Observable<boolean> = this.auth0.isAuthenticated$;
   readonly user$: Observable<User | null | undefined> = this.auth0.user$;
@@ -69,7 +73,8 @@ export class AuthService {
     this.sessionReady$.subscribe();
   }
 
-  // Redirige al login de Auth0 preservando un target interno validado
+  // Redirige al login de Auth0 preservando un target interno validado.
+  // En Android la ventana se abre en el navegador del sistema (FR-UC-21).
   loginWithRedirect(targetUrl?: string): Observable<void> {
     const safeTarget =
       targetUrl && targetUrl.startsWith('/') && !targetUrl.startsWith('//')
@@ -77,7 +82,8 @@ export class AuthService {
         : '/dashboard';
 
     return this.auth0.loginWithRedirect({
-      appState: { target: safeTarget }
+      appState: { target: safeTarget },
+      ...(this.native.enabled ? { openUrl: this.native.openUrl } : {})
     });
   }
 
@@ -85,15 +91,17 @@ export class AuthService {
   logout(): Observable<void> {
     this.userStore.clear();
     this.initTrigger$.next();
-    const returnTo =
-      typeof window !== 'undefined'
+    const returnTo = this.native.enabled
+      ? nativeLogoutUrl(environment.native.appId, environment.auth0.domain)
+      : typeof window !== 'undefined'
         ? `${window.location.origin}/auth/login`
         : 'http://localhost:4200/auth/login';
 
     return this.auth0.logout({
       logoutParams: {
         returnTo
-      }
+      },
+      ...(this.native.enabled ? { openUrl: this.native.openUrl } : {})
     });
   }
 

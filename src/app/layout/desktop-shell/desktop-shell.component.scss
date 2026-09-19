@@ -2,17 +2,19 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--fixup-color-bg, #F8F8F8);
+  background-color: #F8F7F4;
 
   .desktop-body {
     display: flex;
     flex: 1;
+    overflow: hidden;
 
     .desktop-content {
       flex: 1;
-      padding: 2rem;
+      min-width: 0;
+      padding: 1.25rem 1.75rem 1.5rem 1.5rem;
       overflow-y: auto;
-      max-height: calc(100vh - var(--fixup-header-height, 60px));
+      max-height: calc(100vh - var(--fixup-header-height, 72px));
     }
   }
 }

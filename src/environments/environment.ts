@@ -8,5 +8,10 @@ export const environment = {
     domain: 'dev-uzssz142azr2k5hv.us.auth0.com',
     clientId: 'mh6MMduxMTnL2EbEKdSSqp1FM8Ah7105',
     audience: 'urn:fixup:api'
+  },
+  native: {
+    // FR-UC-21: debe coincidir con appId en capacitor.config.ts y con el esquema declarado
+    // en el intent-filter de AndroidManifest.xml.
+    appId: 'com.fixup.app'
   }
 };
