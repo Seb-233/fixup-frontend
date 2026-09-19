@@ -77,7 +77,7 @@ import { requestStatusLabel, specialtyLabel } from '../../utils/request-ui.helpe
           }
         </article>
 
-        @if (!isFixer()) {
+        @if (canViewQuotations()) {
           <a class="board-link" [routerLink]="['/quotations/request', item.requestId]">
             Ver las cotizaciones recibidas →
           </a>
@@ -261,6 +261,11 @@ export class RequestDetailComponent implements OnInit {
   });
 
   readonly isFixer = computed(() => this.users.hasRole('FIXER'));
+
+  readonly canViewQuotations = computed(() => {
+    const role = this.users.activeRole();
+    return role === 'OWNER' || role === 'TENANT' || role === 'REAL_ESTATE_MANAGER';
+  });
 
   // Solo cotiza un Fixer sobre una solicitud abierta
   readonly canQuote = computed(
