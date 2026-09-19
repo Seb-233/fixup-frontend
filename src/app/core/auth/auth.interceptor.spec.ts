@@ -5,6 +5,7 @@ import { authHttpInterceptorFn, Auth0ClientService, AuthService as Auth0Service 
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { apiUrl, API_ROUTES } from '../../api/api.routes';
+import { environment } from '../../../environments/environment';
 import { provideFixUpAuth } from './auth.config';
 
 describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
@@ -95,7 +96,9 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
   });
 
   it('14. no debe adjuntar tokens a rutas internas no autorizadas expresamente', async () => {
-    const internalUnprotected = 'http://localhost:8081/public/health';
+    // Mismo origen que la API pero fuera de los prefijos protegidos: el health publico
+    // del backend es permitAll y no debe recibir el token.
+    const internalUnprotected = `${environment.apiOrigin}/actuator/health`;
     http.get(internalUnprotected).subscribe();
     await Promise.resolve();
 
@@ -104,42 +107,55 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
     req.flush({ status: 'UP' });
   });
 
-  it('15. FR-UC-18: debe adjuntar el token a /requests y a sus subrutas con identificador', async () => {
-    const targets = [
-      apiUrl(API_ROUTES.requests.base),
-      apiUrl(API_ROUTES.requests.open),
-      apiUrl(API_ROUTES.requests.detail('11111111-1111-1111-1111-111111111111'))
+  it('15. no debe adjuntar Authorization a URLs firmadas de almacenamiento (uploadUrl / readUrl en MinIO o S3)', async () => {
+    const signedUploadUrl = 'https://minio.fixup.local:9000/fixup-portfolio/piece-123.webp?X-Amz-Signature=abc';
+    const signedReadUrl = 'https://s3.amazonaws.com/fixup-storage/portfolio/read-456.png?token=xyz';
+
+    http.put(signedUploadUrl, new Blob(['data'], { type: 'image/webp' })).subscribe();
+    http.get(signedReadUrl).subscribe();
+    await Promise.resolve();
+
+    const putReq = httpMock.expectOne(signedUploadUrl);
+    expect(putReq.request.headers.has('Authorization')).toBe(false);
+    putReq.flush(null);
+
+    const getReq = httpMock.expectOne(signedReadUrl);
+    expect(getReq.request.headers.has('Authorization')).toBe(false);
+    getReq.flush(null);
+  });
+
+  it('16. debe adjuntar Authorization a operaciones representativas de /requests/** y /quotations/**', async () => {
+    const operaciones: { method: 'GET' | 'POST'; path: string; body?: unknown }[] = [
+      { method: 'GET', path: '/requests/me' },
+      { method: 'GET', path: '/requests/open' },
+      { method: 'POST', path: '/requests', body: { description: 'test' } },
+      { method: 'POST', path: '/quotations', body: { requestId: 'r1', price: 100 } },
+      { method: 'GET', path: '/quotations/me' },
+      { method: 'POST', path: '/quotations/quot-123/accept', body: {} },
+      { method: 'POST', path: '/quotations/quot-123/reject', body: {} }
     ];
 
-    for (const target of targets) {
-      http.get(target).subscribe();
+    for (const op of operaciones) {
+      const targetUrl = apiUrl(op.path);
+      if (op.method === 'GET') {
+        http.get(targetUrl).subscribe();
+      } else {
+        http.post(targetUrl, op.body ?? {}).subscribe();
+      }
       await Promise.resolve();
 
-      const req = httpMock.expectOne(target);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer valid-auth0-test-token');
-      req.flush([]);
+      const req = httpMock.expectOne(targetUrl);
+      expect(req.request.method).toBe(op.method);
+      expect(req.request.headers.has('Authorization')).toBe(true);
+      const authHeaders = req.request.headers.getAll('Authorization');
+      expect(authHeaders?.length).toBe(1);
+      expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+      req.flush({});
     }
   });
 
-  it('15. FR-UC-18: debe adjuntar el token a /quotations y a sus subrutas con identificador', async () => {
-    const targets = [
-      apiUrl(API_ROUTES.quotations.base),
-      apiUrl(API_ROUTES.quotations.mine),
-      apiUrl(API_ROUTES.quotations.accept('33333333-3333-3333-3333-333333333333'))
-    ];
-
-    for (const target of targets) {
-      http.get(target).subscribe();
-      await Promise.resolve();
-
-      const req = httpMock.expectOne(target);
-      expect(req.request.headers.get('Authorization')).toBe('Bearer valid-auth0-test-token');
-      req.flush([]);
-    }
-  });
-
-  it('15. el prefijo autorizado no debe filtrar el token a rutas que solo empiezan parecido', async () => {
-    const lookAlike = 'http://localhost:8081/requests-export';
+  it('17. el prefijo autorizado no debe filtrar el token a rutas que solo empiezan parecido', async () => {
+    const lookAlike = `${environment.apiOrigin}/requests-export`;
     http.get(lookAlike).subscribe();
     await Promise.resolve();
 

@@ -157,6 +157,45 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'fixers/verification',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/fixers/pages/verification/fixer-verification.component').then(
+            (m) => m.FixerVerificationComponent
+          ),
+        data: { title: 'Verificación de Técnico', roles: ['FIXER'] }
+      },
+      {
+        path: 'fixers/portfolio',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/fixers/pages/portfolio/portfolio.component').then(
+            (m) => m.PortfolioComponent
+          ),
+        data: { title: 'Mi Portafolio', roles: ['FIXER'] }
+      },
+      {
+        path: 'administration/fixer-review',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/administration/pages/fixer-review/fixer-review.component').then(
+            (m) => m.FixerReviewComponent
+          ),
+        data: { title: 'Revisión de Técnicos', roles: ['PLATFORM_ADMIN'] }
+      },
+      {
+        path: 'analytics/market-indicators',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import(
+            './features/analytics/pages/market-indicators/market-indicators.component'
+          ).then((m) => m.MarketIndicatorsComponent),
+        data: {
+          title: 'Indicadores de Mercado',
+          roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
+        }
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/auth/pages/profile/profile.component').then((m) => m.ProfileComponent),

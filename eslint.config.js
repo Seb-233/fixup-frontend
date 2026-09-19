@@ -6,6 +6,11 @@ const angular = require('angular-eslint');
 
 module.exports = defineConfig([
   {
+    // Cliente generado desde docs/openapi.json del backend: se versiona tal cual lo emite
+    // openapi-generator y no se edita a mano, así que no se somete a las reglas de estilo.
+    ignores: ['src/app/api/generated/**'],
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,

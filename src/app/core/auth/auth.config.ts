@@ -1,18 +1,28 @@
 import { EnvironmentProviders } from '@angular/core';
 import { provideAuth0 } from '@auth0/auth0-angular';
 import { environment } from '../../../environments/environment';
-import { API_ROUTES, apiUrl } from '../../api/api.routes';
+import { isFixUpApiUrl } from '../../api/api.routes';
+import { isNativePlatform } from '../config/native-platform';
+import { nativeCallbackUrl } from './native-callback';
 
 const SCOPE = 'openid profile email access:fixup';
 
-// Configura Auth0 autorizando exclusivamente los endpoints del backend de FixUp.
-// El Bearer Token nunca se delega a URLs de terceros.
+// Devuelve la dirección a la que Auth0 entrega el control después de autenticar.
+// En Android la vuelta ocurre por deep link; en web y PWA, por la ruta /auth/callback.
+// La plataforma entra por parámetro para que la regla se pueda probar sin simular Capacitor.
+export function resolveRedirectUri(native: boolean = isNativePlatform()): string {
+  if (native) {
+    return nativeCallbackUrl(environment.native.appId, environment.auth0.domain);
+  }
+  return typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback`
+    : 'http://localhost:4200/auth/callback';
+}
+
+// Configura Auth0 y autoriza el envío del token únicamente a los endpoints del backend de FixUp
 export function provideFixUpAuth(): EnvironmentProviders {
   const audience = environment.auth0.audience;
-  const redirectUri =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
-      : 'http://localhost:4200/auth/callback';
+  const native = isNativePlatform();
 
   const tokenOptions = {
     authorizationParams: {
@@ -21,29 +31,27 @@ export function provideFixUpAuth(): EnvironmentProviders {
     }
   };
 
-  // Las rutas de autenticación son exactas; las de negocio llevan identificadores en la
-  // ruta, así que se autorizan por prefijo contra el origen del backend y nada más.
-  const prefixOf = (base: string) => {
-    const prefix = apiUrl(base);
-    return (uri: string) => uri === prefix || uri.startsWith(`${prefix}/`) || uri.startsWith(`${prefix}?`);
-  };
-
   return provideAuth0({
     domain: environment.auth0.domain,
     clientId: environment.auth0.clientId,
+    // FR-UC-21: dentro del contenedor nativo no hay cookies de terceros, así que la renovación
+    // silenciosa por iframe no funciona. Android renueva con refresh token y no cae al iframe.
+    useRefreshTokens: native,
+    useRefreshTokensFallback: false,
     authorizationParams: {
-      redirect_uri: redirectUri,
+      redirect_uri: resolveRedirectUri(native),
       audience,
       scope: SCOPE
     },
     httpInterceptor: {
+      // Un solo criterio para todas las rutas protegidas del backend: cada caso de uso nuevo
+      // deja de requerir una entrada propia aquí, y el token nunca se adjunta a un tercero
+      // porque isFixUpApiUrl compara contra environment.apiOrigin.
       allowedList: [
-        { uri: apiUrl(API_ROUTES.auth.bootstrap), httpMethod: 'POST', tokenOptions },
-        { uri: apiUrl(API_ROUTES.auth.me), httpMethod: 'GET', tokenOptions },
-        { uri: apiUrl(API_ROUTES.auth.selectRole), httpMethod: 'POST', tokenOptions },
-        // FR-UC-18
-        { uriMatcher: prefixOf(API_ROUTES.requests.base), tokenOptions },
-        { uriMatcher: prefixOf(API_ROUTES.quotations.base), tokenOptions }
+        {
+          uriMatcher: isFixUpApiUrl,
+          tokenOptions
+        }
       ]
     }
   });
