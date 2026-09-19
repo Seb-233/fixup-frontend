@@ -10,6 +10,9 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        // FR-UC-21: host del deep link con el que Auth0 devuelve el control tras autenticar.
+        // Debe coincidir con environment.auth0.domain y con los Allowed Callback URLs del tenant.
+        manifestPlaceholders = [auth0Domain: "dev-uzssz142azr2k5hv.us.auth0.com"]
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
