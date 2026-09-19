@@ -1,7 +1,7 @@
 import { EnvironmentProviders } from '@angular/core';
 import { provideAuth0 } from '@auth0/auth0-angular';
 import { environment } from '../../../environments/environment';
-import { API_ROUTES, apiUrl } from '../../api/api.routes';
+import { isFixUpApiUrl } from '../../api/api.routes';
 import { isNativePlatform } from '../config/native-platform';
 import { nativeCallbackUrl } from './native-callback';
 
@@ -19,7 +19,7 @@ export function resolveRedirectUri(native: boolean = isNativePlatform()): string
     : 'http://localhost:4200/auth/callback';
 }
 
-// Configura Auth0 autorizando exclusivamente los tres endpoints exactos del backend
+// Configura Auth0 y autoriza el envío del token únicamente a los endpoints del backend de FixUp
 export function provideFixUpAuth(): EnvironmentProviders {
   const audience = environment.auth0.audience;
   const native = isNativePlatform();
@@ -44,10 +44,14 @@ export function provideFixUpAuth(): EnvironmentProviders {
       scope: SCOPE
     },
     httpInterceptor: {
+      // Un solo criterio para todas las rutas protegidas del backend: cada caso de uso nuevo
+      // deja de requerir una entrada propia aquí, y el token nunca se adjunta a un tercero
+      // porque isFixUpApiUrl compara contra environment.apiOrigin.
       allowedList: [
-        { uri: apiUrl(API_ROUTES.auth.bootstrap), httpMethod: 'POST', tokenOptions },
-        { uri: apiUrl(API_ROUTES.auth.me), httpMethod: 'GET', tokenOptions },
-        { uri: apiUrl(API_ROUTES.auth.selectRole), httpMethod: 'POST', tokenOptions }
+        {
+          uriMatcher: isFixUpApiUrl,
+          tokenOptions
+        }
       ]
     }
   });
