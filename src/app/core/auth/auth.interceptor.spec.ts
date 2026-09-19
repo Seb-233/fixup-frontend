@@ -123,4 +123,34 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
     expect(getReq.request.headers.has('Authorization')).toBe(false);
     getReq.flush(null);
   });
+
+  it('16. debe adjuntar Authorization a operaciones representativas de /requests/** y /quotations/**', async () => {
+    const operaciones: { method: 'GET' | 'POST'; path: string; body?: unknown }[] = [
+      { method: 'GET', path: '/requests/me' },
+      { method: 'GET', path: '/requests/open' },
+      { method: 'POST', path: '/requests', body: { description: 'test' } },
+      { method: 'POST', path: '/quotations', body: { requestId: 'r1', price: 100 } },
+      { method: 'GET', path: '/quotations/me' },
+      { method: 'POST', path: '/quotations/quot-123/accept', body: {} },
+      { method: 'POST', path: '/quotations/quot-123/reject', body: {} }
+    ];
+
+    for (const op of operaciones) {
+      const targetUrl = apiUrl(op.path);
+      if (op.method === 'GET') {
+        http.get(targetUrl).subscribe();
+      } else {
+        http.post(targetUrl, op.body ?? {}).subscribe();
+      }
+      await Promise.resolve();
+
+      const req = httpMock.expectOne(targetUrl);
+      expect(req.request.method).toBe(op.method);
+      expect(req.request.headers.has('Authorization')).toBe(true);
+      const authHeaders = req.request.headers.getAll('Authorization');
+      expect(authHeaders?.length).toBe(1);
+      expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+      req.flush({});
+    }
+  });
 });

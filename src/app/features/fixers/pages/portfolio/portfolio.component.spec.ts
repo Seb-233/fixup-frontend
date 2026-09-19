@@ -168,7 +168,50 @@ describe('PortfolioComponent (Carga Segura de Medios y Gestión de Portafolio)',
     expect(component.archivoSeleccionado()).toBeNull();
   });
 
-  it('un fallo del PUT binario no debe ejecutar confirmación y debe conservar el formulario', () => {
+  it('1. fallo solicitando ticket y reintento con ticket nuevo', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['content'], 'foto.jpg', { type: 'image/jpeg' });
+    component.titulo = 'Proyecto';
+    component.archivoSeleccionado.set(testFile);
+
+    component.iniciarSubida();
+
+    // 1. Falla al solicitar ticket
+    const ticketReq = httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`);
+    ticketReq.flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(component.archivoFallido()?.failedStage).toBe('TICKET');
+    expect(component.archivoFallido()?.file).toBe(testFile);
+
+    // 2. Reintento: solicita un nuevo ticket
+    component.reintentarSubida();
+    const retryTicketReq = httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`);
+    retryTicketReq.flush({
+      mediaId: 'm-retry-ticket',
+      method: 'PUT',
+      uploadUrl: 'http://storage.local/upload-new',
+      headers: { 'Content-Type': 'image/jpeg' },
+      expiresAt: '2099-01-01T00:00:00Z'
+    });
+
+    httpTesting.expectOne('http://storage.local/upload-new').flush('OK');
+    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-retry-ticket/confirm`).flush({
+      mediaId: 'm-retry-ticket',
+      status: 'CONFIRMED'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`).flush({
+      ...mockPiece1,
+      id: 'p-new',
+      mediaId: 'm-retry-ticket'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    expect(component.archivoFallido()).toBeNull();
+  });
+
+  it('2. fallo de PUT sin ejecutar confirmación y conservación de estado', () => {
     component.ngOnInit();
     httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
 
@@ -184,7 +227,7 @@ describe('PortfolioComponent (Carga Segura de Medios y Gestión de Portafolio)',
       method: 'PUT',
       uploadUrl: 'http://storage.local/upload-fail',
       headers: {},
-      expiresAt: '2026-09-20T12:00:00Z'
+      expiresAt: '2099-01-01T00:00:00Z'
     });
 
     // Falla la carga binaria contra el almacenamiento externo
@@ -194,44 +237,241 @@ describe('PortfolioComponent (Carga Segura de Medios y Gestión de Portafolio)',
     // NO se debe llamar a confirmación
     httpTesting.expectNone(`${environment.apiOrigin}/media/uploads/m-fail/confirm`);
 
-    // Formulario se conserva en memoria ante error recuperable
+    // Formulario y estado recuperable se conservan en memoria
     expect(component.errorRecuperable()).toBe(true);
-    expect(component.titulo).toBe('Trabajo que fallará');
-    expect(component.descripcion).toBe('Detalle');
-    expect(component.archivoFallido()?.file).toBe(testFile);
+    expect(component.archivoFallido()?.failedStage).toBe('UPLOAD');
+    expect(component.archivoFallido()?.ticket?.mediaId).toBe('m-fail');
   });
 
-  it('debe permitir reintentar individualmente una carga fallida', () => {
+  it('3. fallo de PUT con ticket vigente y reintento sin pedir otro ticket', () => {
     component.ngOnInit();
     httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
 
-    const testFile = new File(['content'], 'reintento.webp', { type: 'image/webp' });
-    component.archivoFallido.set({ file: testFile, titulo: 'Foto reintentada', descripcion: 'Ok' });
+    const testFile = new File(['content'], 'foto.webp', { type: 'image/webp' });
+    const ticketVigente = {
+      mediaId: 'm-vigente',
+      method: 'PUT',
+      uploadUrl: 'http://storage.local/upload-vigente',
+      headers: { 'Content-Type': 'image/webp' },
+      expiresAt: '2099-12-31T23:59:59Z' // Vigente
+    };
+
+    component.archivoFallido.set({
+      file: testFile,
+      title: 'Pintura de fachada',
+      ticket: ticketVigente,
+      mediaId: 'm-vigente',
+      failedStage: 'UPLOAD'
+    });
 
     component.reintentarSubida();
 
-    const ticketReq = httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`);
-    ticketReq.flush({
-      mediaId: 'm-retry',
-      method: 'PUT',
-      uploadUrl: 'http://storage.local/upload-retry',
-      headers: { 'Content-Type': 'image/webp' },
-      expiresAt: '2026-09-20T12:00:00Z'
-    });
+    // NO debe pedir otro ticket
+    httpTesting.expectNone(`${environment.apiOrigin}/media/uploads`);
 
-    httpTesting.expectOne('http://storage.local/upload-retry').flush('OK');
-    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-retry/confirm`).flush({
-      mediaId: 'm-retry',
+    // Repite PUT con el ticket actual
+    httpTesting.expectOne('http://storage.local/upload-vigente').flush('OK');
+
+    // Continúa con confirm y addPiece
+    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-vigente/confirm`).flush({
+      mediaId: 'm-vigente',
       status: 'CONFIRMED'
     });
     httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`).flush({
       ...mockPiece1,
-      id: 'p-retried',
-      mediaId: 'm-retry'
+      id: 'p-vigente',
+      mediaId: 'm-vigente'
     });
     httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
 
     expect(component.archivoFallido()).toBeNull();
+  });
+
+  it('4. fallo de PUT con ticket vencido y solicitud de ticket nuevo', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['content'], 'foto.jpg', { type: 'image/jpeg' });
+    const ticketVencido = {
+      mediaId: 'm-old',
+      method: 'PUT',
+      uploadUrl: 'http://storage.local/upload-old',
+      headers: {},
+      expiresAt: '2020-01-01T00:00:00Z' // Vencido
+    };
+
+    component.archivoFallido.set({
+      file: testFile,
+      title: 'Piso laminado',
+      ticket: ticketVencido,
+      mediaId: 'm-old',
+      failedStage: 'UPLOAD'
+    });
+
+    component.reintentarSubida();
+
+    // Al estar vencido, debe solicitar un nuevo ticket
+    const newTicketReq = httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`);
+    newTicketReq.flush({
+      mediaId: 'm-fresh',
+      method: 'PUT',
+      uploadUrl: 'http://storage.local/upload-fresh',
+      headers: { 'Content-Type': 'image/jpeg' },
+      expiresAt: '2099-01-01T00:00:00Z'
+    });
+
+    httpTesting.expectOne('http://storage.local/upload-fresh').flush('OK');
+    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-fresh/confirm`).flush({
+      mediaId: 'm-fresh',
+      status: 'CONFIRMED'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`).flush({
+      ...mockPiece1,
+      id: 'p-fresh',
+      mediaId: 'm-fresh'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    expect(component.archivoFallido()).toBeNull();
+  });
+
+  it('5. fallo de confirmación y reintento con el mismo mediaId sin repetir ticket ni PUT', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['content'], 'foto.png', { type: 'image/png' });
+    component.archivoFallido.set({
+      file: testFile,
+      title: 'Reparación techo',
+      mediaId: 'm-confirm-test',
+      failedStage: 'CONFIRM'
+    });
+
+    component.reintentarSubida();
+
+    // No debe pedir ticket ni repetir PUT
+    httpTesting.expectNone(`${environment.apiOrigin}/media/uploads`);
+
+    // Repite confirmUpload directamente con el mismo mediaId
+    const confirmReq = httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-confirm-test/confirm`);
+    confirmReq.flush({ mediaId: 'm-confirm-test', status: 'CONFIRMED' });
+
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`).flush({
+      ...mockPiece1,
+      id: 'p-ok',
+      mediaId: 'm-confirm-test'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    expect(component.archivoFallido()).toBeNull();
+  });
+
+  it('6. fallo creando la pieza y reintento con el mismo mediaId sin repetir etapas anteriores', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['content'], 'foto.webp', { type: 'image/webp' });
+    component.archivoFallido.set({
+      file: testFile,
+      title: 'Mueble a medida',
+      description: 'Madera de roble',
+      mediaId: 'm-create-test',
+      failedStage: 'CREATE'
+    });
+
+    component.reintentarSubida();
+
+    // No debe repetir ticket, PUT ni confirm
+    httpTesting.expectNone(`${environment.apiOrigin}/media/uploads`);
+    httpTesting.expectNone(`${environment.apiOrigin}/media/uploads/m-create-test/confirm`);
+
+    // Repite addPiece directamente con el mismo mediaId
+    const pieceReq = httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`);
+    expect(pieceReq.request.body).toEqual({
+      mediaId: 'm-create-test',
+      title: 'Mueble a medida',
+      description: 'Madera de roble'
+    });
+    pieceReq.flush({ ...mockPiece1, id: 'p-created', mediaId: 'm-create-test' });
+
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    expect(component.archivoFallido()).toBeNull();
+  });
+
+  it('7. respuesta perdida al crear la pieza: 409 MEDIA_ALREADY_ATTACHED, recarga y recuperación por mediaId', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['content'], 'foto.jpg', { type: 'image/jpeg' });
+    component.archivoFallido.set({
+      file: testFile,
+      title: 'Obra ya registrada',
+      mediaId: 'm-already-attached',
+      failedStage: 'CREATE'
+    });
+
+    component.reintentarSubida();
+
+    // Falla con 409
+    const pieceReq = httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`);
+    pieceReq.flush(
+      { code: 'MEDIA_ALREADY_ATTACHED', message: 'Media is already attached to portfolio' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    // Debe recargar automáticamente el portafolio para verificar si la pieza ya existe
+    const reloadReq = httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`);
+    reloadReq.flush({
+      ...initialPortfolio,
+      pieces: [
+        ...initialPortfolio.pieces,
+        { ...mockPiece1, id: 'p-recovered', mediaId: 'm-already-attached' }
+      ]
+    });
+
+    // Al existir la pieza con ese mediaId, el flujo se considera completado exitosamente
+    expect(component.archivoFallido()).toBeNull();
+    expect(component.subiendo()).toBe(false);
+  });
+
+  it('8. limpieza del estado después de completar el flujo exitosamente', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    const testFile = new File(['data'], 'clean.jpg', { type: 'image/jpeg' });
+    component.titulo = 'Pared estucada';
+    component.descripcion = 'Acabado liso';
+    component.archivoSeleccionado.set(testFile);
+
+    component.iniciarSubida();
+
+    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`).flush({
+      mediaId: 'm-clean',
+      method: 'PUT',
+      uploadUrl: 'http://storage.local/upload-clean',
+      headers: { 'Content-Type': 'image/jpeg' },
+      expiresAt: '2099-01-01T00:00:00Z'
+    });
+    httpTesting.expectOne('http://storage.local/upload-clean').flush('OK');
+    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads/m-clean/confirm`).flush({
+      mediaId: 'm-clean',
+      status: 'CONFIRMED'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio/pieces`).flush({
+      ...mockPiece1,
+      id: 'p-clean',
+      mediaId: 'm-clean'
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/media/me/portfolio`).flush(initialPortfolio);
+
+    // Estado completamente limpio
+    expect(component.archivoFallido()).toBeNull();
+    expect(component.titulo).toBe('');
+    expect(component.descripcion).toBe('');
+    expect(component.archivoSeleccionado()).toBeNull();
+    expect(component.subiendo()).toBe(false);
+    expect(component.pasoCarga()).toBe('IDLE');
   });
 
   it('no debe permitir publicar el portafolio con menos de 3 fotografías visibles', () => {

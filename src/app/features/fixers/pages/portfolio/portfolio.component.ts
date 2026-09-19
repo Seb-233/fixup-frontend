@@ -2,10 +2,20 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { OwnPortfolioResponse, PieceResponse } from '../../../../api/generated';
+import { OwnPortfolioResponse, PieceResponse, UploadTicketDto } from '../../../../api/generated';
 import { PortfolioService } from './portfolio.service';
 
 export type UploadStep = 'IDLE' | 'VALIDATING' | 'TICKET' | 'UPLOADING' | 'CONFIRMING' | 'CREATING';
+export type FailedStage = 'TICKET' | 'UPLOAD' | 'CONFIRM' | 'CREATE';
+
+export interface RecoverableUploadState {
+  file: File;
+  title: string;
+  description?: string;
+  ticket?: UploadTicketDto;
+  mediaId?: string;
+  failedStage: FailedStage;
+}
 
 // FR-UC-17: alta segura de piezas mediante mediaId y galería interactiva del portafolio
 @Component({
@@ -549,7 +559,7 @@ export class PortfolioComponent implements OnInit {
   readonly pasoCarga = signal<UploadStep>('IDLE');
   readonly error = signal<string | null>(null);
   readonly errorRecuperable = signal(false);
-  readonly archivoFallido = signal<{ file: File; titulo: string; descripcion?: string } | null>(null);
+  readonly archivoFallido = signal<RecoverableUploadState | null>(null);
 
   // Campos del formulario
   titulo = '';
@@ -600,62 +610,218 @@ export class PortfolioComponent implements OnInit {
     const file = this.archivoSeleccionado();
     if (!file) return;
 
-    this.ejecutarFlujoSubida(file, this.titulo.trim(), this.descripcion.trim());
+    this.ejecutarDesdeTicket(file, this.titulo.trim(), this.descripcion.trim());
   }
 
   reintentarSubida(): void {
     const fallido = this.archivoFallido();
     if (!fallido) return;
-    this.ejecutarFlujoSubida(fallido.file, fallido.titulo, fallido.descripcion);
+
+    switch (fallido.failedStage) {
+      case 'TICKET':
+        this.ejecutarDesdeTicket(fallido.file, fallido.title, fallido.description);
+        break;
+      case 'UPLOAD':
+        if (fallido.ticket && !this.ticketVencido(fallido.ticket)) {
+          this.ejecutarDesdeUpload(fallido.file, fallido.title, fallido.description, fallido.ticket);
+        } else {
+          this.ejecutarDesdeTicket(fallido.file, fallido.title, fallido.description);
+        }
+        break;
+      case 'CONFIRM':
+        if (fallido.mediaId) {
+          this.ejecutarDesdeConfirm(fallido.file, fallido.title, fallido.description, fallido.mediaId, fallido.ticket);
+        } else {
+          this.ejecutarDesdeTicket(fallido.file, fallido.title, fallido.description);
+        }
+        break;
+      case 'CREATE':
+        if (fallido.mediaId) {
+          this.ejecutarDesdeCreate(fallido.file, fallido.title, fallido.description, fallido.mediaId, fallido.ticket);
+        } else {
+          this.ejecutarDesdeTicket(fallido.file, fallido.title, fallido.description);
+        }
+        break;
+    }
   }
 
-  private ejecutarFlujoSubida(file: File, titulo: string, descripcion?: string): void {
+  private ticketVencido(ticket: UploadTicketDto): boolean {
+    if (!ticket.expiresAt) return false;
+    const expiration = new Date(ticket.expiresAt).getTime();
+    return isNaN(expiration) || expiration <= Date.now();
+  }
+
+  private ejecutarDesdeTicket(file: File, title: string, description?: string): void {
     this.subiendo.set(true);
     this.error.set(null);
     this.errorRecuperable.set(false);
     this.pasoCarga.set('TICKET');
 
-    // 1. Solicitar ticket de carga firmada
     this.portfolioService.requestUploadTicket(file).subscribe({
       next: (ticket) => {
-        this.pasoCarga.set('UPLOADING');
-        // 2. PUT binario directo al almacenamiento externo sin Authorization
-        this.portfolioService.uploadBinary(ticket, file).subscribe({
-          next: () => {
-            this.pasoCarga.set('CONFIRMING');
-            // 3. Confirmar la carga con mediaId
-            this.portfolioService.confirmUpload(ticket.mediaId).subscribe({
-              next: () => {
-                this.pasoCarga.set('CREATING');
-                // 4. Crear la pieza en el portafolio con mediaId
-                this.portfolioService.addPiece(ticket.mediaId, titulo, descripcion).subscribe({
-                  next: () => {
-                    this.subiendo.set(false);
-                    this.pasoCarga.set('IDLE');
-                    this.archivoFallido.set(null);
-                    this.limpiarFormulario();
-                    this.cargarPortafolio();
-                  },
-                  error: (err: HttpErrorResponse) => this.manejarFalloSubida(err, file, titulo, descripcion)
-                });
-              },
-              error: (err: HttpErrorResponse) => this.manejarFalloSubida(err, file, titulo, descripcion)
-            });
-          },
-          error: (err: HttpErrorResponse) => this.manejarFalloSubida(err, file, titulo, descripcion)
-        });
+        this.ejecutarDesdeUpload(file, title, description, ticket);
       },
-      error: (err: HttpErrorResponse) => this.manejarFalloSubida(err, file, titulo, descripcion)
+      error: (err: HttpErrorResponse) => {
+        this.manejarFallo(err, {
+          file,
+          title,
+          description,
+          failedStage: 'TICKET'
+        });
+      }
     });
   }
 
-  private manejarFalloSubida(err: HttpErrorResponse, file: File, titulo: string, descripcion?: string): void {
+  private ejecutarDesdeUpload(
+    file: File,
+    title: string,
+    description: string | undefined,
+    ticket: UploadTicketDto
+  ): void {
+    if (this.ticketVencido(ticket)) {
+      this.ejecutarDesdeTicket(file, title, description);
+      return;
+    }
+
+    this.subiendo.set(true);
+    this.error.set(null);
+    this.errorRecuperable.set(false);
+    this.pasoCarga.set('UPLOADING');
+
+    this.portfolioService.uploadBinary(ticket, file).subscribe({
+      next: () => {
+        this.ejecutarDesdeConfirm(file, title, description, ticket.mediaId, ticket);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.manejarFallo(err, {
+          file,
+          title,
+          description,
+          ticket,
+          mediaId: ticket.mediaId,
+          failedStage: 'UPLOAD'
+        });
+      }
+    });
+  }
+
+  private ejecutarDesdeConfirm(
+    file: File,
+    title: string,
+    description: string | undefined,
+    mediaId: string,
+    ticket?: UploadTicketDto
+  ): void {
+    this.subiendo.set(true);
+    this.error.set(null);
+    this.errorRecuperable.set(false);
+    this.pasoCarga.set('CONFIRMING');
+
+    this.portfolioService.confirmUpload(mediaId).subscribe({
+      next: () => {
+        this.ejecutarDesdeCreate(file, title, description, mediaId, ticket);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.manejarFallo(err, {
+          file,
+          title,
+          description,
+          ticket,
+          mediaId,
+          failedStage: 'CONFIRM'
+        });
+      }
+    });
+  }
+
+  private ejecutarDesdeCreate(
+    file: File,
+    title: string,
+    description: string | undefined,
+    mediaId: string,
+    ticket?: UploadTicketDto
+  ): void {
+    this.subiendo.set(true);
+    this.error.set(null);
+    this.errorRecuperable.set(false);
+    this.pasoCarga.set('CREATING');
+
+    this.portfolioService.addPiece(mediaId, title, description).subscribe({
+      next: () => {
+        this.completarFlujoExitoso();
+      },
+      error: (err: HttpErrorResponse) => {
+        const isConflict =
+          err.status === 409 ||
+          err.error?.code === 'MEDIA_ALREADY_ATTACHED' ||
+          (typeof err.error?.message === 'string' && err.error.message.includes('MEDIA_ALREADY_ATTACHED'));
+
+        if (isConflict) {
+          // Si CREATE devuelve 409 o MEDIA_ALREADY_ATTACHED:
+          // - recargar el portafolio;
+          // - buscar una pieza con el mismo mediaId;
+          // - si existe, considerar el flujo completado;
+          // - si no existe, mostrar el conflicto.
+          this.portfolioService.myPortfolio().subscribe({
+            next: (resp) => {
+              this.portfolio.set(resp);
+              const existe = resp.pieces?.some((p) => p.mediaId === mediaId);
+              if (existe) {
+                this.completarFlujoExitoso(false);
+              } else {
+                this.manejarFallo(err, {
+                  file,
+                  title,
+                  description,
+                  ticket,
+                  mediaId,
+                  failedStage: 'CREATE'
+                });
+              }
+            },
+            error: () => {
+              this.manejarFallo(err, {
+                file,
+                title,
+                description,
+                ticket,
+                mediaId,
+                failedStage: 'CREATE'
+              });
+            }
+          });
+        } else {
+          this.manejarFallo(err, {
+            file,
+            title,
+            description,
+            ticket,
+            mediaId,
+            failedStage: 'CREATE'
+          });
+        }
+      }
+    });
+  }
+
+  private completarFlujoExitoso(recargar = true): void {
+    this.subiendo.set(false);
+    this.pasoCarga.set('IDLE');
+    this.archivoFallido.set(null);
+    this.error.set(null);
+    this.errorRecuperable.set(false);
+    this.limpiarFormulario();
+    if (recargar) {
+      this.cargarPortafolio();
+    }
+  }
+
+  private manejarFallo(err: HttpErrorResponse, estado: RecoverableUploadState): void {
     this.subiendo.set(false);
     this.pasoCarga.set('IDLE');
     this.error.set(this.describirError(err));
     this.errorRecuperable.set(true);
-    this.archivoFallido.set({ file, titulo, descripcion });
-    // NO se limpian this.titulo ni this.descripcion para permitir corregir o reintentar
+    this.archivoFallido.set(estado);
   }
 
   alternarVisibilidad(pieza: PieceResponse): void {
