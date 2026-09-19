@@ -81,7 +81,11 @@ Cada funcionalidad se aísla en su propio dominio. Una feature no debe importar 
 - Contenedor nativo configurado en `capacitor.config.ts` con ID `com.fixup.app`.
 - El directorio `android/` forma parte del repositorio como contenedor puente nativo, pero excluye configuraciones locales (`local.properties`), llaves de firma y artefactos de compilación (`build/`, `*.apk`).
 - No se incorporan pantallas en Kotlin ni configuraciones de la plataforma iOS.
-- **Estado de Autenticación en Android**: La existencia del contenedor nativo de Capacitor en esta fase establece exclusivamente la estructura del proyecto compilable; **no** significa que la autenticación en Android esté terminada. El manejo de callback y deep linking nativo para Auth0 en Android se implementará formalmente en el caso de uso `FR-UC-21`.
+- **Autenticación en Android (`FR-UC-21`)**: El retorno de Auth0 no puede apuntar a `localhost` dentro de la aplicación, así que la ventana de inicio de sesión se abre en el **navegador del sistema** mediante `@capacitor/browser` —nunca en un WebView embebido, que los proveedores de identidad rechazan— y el control vuelve por un **deep link** que `@capacitor/app` entrega a `NativeAuthService`.
+  - La dirección de retorno es `{appId}://{dominio}/capacitor/{appId}/callback` y debe coincidir exactamente en cuatro lugares: `environment.native.appId`, `environment.auth0.domain`, el `intent-filter` de `AndroidManifest.xml` con el placeholder `auth0Domain` de `build.gradle`, y los **Allowed Callback URLs y Allowed Logout URLs** del tenant de Auth0. Si uno solo no cuadra, el navegador no devuelve el control.
+  - Dentro del contenedor nativo no existen cookies de terceros, por lo que la renovación silenciosa por iframe no funciona: Android usa `useRefreshTokens` y no cae al iframe.
+  - `NativeAuthService` descarta cualquier deep link que no sea el callback de Auth0, de modo que otros enlaces que abran la aplicación no se interpreten como una respuesta de autenticación.
+  - El comportamiento en tiempo de ejecución solo puede comprobarse en un dispositivo o emulador con el tenant configurado; la CI verifica que el proyecto compila y que `cap sync` es válido, no el viaje completo del deep link.
 
 ### Autenticación con Auth0 y Autorización Backend
 - **Rol de Auth0**: Auth0 actúa exclusivamente como proveedor de identidad externa, inicio/cierre de sesión federado y emisor de Access Tokens criptográficos.
