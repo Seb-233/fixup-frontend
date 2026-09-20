@@ -60,3 +60,6 @@ yarn-error.log*
 # Operating system
 .DS_Store
 Thumbs.db
+
+# Sandbox local git dir (avoid picking up parent Downloads git repo)
+.git-seb/

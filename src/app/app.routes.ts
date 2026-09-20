@@ -77,11 +77,22 @@ export const routes: Routes = [
       {
         path: 'properties',
         canActivate: [roleGuard],
-        component: PlaceholderComponent,
+        loadComponent: () =>
+          import('./features/properties/pages/my-properties.component').then(
+            (m) => m.MyPropertiesComponent
+          ),
         data: {
           title: 'Propiedades',
           roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
         }
+      },
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/pages/notifications-list.component').then(
+            (m) => m.NotificationsListComponent
+          ),
+        data: { title: 'Notificaciones' }
       },
       {
         path: 'fixers',

@@ -93,9 +93,13 @@ import { AuthService } from '../../core/auth/auth.service';
   `,
   styleUrls: ['./topbar.component.scss']
 })
-export class TopbarComponent {
+export class TopbarComponent implements OnInit, OnDestroy {
   readonly userStore = inject(CurrentUserStore);
   readonly auth = inject(AuthService);
+  private readonly notificationsSvc = inject(NotificationsService);
+  private pollingSub?: Subscription;
+
+  readonly notificationsCount = this.notificationsSvc.unreadCount;
 
   readonly userInitials = computed<string>(() => {
     const user = this.userStore.user();
@@ -117,6 +121,14 @@ export class TopbarComponent {
     const role = this.userStore.activeRole();
     return role === 'OWNER' || role === 'TENANT' || role === 'REAL_ESTATE_MANAGER';
   });
+
+  ngOnInit(): void {
+    this.pollingSub = this.notificationsSvc.startPolling(60000).subscribe();
+  }
+
+  ngOnDestroy(): void {
+    this.pollingSub?.unsubscribe();
+  }
 
   logout(): void {
     this.auth.logout().subscribe();
