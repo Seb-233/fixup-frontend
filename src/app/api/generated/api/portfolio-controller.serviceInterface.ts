@@ -30,7 +30,7 @@ export interface PortfolioControllerServiceInterface {
      * Delete a piece from the portfolio
      * Removes the piece, marks media deleted, and triggers secure storage deletion. If remaining visible photos &lt; 3, reverts portfolio to DRAFT. Requires a verified fixer.
      * @endpoint delete /media/me/portfolio/pieces/{pieceId}
-     * @param pieceId
+     * @param pieceId 
      */
     deletePiece(pieceId: string, extraHttpRequestParams?: any): Observable<{}>;
 

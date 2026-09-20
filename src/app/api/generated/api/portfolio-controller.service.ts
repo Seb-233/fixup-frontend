@@ -50,7 +50,7 @@ export class PortfolioControllerService extends BaseService implements Portfolio
      * Delete a piece from the portfolio
      * Removes the piece, marks media deleted, and triggers secure storage deletion. If remaining visible photos &lt; 3, reverts portfolio to DRAFT. Requires a verified fixer.
      * @endpoint delete /media/me/portfolio/pieces/{pieceId}
-     * @param pieceId
+     * @param pieceId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
