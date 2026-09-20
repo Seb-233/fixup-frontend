@@ -20,7 +20,11 @@ describe('api.routes', () => {
       '/quotations',
       '/quotations/me',
       '/quotations/req-123/accept',
-      '/quotations/req-123/reject'
+      '/quotations/req-123/reject',
+      '/jobs/me',
+      '/jobs/job-123/complete',
+      '/payments/me/earnings',
+      '/payments/me/payouts'
     ];
 
     for (const ruta of protegidas) {
@@ -36,6 +40,11 @@ describe('api.routes', () => {
   it('no debe tratar como protegida una ruta del backend fuera de los prefijos declarados', () => {
     expect(isFixUpApiUrl(`${environment.apiOrigin}/actuator/health`)).toBe(false);
     expect(isFixUpApiUrl(`${environment.apiOrigin}/v3/api-docs`)).toBe(false);
+  });
+
+  it('no debe adjuntar el token a una ruta que solo se parece a las del dinero', () => {
+    expect(isFixUpApiUrl(`${environment.apiOrigin}/jobs-export`)).toBe(false);
+    expect(isFixUpApiUrl(`${environment.apiOrigin}/payments-report`)).toBe(false);
   });
 
   it('no debe confundir un origen que solo comienza igual', () => {

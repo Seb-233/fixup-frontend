@@ -309,7 +309,7 @@ export class FixerVerificationControllerService extends BaseService implements F
      * Update the fixer\&#39;s offered specialties
      * Configures the trades the fixer can attend. Requires active account and FIXER role.
      * @endpoint post /fixers/me/specialties
-     * @param specialtiesRequest
+     * @param specialtiesRequest 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options

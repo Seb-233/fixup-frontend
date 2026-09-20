@@ -15,7 +15,9 @@ export const API_ROUTES = {
     '/media/',
     '/analytics/',
     '/requests/',
-    '/quotations/'
+    '/quotations/',
+    '/jobs/',
+    '/payments/'
   ],
 } as const;
 

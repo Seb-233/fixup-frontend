@@ -62,7 +62,7 @@ export interface FixerVerificationControllerServiceInterface {
      * Update the fixer\&#39;s offered specialties
      * Configures the trades the fixer can attend. Requires active account and FIXER role.
      * @endpoint post /fixers/me/specialties
-     * @param specialtiesRequest
+     * @param specialtiesRequest 
      */
     updateSpecialties(specialtiesRequest: SpecialtiesRequest, extraHttpRequestParams?: any): Observable<VerificationResponse>;
 
