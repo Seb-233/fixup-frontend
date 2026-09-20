@@ -15,7 +15,7 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
  *
  * La comisión se muestra como cifra propia y no como la diferencia entre dos números que el
  * técnico tendría que restar. El monto de la transferencia no se pide: se transfiere el saldo
- * disponible completo, que el backend calcula.
+ * disponible completo a través de una solicitud de transferencia, que el backend calcula.
  */
 @Component({
   selector: 'app-earnings-panel',
@@ -52,7 +52,7 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
             <span class="hint">sobre {{ data.grossTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }} facturados</span>
           </article>
           <article class="tile paid">
-            <span class="label">Ya transferido</span>
+            <span class="label">Solicitado para transferencia</span>
             <strong class="value">{{ data.paidOutTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
           </article>
         </div>
@@ -106,7 +106,7 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
                     · liberado el {{ line.releasedAt | date: 'dd/MM/yyyy' }}
                   }
                   @if (line.paidOutAt) {
-                    · transferido el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
+                    · solicitado para transferencia el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
                   }
                 </p>
               </li>

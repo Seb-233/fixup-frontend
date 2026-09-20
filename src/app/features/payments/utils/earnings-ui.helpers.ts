@@ -7,7 +7,7 @@ export function earningStatusLabel(status: EarningStatus): string {
     case EarningStatus.Available:
       return 'Disponible';
     case EarningStatus.PaidOut:
-      return 'Transferido';
+      return 'Transferencia solicitada';
     default:
       return status;
   }

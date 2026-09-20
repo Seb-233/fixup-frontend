@@ -93,4 +93,18 @@ describe('DashboardComponent (Landing Principal Autenticada)', () => {
     fixture.detectChanges();
     expect(component.canManageRequests()).toBe(false);
   });
+
+  it('debe mostrar la acción rápida a /jobs/me únicamente para el rol FIXER', () => {
+    userStore.setActiveRole('FIXER');
+    fixture.detectChanges();
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(component.isFixer()).toBe(true);
+    expect(compiled.textContent).toContain('Mis trabajos');
+
+    userStore.setActiveRole('OWNER');
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(component.isFixer()).toBe(false);
+    expect(compiled.textContent).not.toContain('Mis trabajos');
+  });
 });
