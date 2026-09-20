@@ -156,6 +156,25 @@ export const routes: Routes = [
           roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER']
         }
       },
+      // FR-UC-20: trabajos e ingresos del técnico. Ambas pantallas son solo del FIXER: el
+      // saldo y el cierre del trabajo no le pertenecen a nadie más.
+      {
+        path: 'jobs/me',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/jobs/pages/mine/my-jobs.component').then((m) => m.MyJobsComponent),
+        data: { title: 'Mis Trabajos', roles: ['FIXER'] }
+      },
+      {
+        path: 'payments/earnings',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/payments/pages/earnings/earnings-panel.component').then(
+            (m) => m.EarningsPanelComponent
+          ),
+        data: { title: 'Mis Ingresos', roles: ['FIXER'] }
+      },
+
       {
         path: 'fixers/verification',
         canActivate: [roleGuard],
