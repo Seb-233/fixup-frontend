@@ -167,6 +167,33 @@ export interface KpiMetric {
               </div>
               <span class="action-arrow">→</span>
             </a>
+
+            <!--
+              TEMPORAL — enlace de prueba para FR-UC-23, no forma parte del diseño final.
+              No hay ningún otro punto de entrada en la UI hacia /administration/fixer-review:
+              esa ruta nunca tuvo item de navegación propio. Usa routerLink (navegación de la
+              SPA) a propósito y no <a href>, porque un href navega con recarga completa del
+              documento y CurrentUserStore.activeRole vive solo en memoria (nunca en
+              localStorage): una recarga completa reinicia activeRole a roles[0] y un
+              PLATFORM_ADMIN que también tenga otro rol pierde el acceso a la pantalla que
+              acaba de abrir. Quitar este bloque cuando exista una entrada de navegación
+              definitiva para administración (o el selector de rol de /profile sea suficiente
+              para llegar hasta aquí).
+            -->
+            @if (isPlatformAdmin()) {
+              <a routerLink="/administration/fixer-review" class="action-card">
+                <div class="action-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div class="action-text">
+                  <h3>[TEMPORAL] Revisión de Técnicos (admin)</h3>
+                  <p>Acceso directo de prueba para FR-UC-23 mientras no exista navegación propia.</p>
+                </div>
+                <span class="action-arrow">→</span>
+              </a>
+            }
           </div>
         </section>
 
@@ -603,6 +630,9 @@ export class DashboardComponent {
     const role = this.userStore.activeRole();
     return role === 'OWNER' || role === 'TENANT' || role === 'FIXER' || role === 'REAL_ESTATE_MANAGER';
   });
+
+  // Gate del enlace TEMPORAL hacia /administration/fixer-review (ver comentario en el template).
+  readonly isPlatformAdmin = computed(() => this.userStore.activeRole() === 'PLATFORM_ADMIN');
 
   readonly roleSubtitle = computed(() => {
     const role = this.userStore.activeRole();
