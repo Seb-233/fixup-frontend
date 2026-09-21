@@ -14,6 +14,7 @@ import { Observable }                                        from 'rxjs';
 import { DocumentsRequest } from '../model/models';
 import { ErrorResponse } from '../model/models';
 import { RejectionRequest } from '../model/models';
+import { ReviewResponse } from '../model/models';
 import { SpecialtiesRequest } from '../model/models';
 import { VerificationResponse } from '../model/models';
 
@@ -51,8 +52,16 @@ export interface FixerVerificationControllerServiceInterface {
     reject1(fixerUserId: string, rejectionRequest: RejectionRequest, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
+     * Read a fixer\&#39;s registered identity, specialties and documents for review
+     * Requires an active PLATFORM_ADMIN. Returns signed, time-limited read URLs for the submitted documents; never their storage keys.
+     * @endpoint get /fixers/{fixerUserId}/verification
+     * @param fixerUserId 
+     */
+    reviewOf(fixerUserId: string, extraHttpRequestParams?: any): Observable<ReviewResponse>;
+
+    /**
      * File the verification documents and open the administrative review
-     * The body carries storage keys only. No document content crosses this API. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its key.
+     * The body carries media IDs already uploaded and confirmed through POST /media/uploads with purpose FIXER_VERIFICATION. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its media.
      * @endpoint post /fixers/me/verification/documents
      * @param documentsRequest 
      */

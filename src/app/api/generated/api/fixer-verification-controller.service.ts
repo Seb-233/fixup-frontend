@@ -23,6 +23,8 @@ import { ErrorResponse } from '../model/error-response';
 // @ts-ignore
 import { RejectionRequest } from '../model/rejection-request';
 // @ts-ignore
+import { ReviewResponse } from '../model/review-response';
+// @ts-ignore
 import { SpecialtiesRequest } from '../model/specialties-request';
 // @ts-ignore
 import { VerificationResponse } from '../model/verification-response';
@@ -236,8 +238,68 @@ export class FixerVerificationControllerService extends BaseService implements F
     }
 
     /**
+     * Read a fixer\&#39;s registered identity, specialties and documents for review
+     * Requires an active PLATFORM_ADMIN. Returns signed, time-limited read URLs for the submitted documents; never their storage keys.
+     * @endpoint get /fixers/{fixerUserId}/verification
+     * @param fixerUserId 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public reviewOf(fixerUserId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<ReviewResponse>;
+    public reviewOf(fixerUserId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<ReviewResponse>>;
+    public reviewOf(fixerUserId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<ReviewResponse>>;
+    public reviewOf(fixerUserId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (fixerUserId === null || fixerUserId === undefined) {
+            throw new Error('Required parameter fixerUserId was null or undefined when calling reviewOf.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/fixers/${this.configuration.encodeParam({name: "fixerUserId", value: fixerUserId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/verification`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<ReviewResponse>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * File the verification documents and open the administrative review
-     * The body carries storage keys only. No document content crosses this API. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its key.
+     * The body carries media IDs already uploaded and confirmed through POST /media/uploads with purpose FIXER_VERIFICATION. Documents may be filed one at a time; the review opens by itself once the mandatory set is complete. Resubmitting a type replaces its media.
      * @endpoint post /fixers/me/verification/documents
      * @param documentsRequest 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.

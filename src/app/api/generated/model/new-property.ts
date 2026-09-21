@@ -7,11 +7,12 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { DocumentRequest } from './document-request';
 
 
-export interface DocumentsRequest { 
-    consentVersion?: string;
-    documents: Array<DocumentRequest>;
+export interface NewProperty { 
+    name?: string;
+    address?: string;
+    city?: string;
+    areaM2?: number;
 }
 
