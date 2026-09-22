@@ -8,7 +8,7 @@ import { CurrentUserStore } from '../../core/auth/current-user.store';
 export interface NavItem {
   path: string;
   label: string;
-  icon: 'dashboard' | 'properties' | 'fixers' | 'requests' | 'profile';
+  icon: 'dashboard' | 'properties' | 'fixers' | 'requests' | 'profile' | 'verification' | 'review';
   badge?: string;
   roles?: string[];
 }
@@ -100,6 +100,19 @@ export interface NavItem {
                         <path d="M6 20v-1a6 6 0 0112 0v1" />
                       </svg>
                     }
+                    @case ('verification') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 12l2 2 4-4" />
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    }
+                    @case ('review') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                        <rect x="9" y="3" width="6" height="4" rx="1" />
+                        <path d="M9 14l2 2 4-4" />
+                      </svg>
+                    }
                   }
                 </span>
 
@@ -149,6 +162,13 @@ export class SidebarComponent implements OnDestroy {
       { path: '/properties', label: 'Propiedades', icon: 'properties', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
       { path: '/fixers', label: 'Técnicos', icon: 'fixers', roles: ['OWNER', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
       { path: activeRole === 'FIXER' ? '/requests/inbox' : '/requests', label: 'Solicitudes', icon: 'requests', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] },
+      // FR-UC-23: sin este item, la única forma de llegar a /fixers/verification era
+      // escribiendo la URL a mano -- un Fixer real necesita esta pantalla siempre (para subir
+      // documentos, ver su estado y ajustar especialidades), no es un enlace de prueba temporal.
+      { path: '/fixers/verification', label: 'Verificación', icon: 'verification', roles: ['FIXER'] },
+      // FR-UC-23: entrada permanente para la revisión administrativa. Reemplaza la tarjeta
+      // TEMPORAL que vivía en el dashboard solo para poder probar la pantalla sin esta entrada.
+      { path: '/administration/fixer-review', label: 'Revisión de técnicos', icon: 'review', roles: ['PLATFORM_ADMIN'] },
       { path: '/profile', label: 'Mi Perfil', icon: 'profile' }
     ];
     return items.filter((item) => !item.roles || item.roles.includes(activeRole));
