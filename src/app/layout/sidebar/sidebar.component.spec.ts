@@ -109,15 +109,15 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     expect(paths).not.toContain('/requests');
   });
 
-  it('limita TENANT a dashboard y perfil', () => {
+  it('muestra solicitudes para TENANT sin exponer propiedades', () => {
     const paths = setRole('TENANT');
-    expect(paths).toEqual(['/dashboard', '/profile']);
+    expect(paths).toEqual(['/dashboard', '/requests', '/profile']);
     expect(paths).not.toContain('/properties');
-    expect(paths).not.toContain('/requests');
   });
 
-  it('no expone propiedades ni solicitudes al REAL_ESTATE_MANAGER', () => {
+  it('muestra solicitudes para REAL_ESTATE_MANAGER sin exponer propiedades', () => {
     const paths = setRole('REAL_ESTATE_MANAGER');
-    expect(paths).toEqual(['/dashboard', '/profile']);
+    expect(paths).toEqual(['/dashboard', '/requests', '/profile']);
+    expect(paths).not.toContain('/properties');
   });
 });

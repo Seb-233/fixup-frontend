@@ -48,9 +48,12 @@ describe('BottomNavigationComponent', () => {
     ]);
   });
 
-  it('limita TENANT y REAL_ESTATE_MANAGER a dashboard y perfil', () => {
-    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/profile']);
-    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual(['/dashboard', '/profile']);
+  it('muestra dashboard, solicitudes y perfil para TENANT', () => {
+    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/requests', '/profile']);
+  });
+
+  it('muestra dashboard, solicitudes y perfil para REAL_ESTATE_MANAGER', () => {
+    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual(['/dashboard', '/requests', '/profile']);
   });
 
   it('no muestra elementos sin rol activo', () => {

@@ -43,10 +43,12 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
   ],
   TENANT: [
     { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard', mobilePrimary: true },
+    { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
   REAL_ESTATE_MANAGER: [
     { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard', mobilePrimary: true },
+    { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ]
 };

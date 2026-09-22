@@ -64,18 +64,24 @@ describe('DashboardComponent', () => {
     expect(links).not.toContain('/jobs/me');
   });
 
-  it('limita TENANT a perfil sin capacidades OWNER o FIXER', () => {
-    const links = paths(render('TENANT'));
-    expect(links).toEqual(['/profile']);
+  it('muestra solicitudes y perfil para TENANT sin capacidades OWNER o FIXER', () => {
+    const element = render('TENANT');
+    const links = paths(element);
+    expect(links).toEqual(['/requests', '/profile']);
+    expect(element.textContent).toContain('Consulta las solicitudes asociadas a tu cuenta.');
     expect(links).not.toContain('/properties');
-    expect(links).not.toContain('/requests');
+    expect(links).not.toContain('/requests/inbox');
+    expect(links).not.toContain('/jobs/me');
   });
 
-  it('limita REAL_ESTATE_MANAGER a perfil', () => {
-    const links = paths(render('REAL_ESTATE_MANAGER'));
-    expect(links).toEqual(['/profile']);
+  it('muestra solicitudes y perfil para REAL_ESTATE_MANAGER sin capacidades OWNER o FIXER', () => {
+    const element = render('REAL_ESTATE_MANAGER');
+    const links = paths(element);
+    expect(links).toEqual(['/requests', '/profile']);
+    expect(element.textContent).toContain('Consulta las solicitudes asociadas a tu cuenta.');
     expect(links).not.toContain('/properties');
-    expect(links).not.toContain('/requests');
+    expect(links).not.toContain('/requests/inbox');
+    expect(links).not.toContain('/jobs/me');
   });
 
   it('no renderiza cifras ni KPI ficticios anteriores', () => {

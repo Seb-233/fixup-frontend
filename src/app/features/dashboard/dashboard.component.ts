@@ -128,7 +128,7 @@ export class DashboardComponent {
   private readonly navigationActions = computed<DashboardAction[]>(() =>
     getNavigationForRole(this.userStore.activeRole())
       .filter((item) => item.path !== '/dashboard')
-      .map((item) => ({ ...item, description: this.actionDescription(item.path) }))
+      .map((item) => ({ ...item, description: this.actionDescription(item.path, this.userStore.activeRole()) }))
   );
 
   readonly primaryActions = computed<DashboardAction[]>(() => {
@@ -155,7 +155,11 @@ export class DashboardComponent {
     return this.navigationActions().filter((action) => !action.mobilePrimary);
   });
 
-  private actionDescription(path: string): string {
+  private actionDescription(path: string, role = this.userStore.activeRole()): string {
+    if (path === '/requests' && (role === 'TENANT' || role === 'REAL_ESTATE_MANAGER')) {
+      return 'Consulta las solicitudes asociadas a tu cuenta.';
+    }
+
     const descriptions: Record<string, string> = {
       '/properties': 'Registra y consulta las propiedades de tu cuenta.',
       '/requests': 'Consulta las solicitudes de reparación que has creado.',
