@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { DashboardComponent } from './dashboard.component';
 
@@ -7,6 +9,7 @@ describe('DashboardComponent', () => {
   let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
   let userStore: CurrentUserStore;
+  let verificationStore: FixerVerificationStore;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -14,6 +17,7 @@ describe('DashboardComponent', () => {
       providers: [CurrentUserStore, provideRouter([])]
     }).compileComponents();
     userStore = TestBed.inject(CurrentUserStore);
+    verificationStore = TestBed.inject(FixerVerificationStore);
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;
   });
@@ -32,8 +36,8 @@ describe('DashboardComponent', () => {
   it('mantiene saludo, rol y estado real', () => {
     const element = render('FIXER', 'PENDING');
     expect(element.querySelector('.greeting-title')?.textContent).toContain('Alex FixUp');
-    expect(element.querySelector('.role-badge')?.textContent).toContain('T閏nico Fixer');
-    expect(element.querySelector('.status-badge')?.textContent).toContain('Cuenta en proceso de validaci髇');
+    expect(element.querySelector('.role-badge')?.textContent).toContain('T茅cnico Fixer');
+    expect(element.querySelector('.status-badge')?.textContent).toContain('Cuenta en proceso de validaci贸n');
   });
 
   it('muestra las acciones OWNER y excluye placeholder y acciones FIXER', () => {
@@ -41,22 +45,34 @@ describe('DashboardComponent', () => {
     const links = paths(element);
     expect(links).toContain('/properties');
     expect(links).toContain('/requests');
-    expect(element.textContent).toContain('Nueva reparaci髇');
+    expect(element.textContent).toContain('Nueva reparaci贸n');
     expect(links).not.toContain('/fixers');
     expect(links).not.toContain('/requests/inbox');
     expect(links).not.toContain('/jobs/me');
   });
 
-  it('muestra todas las acciones reales del FIXER y excluye propiedades', () => {
+  it('limita al FIXER no verificado y muestra el CTA de verificaci贸n', () => {
+    const element = render('FIXER');
+    const links = paths(element);
+    expect(element.textContent).toContain('Completa tu verificaci贸n');
+    expect(links).toContain('/fixers/verification');
+    expect(links).toContain('/quotations/me');
+    expect(links).toContain('/jobs/me');
+    expect(links).toContain('/payments/earnings');
+    expect(links).not.toContain('/requests/inbox');
+    expect(links).not.toContain('/fixers/portfolio');
+  });
+
+  it('restaura todas las acciones profesionales para FIXER verificado', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
     const links = paths(render('FIXER'));
     expect(links).toEqual(expect.arrayContaining([
       '/requests/inbox', '/quotations/me', '/jobs/me', '/payments/earnings',
       '/fixers/verification', '/fixers/portfolio', '/profile'
     ]));
-    expect(links).not.toContain('/properties');
   });
 
-  it('limita PLATFORM_ADMIN a revisi髇 y perfil', () => {
+  it('limita PLATFORM_ADMIN a revisi锟絥 y perfil', () => {
     const links = paths(render('PLATFORM_ADMIN'));
     expect(links).toEqual(['/administration/fixer-review', '/profile']);
     expect(links).not.toContain('/properties');
@@ -91,7 +107,7 @@ describe('DashboardComponent', () => {
     expect(text).not.toContain('4.95');
     expect(text).not.toContain('12 enviados');
     expect(text).not.toContain('85%');
-    expect(text).not.toContain('14 t閏nicos');
+    expect(text).not.toContain('14 t锟絚nicos');
     expect(fixture.nativeElement.querySelector('.kpi-card')).toBeNull();
   });
 });

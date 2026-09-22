@@ -1,12 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { vi } from 'vitest';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { BottomNavigationComponent } from './bottom-navigation.component';
 
 describe('BottomNavigationComponent', () => {
   let component: BottomNavigationComponent;
   let fixture: ComponentFixture<BottomNavigationComponent>;
   let userStore: CurrentUserStore;
+  let verificationStore: FixerVerificationStore;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -18,6 +21,7 @@ describe('BottomNavigationComponent', () => {
     }).compileComponents();
 
     userStore = TestBed.inject(CurrentUserStore);
+    verificationStore = TestBed.inject(FixerVerificationStore);
     fixture = TestBed.createComponent(BottomNavigationComponent);
     component = fixture.componentInstance;
   });
@@ -33,13 +37,13 @@ describe('BottomNavigationComponent', () => {
     expect(pathsFor('OWNER')).toEqual(['/dashboard', '/properties', '/requests', '/profile']);
   });
 
-  it('limita el bottom nav FIXER a sus cuatro elementos primarios', () => {
-    const paths = pathsFor('FIXER');
-    expect(paths).toEqual(['/dashboard', '/requests/inbox', '/jobs/me', '/profile']);
-    expect(paths).not.toContain('/quotations/me');
-    expect(paths).not.toContain('/payments/earnings');
-    expect(paths).not.toContain('/fixers/verification');
-    expect(paths).not.toContain('/fixers/portfolio');
+  it('oculta inbox del bottom nav para FIXER no verificado', () => {
+    expect(pathsFor('FIXER')).toEqual(['/dashboard', '/jobs/me', '/profile']);
+  });
+
+  it('incluye inbox del bottom nav para FIXER verificado', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    expect(pathsFor('FIXER')).toEqual(['/dashboard', '/requests/inbox', '/jobs/me', '/profile']);
   });
 
   it('muestra dashboard, revisión y perfil para PLATFORM_ADMIN', () => {

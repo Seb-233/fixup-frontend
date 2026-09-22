@@ -3,6 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole, RoleNavigationItem } from '../../core/navigation/role-navigation';
+import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
 
 interface DashboardAction extends RoleNavigationItem {
   description: string;
@@ -30,6 +31,14 @@ interface DashboardAction extends RoleNavigationItem {
         </div>
       </header>
 
+      @if (userStore.activeRole() === 'FIXER' && !verificationStore.verified()) {
+        <section class="panel-section verification-callout">
+          <h2>Completa tu verificaci√≥n</h2>
+          <p>Completa tu verificaci√≥n para acceder a solicitudes disponibles y publicar tu portafolio profesional.</p>
+          <a class="primary-action" routerLink="/fixers/verification">Completar verificaci√≥n</a>
+        </section>
+      }
+
       <section class="panel-section" aria-labelledby="main-actions-title">
         <div class="section-header">
           <h2 id="main-actions-title" class="section-title">Acciones principales</h2>
@@ -42,6 +51,7 @@ interface DashboardAction extends RoleNavigationItem {
               <span>
                 <strong>{{ action.label }}</strong>
                 <small>{{ action.description }}</small>
+                @if (action.requiresVerification) { <small>Requiere verificaci√≥n</small> }
               </span>
             </a>
           }
@@ -51,7 +61,7 @@ interface DashboardAction extends RoleNavigationItem {
       @if (secondaryActions().length > 0) {
         <section class="panel-section secondary-panel" aria-labelledby="secondary-actions-title">
           <div class="section-header">
-            <h2 id="secondary-actions-title" class="section-title">M·s herramientas</h2>
+            <h2 id="secondary-actions-title" class="section-title">M√°s herramientas</h2>
             <p>Funciones disponibles desde tu cuenta FixUp.</p>
           </div>
           <div class="actions-list compact">
@@ -61,6 +71,7 @@ interface DashboardAction extends RoleNavigationItem {
                 <span>
                   <strong>{{ action.label }}</strong>
                   <small>{{ action.description }}</small>
+                @if (action.requiresVerification) { <small>Requiere verificaci√≥n</small> }
                 </span>
               </a>
             }
@@ -94,12 +105,13 @@ interface DashboardAction extends RoleNavigationItem {
 })
 export class DashboardComponent {
   readonly userStore = inject(CurrentUserStore);
+  readonly verificationStore = inject(FixerVerificationStore);
 
   readonly roleLabel = computed(() => {
     switch (this.userStore.activeRole()) {
       case 'OWNER': return 'Propietario';
       case 'TENANT': return 'Arrendatario';
-      case 'FIXER': return 'TÈcnico Fixer';
+      case 'FIXER': return 'T√©cnico Fixer';
       case 'REAL_ESTATE_MANAGER': return 'Administrador inmobiliario';
       case 'PLATFORM_ADMIN': return 'Administrador de plataforma';
       default: return 'Usuario';
@@ -109,24 +121,24 @@ export class DashboardComponent {
   readonly statusLabel = computed(() => {
     switch (this.userStore.status()) {
       case 'ACTIVE': return 'Cuenta activa';
-      case 'PENDING': return 'Cuenta en proceso de validaciÛn';
+      case 'PENDING': return 'Cuenta en proceso de validaci√≥n';
       default: return this.userStore.status() ? `Estado: ${this.userStore.status()}` : 'Estado no disponible';
     }
   });
 
   readonly roleSubtitle = computed(() => {
     switch (this.userStore.activeRole()) {
-      case 'OWNER': return 'Organiza tus propiedades y acompaÒa cada reparaciÛn desde su registro hasta sus solicitudes.';
+      case 'OWNER': return 'Organiza tus propiedades y acompa√±a cada reparaci√≥n desde su registro hasta sus solicitudes.';
       case 'FIXER': return 'Consulta solicitudes, cotizaciones, trabajos y las herramientas de tu actividad profesional.';
-      case 'PLATFORM_ADMIN': return 'Administra los procesos de revisiÛn de tÈcnicos disponibles en la plataforma.';
-      case 'TENANT': return 'Tu cuenta est· activa. Las funciones disponibles dependen de los servicios habilitados para tu perfil.';
-      case 'REAL_ESTATE_MANAGER': return 'Tu cuenta est· activa. Las funciones disponibles dependen de los servicios habilitados para tu perfil.';
+      case 'PLATFORM_ADMIN': return 'Administra los procesos de revisi√≥n de t√©cnicos disponibles en la plataforma.';
+      case 'TENANT': return 'Tu cuenta est√° activa. Las funciones disponibles dependen de los servicios habilitados para tu perfil.';
+      case 'REAL_ESTATE_MANAGER': return 'Tu cuenta est√° activa. Las funciones disponibles dependen de los servicios habilitados para tu perfil.';
       default: return 'Consulta las herramientas habilitadas para tu cuenta.';
     }
   });
 
   private readonly navigationActions = computed<DashboardAction[]>(() =>
-    getNavigationForRole(this.userStore.activeRole())
+    getNavigationForRole(this.userStore.activeRole(), this.verificationStore.verified())
       .filter((item) => item.path !== '/dashboard')
       .map((item) => ({ ...item, description: this.actionDescription(item.path, this.userStore.activeRole()) }))
   );
@@ -139,7 +151,7 @@ export class DashboardComponent {
         actions.find((action) => action.path === '/requests')!,
         {
           path: '/properties',
-          label: 'Nueva reparaciÛn',
+          label: 'Nueva reparaci√≥n',
           icon: 'properties',
           mobilePrimary: false,
           description: 'Selecciona una de tus propiedades para reportar un problema.'
@@ -160,17 +172,19 @@ export class DashboardComponent {
       return 'Consulta las solicitudes asociadas a tu cuenta.';
     }
 
+    if (path === '/fixers/verification' && role === 'FIXER') return 'Completa tu verificaci√≥n para acceder a solicitudes disponibles y publicar tu portafolio profesional.';
+
     const descriptions: Record<string, string> = {
       '/properties': 'Registra y consulta las propiedades de tu cuenta.',
-      '/requests': 'Consulta las solicitudes de reparaciÛn que has creado.',
+      '/requests': 'Consulta las solicitudes de reparaci√≥n que has creado.',
       '/requests/inbox': 'Revisa solicitudes disponibles para cotizar.',
       '/quotations/me': 'Consulta las cotizaciones que has enviado.',
       '/jobs/me': 'Da seguimiento a tus trabajos asignados.',
       '/payments/earnings': 'Consulta tus ingresos y transferencias solicitadas.',
-      '/fixers/verification': 'Gestiona tu informaciÛn de verificaciÛn.',
+      '/fixers/verification': 'Gestiona tu informaci√≥n de verificaci√≥n.',
       '/fixers/portfolio': 'Administra las piezas de tu portafolio.',
-      '/administration/fixer-review': 'Consulta y resuelve revisiones de tÈcnicos.',
-      '/profile': 'Consulta la informaciÛn de tu cuenta.'
+      '/administration/fixer-review': 'Consulta y resuelve revisiones de t√©cnicos.',
+      '/profile': 'Consulta la informaci√≥n de tu cuenta.'
     };
     return descriptions[path] ?? 'Consulta esta herramienta disponible para tu cuenta.';
   }

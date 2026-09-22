@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
+import { verifiedFixerGuard } from './core/auth/verified-fixer.guard';
 import { PlaceholderComponent } from './shared/components/placeholder/placeholder.component';
 import { PrivateShellComponent } from './layout/private-shell/private-shell.component';
 
@@ -114,7 +115,7 @@ export const routes: Routes = [
       },
       {
         path: 'requests/inbox',
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, verifiedFixerGuard],
         loadComponent: () =>
           import('./features/requests/pages/inbox/request-inbox.component').then(
             (m) => m.RequestInboxComponent
@@ -207,7 +208,7 @@ export const routes: Routes = [
       },
       {
         path: 'fixers/portfolio',
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, verifiedFixerGuard],
         loadComponent: () =>
           import('./features/fixers/pages/portfolio/portfolio.component').then(
             (m) => m.PortfolioComponent

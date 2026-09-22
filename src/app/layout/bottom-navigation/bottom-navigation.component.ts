@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole } from '../../core/navigation/role-navigation';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 
 @Component({
   selector: 'app-bottom-navigation',
@@ -21,8 +22,9 @@ import { getNavigationForRole } from '../../core/navigation/role-navigation';
 })
 export class BottomNavigationComponent {
   private readonly userStore = inject(CurrentUserStore);
+  private readonly verificationStore = inject(FixerVerificationStore);
 
   readonly visibleItems = computed(() => {
-    return getNavigationForRole(this.userStore.activeRole()).filter((item) => item.mobilePrimary);
+    return getNavigationForRole(this.userStore.activeRole(), this.verificationStore.verified()).filter((item) => item.mobilePrimary);
   });
 }

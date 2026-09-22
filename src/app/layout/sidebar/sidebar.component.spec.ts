@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi, afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { SidebarComponent } from './sidebar.component';
 
@@ -8,6 +9,7 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
   let component: SidebarComponent;
   let fixture: ComponentFixture<SidebarComponent>;
   let userStore: CurrentUserStore;
+  let verificationStore: FixerVerificationStore;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -21,6 +23,7 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     }).compileComponents();
 
     userStore = TestBed.inject(CurrentUserStore);
+    verificationStore = TestBed.inject(FixerVerificationStore);
     userStore.setRoles(['OWNER']);
 
     fixture = TestBed.createComponent(SidebarComponent);
@@ -93,13 +96,21 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     expect(paths).not.toContain('/fixers');
   });
 
-  it('muestra todas las funcionalidades desktop reales del FIXER', () => {
+  it('oculta inbox y portafolio al FIXER no verificado', () => {
     const paths = setRole('FIXER');
-    expect(paths).toEqual([
-      '/dashboard', '/requests/inbox', '/quotations/me', '/jobs/me', '/payments/earnings',
-      '/fixers/verification', '/fixers/portfolio', '/profile'
-    ]);
-    expect(paths).not.toContain('/properties');
+    expect(paths).toContain('/fixers/verification');
+    expect(paths).toContain('/quotations/me');
+    expect(paths).toContain('/jobs/me');
+    expect(paths).toContain('/payments/earnings');
+    expect(paths).not.toContain('/requests/inbox');
+    expect(paths).not.toContain('/fixers/portfolio');
+  });
+
+  it('muestra la navegación completa al FIXER verificado', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    const paths = setRole('FIXER');
+    expect(paths).toContain('/requests/inbox');
+    expect(paths).toContain('/fixers/portfolio');
   });
 
   it('muestra revisión de técnicos y no propiedades ni solicitudes al PLATFORM_ADMIN', () => {

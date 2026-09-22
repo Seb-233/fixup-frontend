@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole } from '../../core/navigation/role-navigation';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 
 @Component({
   selector: 'app-sidebar',
@@ -47,7 +48,7 @@ import { getNavigationForRole } from '../../core/navigation/role-navigation';
             ></li>
           }
 
-          @for (item of visibleItems(); track item.path; let idx = $index) {
+          @for (item of visibleItems(); track item.label; let idx = $index) {
             <li class="nav-item">
               <a
                 [routerLink]="item.path"
@@ -129,6 +130,7 @@ import { getNavigationForRole } from '../../core/navigation/role-navigation';
                 </span>
 
                 <span class="nav-label">{{ item.label }}</span>
+                @if (item.requiresVerification) { <span class="nav-lock" role="img" aria-label="Requiere verificación" title="Completa tu verificación para acceder a esta funcionalidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span> }
 
               </a>
             </li>
@@ -152,6 +154,7 @@ import { getNavigationForRole } from '../../core/navigation/role-navigation';
 })
 export class SidebarComponent implements OnDestroy {
   readonly userStore = inject(CurrentUserStore);
+  private readonly verificationStore = inject(FixerVerificationStore);
   private readonly router = inject(Router);
 
   // Estado de expansión y temporizador de 3 segundos
@@ -163,7 +166,7 @@ export class SidebarComponent implements OnDestroy {
   private readonly routerSubscription: Subscription;
 
   readonly visibleItems = computed(() => {
-    return getNavigationForRole(this.userStore.activeRole());
+    return getNavigationForRole(this.userStore.activeRole(), this.verificationStore.verified());
   });
 
   constructor() {
