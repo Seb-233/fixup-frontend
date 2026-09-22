@@ -14,6 +14,7 @@ import { RepairRequestStatus } from './repair-request-status';
 
 export interface RequestDetailResponse { 
     requestId: string;
+    propertyId?: string;
     specialty: Specialty;
     title: string;
     description: string;

@@ -6,7 +6,7 @@ describe('api.routes', () => {
     expect(apiUrl(API_ROUTES.auth.me)).toBe(`${environment.apiOrigin}/auth/me`);
   });
 
-  it('debe reconocer como protegidas las rutas de los casos de uso (incluyendo /requests y /quotations)', () => {
+  it('debe reconocer como protegidas las rutas de los casos de uso (incluyendo /requests, /quotations y /properties)', () => {
     const protegidas = [
       '/auth/me',
       '/auth/bootstrap',
@@ -24,7 +24,10 @@ describe('api.routes', () => {
       '/jobs/me',
       '/jobs/job-123/complete',
       '/payments/me/earnings',
-      '/payments/me/payouts'
+      '/payments/me/payouts',
+      '/properties',
+      '/properties/me',
+      '/properties/550e8400-e29b-41d4-a716-446655440000'
     ];
 
     for (const ruta of protegidas) {
