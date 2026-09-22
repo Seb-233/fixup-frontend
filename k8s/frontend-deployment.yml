@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fixup-frontend
+  namespace: fixup
+  labels:
+    app: fixup-frontend
+    app.kubernetes.io/part-of: fixup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fixup-frontend
+  template:
+    metadata:
+      labels:
+        app: fixup-frontend
+    spec:
+      containers:
+        - name: fixup-frontend
+          image: ghcr.io/seb-233/fixup-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      imagePullSecrets:
+        - name: ghcr-pull-secret

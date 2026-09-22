@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fixup-frontend
+  namespace: fixup
+  labels:
+    app: fixup-frontend
+    app.kubernetes.io/part-of: fixup
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: "10.43.99.147"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fixup-frontend
+                port:
+                  number: 80

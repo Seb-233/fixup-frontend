@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fixup-frontend
+  namespace: fixup
+  labels:
+    app: fixup-frontend
+    app.kubernetes.io/part-of: fixup
+spec:
+  type: ClusterIP
+  selector:
+    app: fixup-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
