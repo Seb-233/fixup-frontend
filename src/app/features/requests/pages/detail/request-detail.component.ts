@@ -83,6 +83,15 @@ import { requestStatusLabel, specialtyLabel } from '../../utils/request-ui.helpe
           </a>
         }
 
+        <!-- FR-UC-24: el chat solo existe una vez que la solicitud tiene Fixer asignado; el
+             backend rechaza con 409 tanto la lectura como el envío de mensajes antes de eso, así
+             que ni siquiera se ofrece el link mientras status es OPEN. -->
+        @if (item.status === 'ASSIGNED') {
+          <a class="board-link" [routerLink]="['/requests', item.requestId, 'messages']">
+            Ver conversación →
+          </a>
+        }
+
         @if (canQuote()) {
           <article class="block quote-block">
             <h2 class="block-title">Enviar cotización</h2>

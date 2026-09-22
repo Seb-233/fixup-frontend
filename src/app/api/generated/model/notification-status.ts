@@ -7,11 +7,12 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
-import { DocumentRequest } from './document-request';
 
 
-export interface DocumentsRequest { 
-    consentVersion?: string;
-    documents: Array<DocumentRequest>;
-}
+export const NotificationStatus = {
+    Sent: 'SENT',
+    Skipped: 'SKIPPED',
+    Failed: 'FAILED',
+} as const;
+export type NotificationStatus = typeof NotificationStatus[keyof typeof NotificationStatus];
 

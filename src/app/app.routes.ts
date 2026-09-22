@@ -130,6 +130,21 @@ export const routes: Routes = [
           roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
         }
       },
+      // FR-UC-24: chat privado de una solicitud ya asignada. Anidada bajo /requests porque así
+      // la expone el backend (POST/GET /requests/{requestId}/messages), aunque el componente
+      // vive en la feature "messaging", no en "requests".
+      {
+        path: 'requests/:requestId/messages',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/messaging/pages/chat/request-chat.component').then(
+            (m) => m.RequestChatComponent
+          ),
+        data: {
+          title: 'Conversación',
+          roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
+        }
+      },
 
       // FR-UC-18: cotizaciones
       {
