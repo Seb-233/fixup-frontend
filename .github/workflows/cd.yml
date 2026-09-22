@@ -91,7 +91,7 @@ jobs:
             --namespace=fixup \
             --docker-server=ghcr.io \
             --docker-username=seb-233 \
-            --docker-password=${{ secrets.GHCR_PAT }} \
+            --docker-password="${{ secrets.GHCR_PAT }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply infrastructure manifests
