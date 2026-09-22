@@ -13,6 +13,7 @@ import {
   UploadTicketDto
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
+import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import {
   MAX_REQUEST_PHOTOS,
   requestStatusLabel,
@@ -41,6 +42,7 @@ export interface RequestPhotoUploadItem {
         <p class="subtitle">Describe el daño y recibe cotizaciones de técnicos verificados.</p>
       </header>
 
+      @if (canCreateRequest()) {
       <article class="block">
         <h2 class="block-title">Nueva solicitud</h2>
 
@@ -178,6 +180,7 @@ export interface RequestPhotoUploadItem {
           </button>
         </form>
       </article>
+      }
 
       <article class="block">
         <h2 class="block-title">Publicadas</h2>
@@ -187,7 +190,7 @@ export interface RequestPhotoUploadItem {
         } @else if (loadError()) {
           <p class="state error">{{ loadError() }}</p>
         } @else if (requests().length === 0) {
-          <p class="state">Todavía no has publicado ninguna solicitud.</p>
+          <p class="state">No tienes solicitudes registradas.</p>
         } @else {
           <ul class="list">
             @for (request of requests(); track request.requestId) {
@@ -329,6 +332,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly propertyApi = inject(PropertyControllerService);
   private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
+  private readonly userStore = inject(CurrentUserStore);
   private readonly fb = inject(FormBuilder);
 
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
@@ -359,10 +363,14 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
     return list.every((item) => item.status === 'READY');
   });
 
+  readonly canCreateRequest = computed(() => this.userStore.activeRole() === 'OWNER');
+
   ngOnInit(): void {
-    this.requestedPropertyId = this.route.snapshot.queryParamMap.get('propertyId');
     this.load();
-    this.loadProperties();
+    if (this.canCreateRequest()) {
+      this.requestedPropertyId = this.route.snapshot.queryParamMap.get('propertyId');
+      this.loadProperties();
+    }
   }
 
   ngOnDestroy(): void {
@@ -499,7 +507,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
-    if (this.form.invalid || !this.allPhotosReady()) {
+    if (!this.canCreateRequest() || this.form.invalid || !this.allPhotosReady()) {
       this.form.markAllAsTouched();
       return;
     }

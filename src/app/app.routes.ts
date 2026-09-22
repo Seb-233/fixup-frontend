@@ -1,16 +1,19 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
+import { verifiedFixerGuard } from './core/auth/verified-fixer.guard';
 import { PlaceholderComponent } from './shared/components/placeholder/placeholder.component';
 import { PrivateShellComponent } from './layout/private-shell/private-shell.component';
 
 // Rutas de la aplicación web y PWA de FixUp
 export const routes: Routes = [
-  // 1. Redirección canónica de la raíz hacia el panel principal
+  // 1. Entrada pública de FixUp, fuera del shell privado.
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard'
+    loadComponent: () =>
+      import('./features/landing/pages/landing.component').then((m) => m.LandingComponent),
+    data: { title: 'FixUp' }
   },
 
   // 2. Rutas públicas (sin sidebar ni layout privado)
@@ -70,6 +73,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [roleGuard],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
         data: { title: 'Panel Principal' }
@@ -111,7 +115,7 @@ export const routes: Routes = [
       },
       {
         path: 'requests/inbox',
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, verifiedFixerGuard],
         loadComponent: () =>
           import('./features/requests/pages/inbox/request-inbox.component').then(
             (m) => m.RequestInboxComponent
@@ -204,7 +208,7 @@ export const routes: Routes = [
       },
       {
         path: 'fixers/portfolio',
-        canActivate: [roleGuard],
+        canActivate: [roleGuard, verifiedFixerGuard],
         loadComponent: () =>
           import('./features/fixers/pages/portfolio/portfolio.component').then(
             (m) => m.PortfolioComponent

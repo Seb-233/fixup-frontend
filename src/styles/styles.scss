@@ -25,3 +25,11 @@ html, body {
 *, *::before, *::after {
   box-sizing: inherit;
 }
+
+body:has(app-landing) {
+  position: static;
+  height: auto;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}

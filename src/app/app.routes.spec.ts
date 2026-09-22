@@ -1,10 +1,11 @@
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
-import { NavigationEnd, provideRouter, Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { CurrentUserStore } from './core/auth/current-user.store';
+import { roleGuard } from './core/auth/role.guard';
 
 describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () => {
   let router: Router;
@@ -29,33 +30,27 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     userStore = TestBed.inject(CurrentUserStore);
   });
 
-  it('1. la ruta raíz / debe redirigir canónicamente hacia /dashboard', () => {
+  it('1. la ruta raíz / carga la landing pública y no redirige al dashboard', async () => {
     const rootRoute = routes.find((r) => r.path === '');
     expect(rootRoute).toBeDefined();
-    expect(rootRoute?.redirectTo).toBe('dashboard');
+    expect(rootRoute?.redirectTo).toBeUndefined();
     expect(rootRoute?.pathMatch).toBe('full');
+    expect(rootRoute?.loadComponent).toBeDefined();
+
+    const component = await rootRoute?.loadComponent?.();
+    expect(component).toBeDefined();
+    expect((component as { ɵcmp?: { selectors?: string[][] } }).ɵcmp?.selectors).toContainEqual([
+      'app-landing'
+    ]);
   });
 
-  it('2. un usuario anónimo que visita / termina en /auth/login con returnUrl conservado', async () => {
+  it('2. / es pública y queda fuera de PrivateShell', async () => {
     userStore.clear();
-    const navPromise = new Promise<void>((resolve) => {
-      const sub = router.events.subscribe((event) => {
-        if (event instanceof NavigationEnd && event.urlAfterRedirects.includes('/auth/login')) {
-          sub.unsubscribe();
-          resolve();
-        }
-      });
-    });
-
     await router.navigateByUrl('/');
-    await Promise.race([
-      navPromise,
-      new Promise((resolve) => setTimeout(resolve, 500))
-    ]);
+    expect(router.url).toBe('/');
 
-    // Redirige canónicamente a dashboard, interceptado por authGuard hacia /auth/login?returnUrl=/dashboard
-    expect(router.url).toContain('/auth/login');
-    expect(router.url).toContain('returnUrl=%2Fdashboard');
+    const privateLayoutRoute = routes.find((route) => route.component && route.children);
+    expect(privateLayoutRoute?.children?.some((child) => child.path === '')).toBe(false);
   });
 
   it('3. las rutas públicas /auth/login y /auth/callback deben estar fuera del layout privado', () => {
@@ -81,5 +76,15 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(propertiesRoute?.loadComponent).toBeDefined();
     expect(propertiesRoute?.component).toBeUndefined();
     expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER']);
+  });
+
+  it('5. /dashboard sigue dentro del shell privado autenticado y exige un rol activo', () => {
+    const privateLayoutRoute = routes.find((route) => route.component && route.children);
+    const dashboardRoute = privateLayoutRoute?.children?.find((route) => route.path === 'dashboard');
+
+    expect(privateLayoutRoute?.canActivate).toBeDefined();
+    expect(dashboardRoute?.loadComponent).toBeDefined();
+    expect(dashboardRoute?.canActivate).toContain(roleGuard);
+    expect(dashboardRoute?.data?.['roles']).toBeUndefined();
   });
 });

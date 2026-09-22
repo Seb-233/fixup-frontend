@@ -35,7 +35,7 @@ import {
  * superficie de ataque del backend y evita que datos sensibles de identidad transiten por un
  * salto de red adicional bajo control de FixUp.
  */
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class FixerVerificationStore {
   private readonly api = inject(FixerVerificationControllerService);
   private readonly mediaUploadsApi = inject(MediaUploadsControllerService);
@@ -75,6 +75,11 @@ export class FixerVerificationStore {
   );
   readonly underReview = computed(() => this.verificationState()?.underReview ?? false);
   readonly verified = computed(() => this.verificationState()?.status === 'VERIFIED');
+
+  /** Evita solicitudes duplicadas mientras la consulta compartida está en curso. */
+  ensureLoaded(): void {
+    if (!this.verificationState() && !this.loadingState()) this.load();
+  }
 
   /** FR-UC-23: carga el estado propio de verificación (GET /fixers/me/verification). */
   load(): void {

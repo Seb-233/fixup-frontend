@@ -10,12 +10,12 @@ import { RouterLink } from '@angular/router';
   template: `
     <div class="denied-card">
       <div class="icon-circle" aria-hidden="true">🔒</div>
-      <h1 class="title">Acceso Denegado</h1>
+      <h1 class="title">Acceso denegado</h1>
       <p class="description">
         No cuentas con los permisos o el rol requerido para ver esta sección. Tu sesión permanece activa.
       </p>
       <div class="actions">
-        <a routerLink="/" class="btn-primary">Volver al inicio</a>
+        <a routerLink="/dashboard" class="btn-primary">Volver al panel</a>
       </div>
     </div>
   `,

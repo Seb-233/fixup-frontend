@@ -21,22 +21,6 @@ import { AuthService } from '../../core/auth/auth.service';
           </div>
           <span class="brand-name">FixUp</span>
         </a>
-
-        <div class="header-divider" aria-hidden="true"></div>
-
-        <!-- Barra de Atajo / Búsqueda Global -->
-        <div class="quick-search-wrapper" role="search">
-          <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-          </svg>
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Buscar inmuebles, solicitudes, técnicos..."
-            aria-label="Buscar en FixUp"
-          />
-          <kbd class="shortcut-kbd" title="Atajo de búsqueda">⌘K</kbd>
-        </div>
       </div>
 
       <!-- Atajos y Acciones Rápidas del Usuario -->
@@ -51,14 +35,6 @@ import { AuthService } from '../../core/auth/auth.service';
               <span class="btn-shortcut-text">Nueva Solicitud</span>
             </a>
           }
-
-          <!-- Atajo 2: Campana de Notificaciones -->
-          <button type="button" class="btn-icon-shortcut" title="Notificaciones del sistema" aria-label="Notificaciones">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-            </svg>
-            <span class="notification-badge" aria-label="2 notificaciones pendientes">2</span>
-          </button>
 
           <div class="header-divider" aria-hidden="true"></div>
 
@@ -114,8 +90,7 @@ export class TopbarComponent {
   });
 
   readonly canCreateRequest = computed(() => {
-    const role = this.userStore.activeRole();
-    return role === 'OWNER' || role === 'TENANT' || role === 'REAL_ESTATE_MANAGER';
+    return this.userStore.activeRole() === 'OWNER';
   });
 
   logout(): void {

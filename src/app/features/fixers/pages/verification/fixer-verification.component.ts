@@ -45,7 +45,6 @@ import {
   selector: 'app-fixer-verification',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  providers: [FixerVerificationStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="verification">
