@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { DashboardComponent } from './dashboard.component';
 
-describe('DashboardComponent (Landing Principal Autenticada)', () => {
+describe('DashboardComponent', () => {
   let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
   let userStore: CurrentUserStore;
@@ -11,100 +11,81 @@ describe('DashboardComponent (Landing Principal Autenticada)', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
-      providers: [
-        CurrentUserStore,
-        provideRouter([])
-      ]
+      providers: [CurrentUserStore, provideRouter([])]
     }).compileComponents();
-
     userStore = TestBed.inject(CurrentUserStore);
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;
   });
 
-  it('debe renderizar el saludo y las secciones principales', () => {
-    userStore.setProfile({
-      id: 'uuid-1',
-      email: 'carlos@fixup.com',
-      displayName: 'Carlos Mendoza',
-      status: 'ACTIVE',
-      roles: ['OWNER']
-    });
-    userStore.setActiveRole('OWNER');
+  function render(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER', status: 'ACTIVE' | 'PENDING' = 'ACTIVE'): HTMLElement {
+    userStore.setProfile({ id: 'user-1', email: 'user@fixup.com', displayName: 'Alex FixUp', status, roles: [role] });
+    userStore.setActiveRole(role);
     fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
 
-    expect(component).toBeTruthy();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.greeting-title')?.textContent).toContain('Carlos Mendoza');
-    expect(compiled.querySelector('.role-badge')?.textContent).toContain('Propietario');
-    expect(compiled.querySelector('.status-badge')?.textContent).toContain('activa');
-    expect(compiled.querySelectorAll('.kpi-card').length).toBe(4);
+  function paths(element: HTMLElement): string[] {
+    return Array.from(element.querySelectorAll('a')).map((link) => link.getAttribute('href') ?? '');
+  }
+
+  it('mantiene saludo, rol y estado real', () => {
+    const element = render('FIXER', 'PENDING');
+    expect(element.querySelector('.greeting-title')?.textContent).toContain('Alex FixUp');
+    expect(element.querySelector('.role-badge')?.textContent).toContain('T�cnico Fixer');
+    expect(element.querySelector('.status-badge')?.textContent).toContain('Cuenta en proceso de validaci�n');
   });
 
-  it('debe adaptar las métricas y subtítulo al rol TENANT', () => {
-    userStore.setProfile({
-      id: 'uuid-2',
-      email: 'ana@fixup.com',
-      displayName: 'Ana Gómez',
-      status: 'ACTIVE',
-      roles: ['TENANT']
-    });
-    userStore.setActiveRole('TENANT');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.role-badge')?.textContent).toContain('Arrendatario');
-    expect(compiled.textContent).toContain('Inmueble Residencia');
+  it('muestra las acciones OWNER y excluye placeholder y acciones FIXER', () => {
+    const element = render('OWNER');
+    const links = paths(element);
+    expect(links).toContain('/properties');
+    expect(links).toContain('/requests');
+    expect(element.textContent).toContain('Nueva reparaci�n');
+    expect(links).not.toContain('/fixers');
+    expect(links).not.toContain('/requests/inbox');
+    expect(links).not.toContain('/jobs/me');
   });
 
-  it('debe adaptar las métricas y mostrar estado PENDING para rol FIXER si aplica', () => {
-    userStore.setProfile({
-      id: 'uuid-3',
-      email: 'fixer@fixup.com',
-      displayName: 'Pedro Técnico',
-      status: 'PENDING',
-      roles: ['FIXER']
-    });
-    userStore.setActiveRole('FIXER');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.role-badge')?.textContent).toContain('Técnico Fixer');
-    expect(compiled.querySelector('.status-badge.pending')?.textContent).toContain('Verificación en revisión');
-    expect(compiled.textContent).toContain('Solicitudes en Zona');
+  it('muestra todas las acciones reales del FIXER y excluye propiedades', () => {
+    const links = paths(render('FIXER'));
+    expect(links).toEqual(expect.arrayContaining([
+      '/requests/inbox', '/quotations/me', '/jobs/me', '/payments/earnings',
+      '/fixers/verification', '/fixers/portfolio', '/profile'
+    ]));
+    expect(links).not.toContain('/properties');
   });
 
-  it('debe enrutar /requests para OWNER', () => {
-    userStore.setActiveRole('OWNER');
-    fixture.detectChanges();
-    expect(component.requestsPath()).toBe('/requests');
-    expect(component.canManageRequests()).toBe(true);
+  it('limita PLATFORM_ADMIN a revisi�n y perfil', () => {
+    const links = paths(render('PLATFORM_ADMIN'));
+    expect(links).toEqual(['/administration/fixer-review', '/profile']);
+    expect(links).not.toContain('/properties');
+    expect(links).not.toContain('/requests');
+    expect(links).not.toContain('/jobs/me');
   });
 
-  it('debe enrutar /requests/inbox para FIXER', () => {
-    userStore.setActiveRole('FIXER');
-    fixture.detectChanges();
-    expect(component.requestsPath()).toBe('/requests/inbox');
-    expect(component.canManageRequests()).toBe(true);
+  it('limita TENANT a perfil sin capacidades OWNER o FIXER', () => {
+    const links = paths(render('TENANT'));
+    expect(links).toEqual(['/profile']);
+    expect(links).not.toContain('/properties');
+    expect(links).not.toContain('/requests');
   });
 
-  it('no debe mostrar gestionar solicitudes para PLATFORM_ADMIN', () => {
-    userStore.setActiveRole('PLATFORM_ADMIN');
-    fixture.detectChanges();
-    expect(component.canManageRequests()).toBe(false);
+  it('limita REAL_ESTATE_MANAGER a perfil', () => {
+    const links = paths(render('REAL_ESTATE_MANAGER'));
+    expect(links).toEqual(['/profile']);
+    expect(links).not.toContain('/properties');
+    expect(links).not.toContain('/requests');
   });
 
-  it('debe mostrar la acción rápida a /jobs/me únicamente para el rol FIXER', () => {
-    userStore.setActiveRole('FIXER');
-    fixture.detectChanges();
-    let compiled = fixture.nativeElement as HTMLElement;
-    expect(component.isFixer()).toBe(true);
-    expect(compiled.textContent).toContain('Mis trabajos');
-
-    userStore.setActiveRole('OWNER');
-    fixture.detectChanges();
-    compiled = fixture.nativeElement as HTMLElement;
-    expect(component.isFixer()).toBe(false);
-    expect(compiled.textContent).not.toContain('Mis trabajos');
+  it('no renderiza cifras ni KPI ficticios anteriores', () => {
+    const text = render('OWNER').textContent ?? '';
+    expect(text).not.toContain('4 inmuebles');
+    expect(text).not.toContain('8 activas');
+    expect(text).not.toContain('4.95');
+    expect(text).not.toContain('12 enviados');
+    expect(text).not.toContain('85%');
+    expect(text).not.toContain('14 t�cnicos');
+    expect(fixture.nativeElement.querySelector('.kpi-card')).toBeNull();
   });
 });

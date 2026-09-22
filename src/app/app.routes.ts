@@ -6,11 +6,13 @@ import { PrivateShellComponent } from './layout/private-shell/private-shell.comp
 
 // Rutas de la aplicación web y PWA de FixUp
 export const routes: Routes = [
-  // 1. Redirección canónica de la raíz hacia el panel principal
+  // 1. Entrada pública de FixUp, fuera del shell privado.
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard'
+    loadComponent: () =>
+      import('./features/landing/pages/landing.component').then((m) => m.LandingComponent),
+    data: { title: 'FixUp' }
   },
 
   // 2. Rutas públicas (sin sidebar ni layout privado)
@@ -70,6 +72,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [roleGuard],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
         data: { title: 'Panel Principal' }

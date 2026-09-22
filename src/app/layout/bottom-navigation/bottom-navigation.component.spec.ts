@@ -22,30 +22,40 @@ describe('BottomNavigationComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('debe incluir /requests/inbox para FIXER', () => {
-    userStore.setRoles(['FIXER']);
-    userStore.setActiveRole('FIXER');
+  function pathsFor(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER'): string[] {
+    userStore.setRoles([role]);
+    userStore.setActiveRole(role);
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests/inbox');
+    return component.visibleItems().map((item) => item.path);
+  }
+
+  it('muestra dashboard, propiedades, solicitudes y perfil para OWNER', () => {
+    expect(pathsFor('OWNER')).toEqual(['/dashboard', '/properties', '/requests', '/profile']);
   });
 
-  it('no debe incluir enlace de Solicitudes para PLATFORM_ADMIN', () => {
-    userStore.setRoles(['PLATFORM_ADMIN']);
-    userStore.setActiveRole('PLATFORM_ADMIN');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem).toBeUndefined();
+  it('limita el bottom nav FIXER a sus cuatro elementos primarios', () => {
+    const paths = pathsFor('FIXER');
+    expect(paths).toEqual(['/dashboard', '/requests/inbox', '/jobs/me', '/profile']);
+    expect(paths).not.toContain('/quotations/me');
+    expect(paths).not.toContain('/payments/earnings');
+    expect(paths).not.toContain('/fixers/verification');
+    expect(paths).not.toContain('/fixers/portfolio');
   });
 
-  it('debe incluir /requests para OWNER', () => {
-    userStore.setRoles(['OWNER']);
-    userStore.setActiveRole('OWNER');
+  it('muestra dashboard, revisión y perfil para PLATFORM_ADMIN', () => {
+    expect(pathsFor('PLATFORM_ADMIN')).toEqual([
+      '/dashboard', '/administration/fixer-review', '/profile'
+    ]);
+  });
+
+  it('limita TENANT y REAL_ESTATE_MANAGER a dashboard y perfil', () => {
+    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/profile']);
+    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual(['/dashboard', '/profile']);
+  });
+
+  it('no muestra elementos sin rol activo', () => {
+    userStore.clear();
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests');
+    expect(component.visibleItems()).toEqual([]);
   });
 });

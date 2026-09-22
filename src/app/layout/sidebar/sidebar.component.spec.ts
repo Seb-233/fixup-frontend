@@ -79,30 +79,45 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     expect(component.activeIndex()).toBe(1);
   });
 
-  it('debe incluir /requests/inbox para FIXER', () => {
-    userStore.setRoles(['FIXER']);
-    userStore.setActiveRole('FIXER');
+  function setRole(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER'): string[] {
+    userStore.setRoles([role]);
+    userStore.setActiveRole(role);
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests/inbox');
+    return component.visibleItems().map((item) => item.path);
+  }
+
+  it('muestra las propiedades y solicitudes del OWNER sin el placeholder de técnicos', () => {
+    const paths = setRole('OWNER');
+    expect(paths).toContain('/properties');
+    expect(paths).toContain('/requests');
+    expect(paths).not.toContain('/fixers');
   });
 
-  it('no debe incluir enlace de Solicitudes para PLATFORM_ADMIN', () => {
-    userStore.setRoles(['PLATFORM_ADMIN']);
-    userStore.setActiveRole('PLATFORM_ADMIN');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem).toBeUndefined();
+  it('muestra todas las funcionalidades desktop reales del FIXER', () => {
+    const paths = setRole('FIXER');
+    expect(paths).toEqual([
+      '/dashboard', '/requests/inbox', '/quotations/me', '/jobs/me', '/payments/earnings',
+      '/fixers/verification', '/fixers/portfolio', '/profile'
+    ]);
+    expect(paths).not.toContain('/properties');
   });
 
-  it('debe incluir /requests para OWNER', () => {
-    userStore.setRoles(['OWNER']);
-    userStore.setActiveRole('OWNER');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests');
+  it('muestra revisión de técnicos y no propiedades ni solicitudes al PLATFORM_ADMIN', () => {
+    const paths = setRole('PLATFORM_ADMIN');
+    expect(paths).toContain('/administration/fixer-review');
+    expect(paths).not.toContain('/properties');
+    expect(paths).not.toContain('/requests');
+  });
+
+  it('limita TENANT a dashboard y perfil', () => {
+    const paths = setRole('TENANT');
+    expect(paths).toEqual(['/dashboard', '/profile']);
+    expect(paths).not.toContain('/properties');
+    expect(paths).not.toContain('/requests');
+  });
+
+  it('no expone propiedades ni solicitudes al REAL_ESTATE_MANAGER', () => {
+    const paths = setRole('REAL_ESTATE_MANAGER');
+    expect(paths).toEqual(['/dashboard', '/profile']);
   });
 });
