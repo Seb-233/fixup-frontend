@@ -10,11 +10,13 @@
 import { FixerVerificationDocumentType } from './fixer-verification-document-type';
 
 
-export interface DocumentRequest { 
+export interface ReviewDocumentResponse { 
     type: FixerVerificationDocumentType;
     mediaId: string;
+    readUrl: string;
+    readUrlExpiresAt: string;
 }
-export namespace DocumentRequest {
+export namespace ReviewDocumentResponse {
 }
 
 

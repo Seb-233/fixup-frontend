@@ -127,7 +127,7 @@ describe('PortfolioComponent (Carga Segura de Medios y Gestión de Portafolio)',
       method: 'PUT',
       uploadUrl: 'http://minio.storage.local/bucket/m-new-999.jpg',
       headers: { 'Content-Type': 'image/jpeg' },
-      expiresAt: '2026-09-20T12:00:00Z'
+      expiresAt: '2099-01-01T00:00:00Z'
     });
 
     // 2. PUT binario directo al almacenamiento (MinIO/S3)

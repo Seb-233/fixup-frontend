@@ -3,8 +3,25 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
+import { Role } from '../../../../core/auth/auth.types';
 
-// Pantalla enriquecida del perfil del usuario con estética PropTech, formulario editable y gestión de roles
+/**
+ * Pantalla enriquecida del perfil del usuario con estética PropTech, formulario editable y
+ * gestión de roles.
+ *
+ * Selector de rol activo (líneas del `roles-list-interactive` más abajo, ver {@link switchRole}):
+ * esta pantalla es, hoy, el único lugar de toda la aplicación donde una cuenta con más de un rol
+ * puede cambiar cuál tiene activo. El mecanismo en sí — `AuthService.selectRole(role)` — ya
+ * existía antes de este cambio y funciona sin llamar al backend (fija el rol activo en
+ * `CurrentUserStore` y navega a `/dashboard`; no hace falta reconfirmar contra `/auth/me` porque
+ * esa llamada ya trajo la lista completa de roles autorizados), pero no estaba conectado a
+ * ningún control de la interfaz: `CurrentUserStore.setProfile()` siempre fija el rol activo por
+ * defecto en `roles[0]` (el primero que devuelve el backend) y no había forma de elegir otro.
+ * Eso dejaba varado, por ejemplo, a un PLATFORM_ADMIN que también tuviera OWNER u otro rol
+ * asignado: nunca podía activar PLATFORM_ADMIN sin manipular el estado a mano desde la consola.
+ * Las filas de esta lista cierran ese vacío conectando el clic del usuario con el método que ya
+ * existía, en vez de construir un mecanismo nuevo.
+ */
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -196,7 +213,17 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 
               <div class="roles-list-interactive">
                 @for (role of user.roles; track role) {
-                  <div class="role-badge-row" [class.active-role-row]="role === userStore.activeRole()">
+                  <div
+                    class="role-badge-row"
+                    [class.active-role-row]="role === userStore.activeRole()"
+                    [class.switchable-role-row]="role !== userStore.activeRole()"
+                    [attr.role]="role !== userStore.activeRole() ? 'button' : null"
+                    [attr.tabindex]="role !== userStore.activeRole() ? 0 : null"
+                    [attr.title]="role !== userStore.activeRole() ? 'Cambiar al rol ' + role : null"
+                    (click)="switchRole(role)"
+                    (keydown.enter)="switchRole(role)"
+                    (keydown.space)="switchRole(role)"
+                  >
                     <div class="role-icon-box">
                       @if (role === 'OWNER') {
                         <svg viewBox="0 0 20 20" fill="currentColor">
@@ -224,8 +251,14 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
                           Publicación de inmuebles y contratación de técnicos.
                         } @else if (role === 'TENANT') {
                           Consulta de inmuebles y reporte de solicitudes.
-                        } @else {
+                        } @else if (role === 'FIXER') {
                           Cotización y ejecución de servicios técnicos Fixer.
+                        } @else if (role === 'REAL_ESTATE_MANAGER') {
+                          Gestión de portafolio de inmuebles y coordinación de servicios para terceros.
+                        } @else if (role === 'PLATFORM_ADMIN') {
+                          Administración de la plataforma: revisión de verificaciones de técnicos y gobernanza de usuarios.
+                        } @else {
+                          Rol de la plataforma FixUp.
                         }
                       </span>
                     </div>
@@ -705,6 +738,20 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
           border-color: rgba(206, 172, 120, 0.45);
         }
 
+        &.switchable-role-row {
+          cursor: pointer;
+
+          &:hover, &:focus-visible {
+            border-color: var(--fixup-color-neutral);
+            background: #F3F4F6;
+          }
+
+          &:focus-visible {
+            outline: 2px solid #CEAC78;
+            outline-offset: 2px;
+          }
+        }
+
         .role-icon-box {
           width: 34px;
           height: 34px;
@@ -890,6 +937,23 @@ export class ProfileComponent {
     setTimeout(() => {
       this.saveMessage.set(null);
     }, 3000);
+  }
+
+  /**
+   * Activa `role` como el rol de sesión actual, siempre que la cuenta ya lo tenga asignado (la
+   * fila correspondiente solo dispara esto cuando `role !== userStore.activeRole()`, pero se
+   * repite la comprobación aquí porque un manejador de clic nunca debe confiar únicamente en que
+   * la plantilla lo llamó en el momento correcto).
+   *
+   * Delega en `AuthService.selectRole`, que ya hacía exactamente esto (fijar el rol activo y
+   * navegar a `/dashboard`) desde antes de esta pantalla tener manejador de clic — el gap era
+   * puramente de UI, no de lógica faltante.
+   */
+  switchRole(role: Role): void {
+    if (role === this.userStore.activeRole()) {
+      return;
+    }
+    this.auth.selectRole(role);
   }
 
   copyId(id: string): void {
