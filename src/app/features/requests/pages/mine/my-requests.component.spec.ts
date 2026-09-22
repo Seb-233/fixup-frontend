@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
@@ -13,11 +13,14 @@ import {
   provideApi
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
+import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { MyRequestsComponent } from './my-requests.component';
 
 describe('MyRequestsComponent (Creación y listado de solicitudes con medios seguros)', () => {
   let component: MyRequestsComponent;
+  let fixture: ComponentFixture<MyRequestsComponent>;
   let httpTesting: HttpTestingController;
+  let userStore: CurrentUserStore;
   let requestedPropertyId: string | null;
 
   const mockRequest: RequestDetailResponse = {
@@ -71,7 +74,11 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     });
 
     httpTesting = TestBed.inject(HttpTestingController);
-    component = TestBed.createComponent(MyRequestsComponent).componentInstance;
+    userStore = TestBed.inject(CurrentUserStore);
+    userStore.setRoles(['OWNER']);
+    userStore.setActiveRole('OWNER');
+    fixture = TestBed.createComponent(MyRequestsComponent);
+    component = fixture.componentInstance;
   });
 
   afterEach(() => {
@@ -90,6 +97,21 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(propertiesRequest.request.method).toBe('GET');
     expect(propertiesRequest.request.headers.get('Accept')).toBe('application/json');
     propertiesRequest.flush(properties);
+  }
+
+  function initializeReadOnly(
+    role: 'TENANT' | 'REAL_ESTATE_MANAGER',
+    requests: RequestDetailResponse[] = []
+  ): HTMLElement {
+    userStore.setRoles([role]);
+    userStore.setActiveRole(role);
+    fixture.detectChanges();
+    const requestsRequest = httpTesting.expectOne(`${environment.apiOrigin}/requests/me`);
+    expect(requestsRequest.request.method).toBe('GET');
+    requestsRequest.flush(requests);
+    httpTesting.expectNone(`${environment.apiOrigin}/properties/me`);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
   }
 
   it('debe cargar las solicitudes y propiedades propias al iniciar', () => {
@@ -376,5 +398,37 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     component.form.controls.propertyId.setValue(anotherProperty.id!);
 
     expect(component.form.controls.propertyId.value).toBe(anotherProperty.id);
+  });
+
+  it('TENANT carga sus solicitudes sin consultar propiedades y no muestra el formulario', () => {
+    const element = initializeReadOnly('TENANT', [mockRequest]);
+
+    expect(component.requests()).toEqual([mockRequest]);
+    expect(element.textContent).toContain(mockRequest.title);
+    expect(element.textContent).not.toContain('Nueva solicitud');
+    expect(element.querySelector('form')).toBeNull();
+  });
+
+  it('TENANT ignora propertyId de la URL sin consultar propiedades ni preseleccionar', () => {
+    requestedPropertyId = mockProperty.id!;
+    initializeReadOnly('TENANT');
+
+    expect(component.form.controls.propertyId.value).toBe('');
+    expect(component.properties()).toEqual([]);
+  });
+
+  it('REAL_ESTATE_MANAGER carga sus solicitudes sin consultar propiedades ni mostrar creación', () => {
+    const element = initializeReadOnly('REAL_ESTATE_MANAGER', [mockRequest]);
+
+    expect(component.requests()).toEqual([mockRequest]);
+    expect(element.textContent).not.toContain('Nueva solicitud');
+    expect(element.querySelector('form')).toBeNull();
+  });
+
+  it('muestra un estado vacío neutral para roles de solo lectura', () => {
+    const element = initializeReadOnly('TENANT');
+
+    expect(element.textContent).toContain('No tienes solicitudes registradas.');
+    expect(element.textContent).not.toContain('Registrar propiedad');
   });
 });
