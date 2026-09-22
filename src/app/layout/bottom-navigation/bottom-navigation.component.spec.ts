@@ -1,12 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { vi } from 'vitest';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { BottomNavigationComponent } from './bottom-navigation.component';
 
 describe('BottomNavigationComponent', () => {
   let component: BottomNavigationComponent;
   let fixture: ComponentFixture<BottomNavigationComponent>;
   let userStore: CurrentUserStore;
+  let verificationStore: FixerVerificationStore;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -18,34 +21,48 @@ describe('BottomNavigationComponent', () => {
     }).compileComponents();
 
     userStore = TestBed.inject(CurrentUserStore);
+    verificationStore = TestBed.inject(FixerVerificationStore);
     fixture = TestBed.createComponent(BottomNavigationComponent);
     component = fixture.componentInstance;
   });
 
-  it('debe incluir /requests/inbox para FIXER', () => {
-    userStore.setRoles(['FIXER']);
-    userStore.setActiveRole('FIXER');
+  function pathsFor(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER'): string[] {
+    userStore.setRoles([role]);
+    userStore.setActiveRole(role);
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests/inbox');
+    return component.visibleItems().map((item) => item.path);
+  }
+
+  it('muestra dashboard, propiedades, solicitudes y perfil para OWNER', () => {
+    expect(pathsFor('OWNER')).toEqual(['/dashboard', '/properties', '/requests', '/profile']);
   });
 
-  it('no debe incluir enlace de Solicitudes para PLATFORM_ADMIN', () => {
-    userStore.setRoles(['PLATFORM_ADMIN']);
-    userStore.setActiveRole('PLATFORM_ADMIN');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem).toBeUndefined();
+  it('oculta inbox del bottom nav para FIXER no verificado', () => {
+    expect(pathsFor('FIXER')).toEqual(['/dashboard', '/jobs/me', '/profile']);
   });
 
-  it('debe incluir /requests para OWNER', () => {
-    userStore.setRoles(['OWNER']);
-    userStore.setActiveRole('OWNER');
+  it('incluye inbox del bottom nav para FIXER verificado', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    expect(pathsFor('FIXER')).toEqual(['/dashboard', '/requests/inbox', '/jobs/me', '/profile']);
+  });
+
+  it('muestra dashboard, revisión y perfil para PLATFORM_ADMIN', () => {
+    expect(pathsFor('PLATFORM_ADMIN')).toEqual([
+      '/dashboard', '/administration/fixer-review', '/profile'
+    ]);
+  });
+
+  it('muestra dashboard, solicitudes y perfil para TENANT', () => {
+    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/requests', '/profile']);
+  });
+
+  it('muestra dashboard, solicitudes y perfil para REAL_ESTATE_MANAGER', () => {
+    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual(['/dashboard', '/requests', '/profile']);
+  });
+
+  it('no muestra elementos sin rol activo', () => {
+    userStore.clear();
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests');
+    expect(component.visibleItems()).toEqual([]);
   });
 });

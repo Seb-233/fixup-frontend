@@ -2,18 +2,20 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   RepairRequestControllerService,
   RepairRequestStatus,
   RequestDetailResponse,
+  PropertyControllerService,
+  PropertySummary,
   Specialty,
   UploadTicketDto
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
+import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import {
   MAX_REQUEST_PHOTOS,
-  SPECIALTY_OPTIONS,
   requestStatusLabel,
   specialtyLabel
 } from '../../utils/request-ui.helpers';
@@ -40,18 +42,34 @@ export interface RequestPhotoUploadItem {
         <p class="subtitle">Describe el daño y recibe cotizaciones de técnicos verificados.</p>
       </header>
 
+      @if (canCreateRequest()) {
       <article class="block">
         <h2 class="block-title">Nueva solicitud</h2>
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
-          <label class="field">
-            <span>Especialidad</span>
-            <select formControlName="specialty">
-              @for (option of specialtyOptions; track option.value) {
-                <option [value]="option.value">{{ option.label }}</option>
+          @if (propertiesLoading()) {
+            <p class="state">Cargando propiedades…</p>
+          } @else if (propertiesError()) {
+            <p class="state error">{{ propertiesError() }}</p>
+          } @else if (properties().length === 0) {
+            <p class="state wide">
+              Debes registrar una propiedad antes de crear una solicitud.
+              <a [routerLink]="['/properties']">Registrar propiedad</a>
+            </p>
+          } @else {
+            <label class="field">
+              <span>Propiedad</span>
+              <select formControlName="propertyId">
+                <option value="" disabled>Selecciona una propiedad</option>
+                @for (property of properties(); track property.id) {
+                  <option [value]="property.id">{{ property.name }} — {{ property.address }} — {{ property.city }}</option>
+                }
+              </select>
+              @if (form.controls.propertyId.touched && form.controls.propertyId.invalid) {
+                <small class="field-error">Selecciona una propiedad.</small>
               }
-            </select>
-          </label>
+            </label>
+          }
 
           <label class="field">
             <span>Título</span>
@@ -149,6 +167,10 @@ export interface RequestPhotoUploadItem {
             <p class="submit-error">{{ submitError() }}</p>
           }
 
+          @if (submitSuccess()) {
+            <p class="submit-success">{{ submitSuccess() }}</p>
+          }
+
           <button
             type="submit"
             class="primary"
@@ -158,6 +180,7 @@ export interface RequestPhotoUploadItem {
           </button>
         </form>
       </article>
+      }
 
       <article class="block">
         <h2 class="block-title">Publicadas</h2>
@@ -167,7 +190,7 @@ export interface RequestPhotoUploadItem {
         } @else if (loadError()) {
           <p class="state error">{{ loadError() }}</p>
         } @else if (requests().length === 0) {
-          <p class="state">Todavía no has publicado ninguna solicitud.</p>
+          <p class="state">No tienes solicitudes registradas.</p>
         } @else {
           <ul class="list">
             @for (request of requests(); track request.requestId) {
@@ -217,6 +240,10 @@ export interface RequestPhotoUploadItem {
     .submit-error {
       grid-column: 1 / -1; color: #b91c1c; font-size: 0.85rem; margin: 0;
       background: rgba(185, 28, 28, 0.06); border-radius: var(--fixup-radius-md); padding: 0.6rem 0.75rem;
+    }
+    .submit-success {
+      grid-column: 1 / -1; color: #047857; font-size: 0.85rem; margin: 0;
+      background: rgba(16, 185, 129, 0.08); border-radius: var(--fixup-radius-md); padding: 0.6rem 0.75rem;
     }
     .primary {
       grid-column: 1 / -1; justify-self: start;
@@ -302,24 +329,31 @@ export interface RequestPhotoUploadItem {
 })
 export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly repairRequestApi = inject(RepairRequestControllerService);
+  private readonly propertyApi = inject(PropertyControllerService);
+  private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
+  private readonly userStore = inject(CurrentUserStore);
   private readonly fb = inject(FormBuilder);
 
-  readonly specialtyOptions = SPECIALTY_OPTIONS;
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
 
   readonly requests = signal<RequestDetailResponse[]>([]);
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
+  readonly properties = signal<PropertySummary[]>([]);
+  readonly propertiesLoading = signal(true);
+  readonly propertiesError = signal<string | null>(null);
 
   readonly photos = signal<RequestPhotoUploadItem[]>([]);
   readonly photoValidationError = signal<string | null>(null);
 
   readonly sending = signal(false);
   readonly submitError = signal<string | null>(null);
+  readonly submitSuccess = signal<string | null>(null);
+  private requestedPropertyId: string | null = null;
 
   readonly form = this.fb.nonNullable.group({
-    specialty: [Specialty.General as Specialty, Validators.required],
+    propertyId: ['', Validators.required],
     title: ['', [Validators.required, Validators.maxLength(150)]],
     description: ['', [Validators.required, Validators.maxLength(2000)]]
   });
@@ -329,8 +363,14 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
     return list.every((item) => item.status === 'READY');
   });
 
+  readonly canCreateRequest = computed(() => this.userStore.activeRole() === 'OWNER');
+
   ngOnInit(): void {
     this.load();
+    if (this.canCreateRequest()) {
+      this.requestedPropertyId = this.route.snapshot.queryParamMap.get('propertyId');
+      this.loadProperties();
+    }
   }
 
   ngOnDestroy(): void {
@@ -467,14 +507,15 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
-    if (this.form.invalid || !this.allPhotosReady()) {
+    if (!this.canCreateRequest() || this.form.invalid || !this.allPhotosReady()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { specialty, title, description } = this.form.getRawValue();
+    const { propertyId, title, description } = this.form.getRawValue();
     this.sending.set(true);
     this.submitError.set(null);
+    this.submitSuccess.set(null);
 
     const mediaIds = this.photos()
       .map((p) => p.mediaId)
@@ -482,7 +523,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
     this.repairRequestApi
       .open({
-        specialty,
+        propertyId,
         title: title.trim(),
         description: description.trim(),
         mediaIds: mediaIds.length > 0 ? mediaIds : undefined
@@ -499,7 +540,8 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
             }
           });
           this.photos.set([]);
-          this.form.reset({ specialty: Specialty.General, title: '', description: '' });
+          this.form.reset({ propertyId, title: '', description: '' });
+          this.submitSuccess.set(`Solicitud creada. Especialidad detectada: ${specialtyLabel(created.specialty)}`);
           this.sending.set(false);
         },
         error: (error: HttpErrorResponse) => {
@@ -528,5 +570,30 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       }
     });
+  }
+
+  private loadProperties(): void {
+    this.propertiesLoading.set(true);
+    // The generated contract advertises */* for this JSON endpoint; request JSON explicitly.
+    this.propertyApi.listOwn('body', false, { httpHeaderAccept: 'application/json' } as never).subscribe({
+      next: (properties) => {
+        this.properties.set(properties);
+        this.selectRequestedProperty(properties);
+        this.propertiesLoading.set(false);
+      },
+      error: () => {
+        this.propertiesError.set('No pudimos cargar tus propiedades.');
+        this.propertiesLoading.set(false);
+      }
+    });
+  }
+
+  private selectRequestedProperty(properties: PropertySummary[]): void {
+    if (this.requestedPropertyId === null) {
+      return;
+    }
+
+    const propertyBelongsToOwner = properties.some((property) => property.id === this.requestedPropertyId);
+    this.form.controls.propertyId.setValue(propertyBelongsToOwner ? this.requestedPropertyId : '');
   }
 }

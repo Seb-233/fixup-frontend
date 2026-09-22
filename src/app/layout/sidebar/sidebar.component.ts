@@ -4,14 +4,8 @@ import { Router, NavigationEnd, RouterLink, RouterLinkActive } from '@angular/ro
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
-
-export interface NavItem {
-  path: string;
-  label: string;
-  icon: 'dashboard' | 'properties' | 'fixers' | 'requests' | 'profile' | 'verification' | 'review';
-  badge?: string;
-  roles?: string[];
-}
+import { getNavigationForRole } from '../../core/navigation/role-navigation';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 
 @Component({
   selector: 'app-sidebar',
@@ -54,7 +48,7 @@ export interface NavItem {
             ></li>
           }
 
-          @for (item of visibleItems(); track item.path; let idx = $index) {
+          @for (item of visibleItems(); track item.label; let idx = $index) {
             <li class="nav-item">
               <a
                 [routerLink]="item.path"
@@ -81,10 +75,10 @@ export interface NavItem {
                         <path d="M9 10h2M13 10h2M9 14h2M13 14h2M10 21v-3a1 1 0 011-1h2a1 1 0 011 1v3" />
                       </svg>
                     }
-                    @case ('fixers') {
+                    @case ('quotations') {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-                        <circle cx="17" cy="7" r="1" fill="currentColor" />
+                        <path d="M6 3h12v18H6z" />
+                        <path d="M9 8h6M9 12h6M9 16h3" />
                       </svg>
                     }
                     @case ('requests') {
@@ -106,6 +100,25 @@ export interface NavItem {
                         <circle cx="12" cy="12" r="9" />
                       </svg>
                     }
+                    @case ('jobs') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="7" width="18" height="13" rx="2" />
+                        <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18" />
+                      </svg>
+                    }
+                    @case ('earnings') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                        <path d="M7 12h.01M16 12h1M12 8v8M14 10c0-1-4-1-4 1s4 1 4 3-4 2-4 1" />
+                      </svg>
+                    }
+                    @case ('portfolio') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <circle cx="8" cy="9" r="1.5" />
+                        <path d="M3 17l5-5 4 4 3-3 6 6" />
+                      </svg>
+                    }
                     @case ('review') {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
@@ -117,10 +130,8 @@ export interface NavItem {
                 </span>
 
                 <span class="nav-label">{{ item.label }}</span>
+                @if (item.requiresVerification) { <span class="nav-lock" role="img" aria-label="Requiere verificación" title="Completa tu verificación para acceder a esta funcionalidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span> }
 
-                @if (item.badge) {
-                  <span class="item-badge">{{ item.badge }}</span>
-                }
               </a>
             </li>
           }
@@ -143,6 +154,7 @@ export interface NavItem {
 })
 export class SidebarComponent implements OnDestroy {
   readonly userStore = inject(CurrentUserStore);
+  private readonly verificationStore = inject(FixerVerificationStore);
   private readonly router = inject(Router);
 
   // Estado de expansión y temporizador de 3 segundos
@@ -154,24 +166,7 @@ export class SidebarComponent implements OnDestroy {
   private readonly routerSubscription: Subscription;
 
   readonly visibleItems = computed(() => {
-    const activeRole = this.userStore.activeRole();
-    if (!activeRole) return [];
-
-    const items: NavItem[] = [
-      { path: '/dashboard', label: 'Panel Principal', icon: 'dashboard' },
-      { path: '/properties', label: 'Propiedades', icon: 'properties', roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-      { path: '/fixers', label: 'Técnicos', icon: 'fixers', roles: ['OWNER', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] },
-      { path: activeRole === 'FIXER' ? '/requests/inbox' : '/requests', label: 'Solicitudes', icon: 'requests', roles: ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] },
-      // FR-UC-23: sin este item, la única forma de llegar a /fixers/verification era
-      // escribiendo la URL a mano -- un Fixer real necesita esta pantalla siempre (para subir
-      // documentos, ver su estado y ajustar especialidades), no es un enlace de prueba temporal.
-      { path: '/fixers/verification', label: 'Verificación', icon: 'verification', roles: ['FIXER'] },
-      // FR-UC-23: entrada permanente para la revisión administrativa. Reemplaza la tarjeta
-      // TEMPORAL que vivía en el dashboard solo para poder probar la pantalla sin esta entrada.
-      { path: '/administration/fixer-review', label: 'Revisión de técnicos', icon: 'review', roles: ['PLATFORM_ADMIN'] },
-      { path: '/profile', label: 'Mi Perfil', icon: 'profile' }
-    ];
-    return items.filter((item) => !item.roles || item.roles.includes(activeRole));
+    return getNavigationForRole(this.userStore.activeRole(), this.verificationStore.verified());
   });
 
   constructor() {

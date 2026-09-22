@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi, afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { SidebarComponent } from './sidebar.component';
 
@@ -8,6 +9,7 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
   let component: SidebarComponent;
   let fixture: ComponentFixture<SidebarComponent>;
   let userStore: CurrentUserStore;
+  let verificationStore: FixerVerificationStore;
 
   beforeEach(async () => {
     vi.useFakeTimers();
@@ -21,6 +23,7 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     }).compileComponents();
 
     userStore = TestBed.inject(CurrentUserStore);
+    verificationStore = TestBed.inject(FixerVerificationStore);
     userStore.setRoles(['OWNER']);
 
     fixture = TestBed.createComponent(SidebarComponent);
@@ -79,30 +82,53 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     expect(component.activeIndex()).toBe(1);
   });
 
-  it('debe incluir /requests/inbox para FIXER', () => {
-    userStore.setRoles(['FIXER']);
-    userStore.setActiveRole('FIXER');
+  function setRole(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER'): string[] {
+    userStore.setRoles([role]);
+    userStore.setActiveRole(role);
     fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests/inbox');
+    return component.visibleItems().map((item) => item.path);
+  }
+
+  it('muestra las propiedades y solicitudes del OWNER sin el placeholder de técnicos', () => {
+    const paths = setRole('OWNER');
+    expect(paths).toContain('/properties');
+    expect(paths).toContain('/requests');
+    expect(paths).not.toContain('/fixers');
   });
 
-  it('no debe incluir enlace de Solicitudes para PLATFORM_ADMIN', () => {
-    userStore.setRoles(['PLATFORM_ADMIN']);
-    userStore.setActiveRole('PLATFORM_ADMIN');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem).toBeUndefined();
+  it('oculta inbox y portafolio al FIXER no verificado', () => {
+    const paths = setRole('FIXER');
+    expect(paths).toContain('/fixers/verification');
+    expect(paths).toContain('/quotations/me');
+    expect(paths).toContain('/jobs/me');
+    expect(paths).toContain('/payments/earnings');
+    expect(paths).not.toContain('/requests/inbox');
+    expect(paths).not.toContain('/fixers/portfolio');
   });
 
-  it('debe incluir /requests para OWNER', () => {
-    userStore.setRoles(['OWNER']);
-    userStore.setActiveRole('OWNER');
-    fixture.detectChanges();
-    const items = component.visibleItems();
-    const reqItem = items.find(i => i.label === 'Solicitudes');
-    expect(reqItem?.path).toBe('/requests');
+  it('muestra la navegación completa al FIXER verificado', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    const paths = setRole('FIXER');
+    expect(paths).toContain('/requests/inbox');
+    expect(paths).toContain('/fixers/portfolio');
+  });
+
+  it('muestra revisión de técnicos y no propiedades ni solicitudes al PLATFORM_ADMIN', () => {
+    const paths = setRole('PLATFORM_ADMIN');
+    expect(paths).toContain('/administration/fixer-review');
+    expect(paths).not.toContain('/properties');
+    expect(paths).not.toContain('/requests');
+  });
+
+  it('muestra solicitudes para TENANT sin exponer propiedades', () => {
+    const paths = setRole('TENANT');
+    expect(paths).toEqual(['/dashboard', '/requests', '/profile']);
+    expect(paths).not.toContain('/properties');
+  });
+
+  it('muestra solicitudes para REAL_ESTATE_MANAGER sin exponer propiedades', () => {
+    const paths = setRole('REAL_ESTATE_MANAGER');
+    expect(paths).toEqual(['/dashboard', '/requests', '/profile']);
+    expect(paths).not.toContain('/properties');
   });
 });

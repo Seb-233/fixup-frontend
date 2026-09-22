@@ -17,7 +17,8 @@ export const API_ROUTES = {
     '/requests/',
     '/quotations/',
     '/jobs/',
-    '/payments/'
+    '/payments/',
+    '/properties/'
   ],
 } as const;
 
