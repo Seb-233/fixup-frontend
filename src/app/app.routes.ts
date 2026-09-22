@@ -77,10 +77,13 @@ export const routes: Routes = [
       {
         path: 'properties',
         canActivate: [roleGuard],
-        component: PlaceholderComponent,
+        loadComponent: () =>
+          import('./features/properties/pages/my-properties.component').then(
+            (m) => m.MyPropertiesComponent
+          ),
         data: {
           title: 'Propiedades',
-          roles: ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN']
+          roles: ['OWNER']
         }
       },
       {

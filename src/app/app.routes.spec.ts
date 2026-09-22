@@ -72,4 +72,14 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(privateChildren.some((child) => child.path === 'auth/login')).toBe(false);
     expect(privateChildren.some((child) => child.path === 'auth/callback')).toBe(false);
   });
+
+  it('4. /properties carga la pantalla del owner de forma diferida', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const propertiesRoute = privateLayoutRoute?.children?.find((route) => route.path === 'properties');
+
+    expect(propertiesRoute).toBeDefined();
+    expect(propertiesRoute?.loadComponent).toBeDefined();
+    expect(propertiesRoute?.component).toBeUndefined();
+    expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER']);
+  });
 });
