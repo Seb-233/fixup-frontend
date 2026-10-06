@@ -1,0 +1,87 @@
+.sla-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--fixup-radius-md);
+  background: #faf9f6;
+  border: 1px solid #efece5;
+
+  &.sla-green {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.06);
+
+    .sla-text {
+      color: #047857;
+    }
+  }
+
+  &.sla-amber {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.06);
+
+    .sla-text {
+      color: #92400e;
+    }
+  }
+
+  &.sla-red {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.06);
+
+    .sla-text,
+    .sla-text.expired {
+      color: #b91c1c;
+    }
+  }
+}
+
+.sla-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.sla-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--fixup-font-body);
+
+  &.expired {
+    font-weight: 800;
+  }
+}
+
+.sla-urgency {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+
+  &.urgency-low {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1e40af;
+  }
+
+  &.urgency-medium {
+    background: rgba(154, 148, 141, 0.2);
+    color: #57534e;
+  }
+
+  &.urgency-high {
+    background: rgba(245, 158, 11, 0.15);
+    color: #92400e;
+  }
+
+  &.urgency-urgent {
+    background: rgba(239, 68, 68, 0.15);
+    color: #b91c1c;
+  }
+}
+
+.sla-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { IonicModule } from '@ionic/angular/lazy';
 import {
   RepairRequestControllerService,
   RepairRequestStatus,
@@ -14,11 +15,17 @@ import {
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
+import { NotificationsStore } from '../../../../core/notifications/notifications.store';
 import {
   MAX_REQUEST_PHOTOS,
   requestStatusLabel,
   specialtyLabel
 } from '../../utils/request-ui.helpers';
+import {
+  UrgencyLevel,
+  URGENCY_LABELS,
+  OpenRequestExtended
+} from '../../models/request-extensions';
 
 export interface RequestPhotoUploadItem {
   id: string;
@@ -34,7 +41,7 @@ export interface RequestPhotoUploadItem {
 @Component({
   selector: 'app-my-requests',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule],
   template: `
     <section class="mine">
       <header>
@@ -89,6 +96,24 @@ export interface RequestPhotoUploadItem {
             ></textarea>
             @if (form.controls.description.touched && form.controls.description.invalid) {
               <small class="field-error">Describe el daño para que el técnico pueda cotizar.</small>
+            }
+          </label>
+
+          <label class="field">
+            <span>Nivel de urgencia</span>
+            <ion-select
+              formControlName="urgencyLevel"
+              interface="popover"
+              placeholder="Selecciona un nivel"
+              class="urgency-select"
+            >
+              <ion-select-option value="LOW">Baja</ion-select-option>
+              <ion-select-option value="MEDIUM">Media</ion-select-option>
+              <ion-select-option value="HIGH">Alta</ion-select-option>
+              <ion-select-option value="URGENT">Urgente</ion-select-option>
+            </ion-select>
+            @if (form.controls.urgencyLevel.touched && form.controls.urgencyLevel.invalid) {
+              <small class="field-error">Selecciona el nivel de urgencia.</small>
             }
           </label>
 
@@ -197,13 +222,22 @@ export interface RequestPhotoUploadItem {
               <li class="row">
                 <div class="row-main">
                   <span class="chip">{{ label(request.specialty) }}</span>
+                  <span
+                    class="urgency-badge"
+                    [class]="'urgency-' + urgencyOf(request).toLowerCase()"
+                  >
+                    {{ urgencyBadgeLabel(urgencyOf(request)) }}
+                  </span>
                   <span class="row-title">{{ request.title }}</span>
                 </div>
                 <div class="row-side">
                   <span class="status" [class.assigned]="request.status === 'ASSIGNED'">
                     {{ statusLabel(request.status) }}
                   </span>
-                  <a class="cta" [routerLink]="['/quotations/request', request.requestId]">Ver ofertas →</a>
+                  <div class="cta-group">
+                    <a class="cta" [routerLink]="['/requests', request.requestId]">Ver detalle →</a>
+                    <a class="cta" [routerLink]="['/quotations/request', request.requestId]">Ver ofertas →</a>
+                  </div>
                 </div>
               </li>
             }
@@ -276,6 +310,35 @@ export interface RequestPhotoUploadItem {
     .cta { color: var(--fixup-color-accent); font-weight: 700; font-size: 0.84rem; text-decoration: none; }
     .cta:hover { text-decoration: underline; }
 
+    .urgency-select {
+      border: 1px solid rgba(154, 148, 141, 0.4);
+      border-radius: var(--fixup-radius-md);
+      padding: 0;
+    }
+
+    .urgency-badge {
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .urgency-badge.urgency-low {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1e40af;
+    }
+    .urgency-badge.urgency-medium {
+      background: rgba(154, 148, 141, 0.2);
+      color: #57534e;
+    }
+    .urgency-badge.urgency-high {
+      background: rgba(245, 158, 11, 0.15);
+      color: #92400e;
+    }
+    .urgency-badge.urgency-urgent {
+      background: rgba(239, 68, 68, 0.15);
+      color: #b91c1c;
+    }
+
     /* Photo uploader styles */
     .photos-section { display: flex; flex-direction: column; gap: 0.5rem; }
     .photos-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -333,6 +396,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
   private readonly userStore = inject(CurrentUserStore);
+  private readonly notificationsStore = inject(NotificationsStore);
   private readonly fb = inject(FormBuilder);
 
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
@@ -355,7 +419,8 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly form = this.fb.nonNullable.group({
     propertyId: ['', Validators.required],
     title: ['', [Validators.required, Validators.maxLength(150)]],
-    description: ['', [Validators.required, Validators.maxLength(2000)]]
+    description: ['', [Validators.required, Validators.maxLength(2000)]],
+    urgencyLevel: ['MEDIUM' as UrgencyLevel, Validators.required]
   });
 
   readonly allPhotosReady = computed(() => {
@@ -390,6 +455,19 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
   statusLabel(status: RepairRequestStatus): string {
     return requestStatusLabel(status);
+  }
+
+  private castExt(item: RequestDetailResponse): OpenRequestExtended {
+    return item as unknown as OpenRequestExtended;
+  }
+
+  urgencyOf(item: RequestDetailResponse): UrgencyLevel {
+    const lvl = this.castExt(item).urgencyLevel;
+    return lvl ?? 'MEDIUM';
+  }
+
+  urgencyBadgeLabel(level: UrgencyLevel | string): string {
+    return URGENCY_LABELS[level as UrgencyLevel] ?? level;
   }
 
   onFilesSelected(event: Event): void {
@@ -512,7 +590,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const { propertyId, title, description } = this.form.getRawValue();
+    const { propertyId, title, description, urgencyLevel } = this.form.getRawValue();
     this.sending.set(true);
     this.submitError.set(null);
     this.submitSuccess.set(null);
@@ -521,13 +599,16 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
       .map((p) => p.mediaId)
       .filter((id): id is string => Boolean(id));
 
+    const body: OpenRequestExtended = {
+      propertyId,
+      title: title.trim(),
+      description: description.trim(),
+      urgencyLevel,
+      mediaIds: mediaIds.length > 0 ? mediaIds : undefined
+    };
+
     this.repairRequestApi
-      .open({
-        propertyId,
-        title: title.trim(),
-        description: description.trim(),
-        mediaIds: mediaIds.length > 0 ? mediaIds : undefined
-      })
+      .open(body as any)
       .subscribe({
         next: (created) => {
           this.requests.update((current) => [created, ...current]);
@@ -540,9 +621,18 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
             }
           });
           this.photos.set([]);
-          this.form.reset({ propertyId, title: '', description: '' });
+          this.form.reset({ propertyId, title: '', description: '', urgencyLevel: 'MEDIUM' as UrgencyLevel });
           this.submitSuccess.set(`Solicitud creada. Especialidad detectada: ${specialtyLabel(created.specialty)}`);
           this.sending.set(false);
+
+          // Si la solicitud es urgente, forzamos refresco inmediato del centro de notificaciones
+          // para que aparezca la fila "Solicitud urgente creada" sin esperar los 30s de polling.
+          const lvl = urgencyLevel?.toUpperCase?.() ?? urgencyLevel;
+          if (lvl === 'URGENT') {
+            try { this.notificationsStore.forceRefresh(); } catch {
+              // ignore
+            }
+          }
         },
         error: (error: HttpErrorResponse) => {
           this.sending.set(false);

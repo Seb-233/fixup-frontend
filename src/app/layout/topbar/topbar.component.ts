@@ -1,13 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { IonicModule } from '@ionic/angular/lazy';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { AuthService } from '../../core/auth/auth.service';
+import { NotificationsStore } from '../../core/notifications/notifications.store';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, IonicModule],
   template: `
     <header class="topbar">
       <!-- Marca y Navegación Rápida -->
@@ -35,6 +37,22 @@ import { AuthService } from '../../core/auth/auth.service';
               <span class="btn-shortcut-text">Nueva Solicitud</span>
             </a>
           }
+
+          <!-- Botón de Notificaciones -->
+          <ion-button
+            fill="clear"
+            color="light"
+            routerLink="/notifications"
+            class="btn-notifications"
+            title="Ver notificaciones"
+          >
+            <ion-icon name="notifications-outline" slot="icon-only"></ion-icon>
+            @if (notificationsStore.unreadCount() > 0) {
+              <ion-badge color="danger" slot="end">
+                {{ notificationsStore.unreadCount() > 99 ? '99+' : notificationsStore.unreadCount() }}
+              </ion-badge>
+            }
+          </ion-button>
 
           <div class="header-divider" aria-hidden="true"></div>
 
@@ -69,9 +87,10 @@ import { AuthService } from '../../core/auth/auth.service';
   `,
   styleUrls: ['./topbar.component.scss']
 })
-export class TopbarComponent {
+export class TopbarComponent implements OnInit, OnDestroy {
   readonly userStore = inject(CurrentUserStore);
   readonly auth = inject(AuthService);
+  readonly notificationsStore = inject(NotificationsStore);
 
   readonly userInitials = computed<string>(() => {
     const user = this.userStore.user();
@@ -92,6 +111,14 @@ export class TopbarComponent {
   readonly canCreateRequest = computed(() => {
     return this.userStore.activeRole() === 'OWNER';
   });
+
+  ngOnInit(): void {
+    this.notificationsStore.init();
+  }
+
+  ngOnDestroy(): void {
+    this.notificationsStore.ngOnDestroy();
+  }
 
   logout(): void {
     this.auth.logout().subscribe();
