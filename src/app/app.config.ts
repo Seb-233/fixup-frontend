@@ -6,7 +6,7 @@ import {
   provideBrowserGlobalErrorListeners
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideIonicAngular } from '@ionic/angular';
 import { routes } from './app.routes';
@@ -22,7 +22,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authHttpInterceptorFn, errorInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authHttpInterceptorFn, errorInterceptor])),
     provideFixUpAuth(),
     // El cliente de src/app/api/generated se genera desde docs/openapi.json del backend.
     provideApi(environment.apiOrigin),

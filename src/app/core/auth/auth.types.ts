@@ -7,13 +7,15 @@ export type Role =
   | 'PLATFORM_ADMIN';
 
 // Roles que el usuario puede autoasignarse en el registro inicial según el contrato del backend
-export type SelectableRole = 'OWNER' | 'TENANT' | 'FIXER';
+export type SelectableRole = 'OWNER' | 'TENANT' | 'FIXER' | 'REAL_ESTATE_MANAGER' | 'PLATFORM_ADMIN';
 export type SelfSelectableRole = SelectableRole;
 
 export const INITIAL_ROLE_OPTIONS: readonly SelectableRole[] = [
   'OWNER',
   'TENANT',
-  'FIXER'
+  'FIXER',
+  'REAL_ESTATE_MANAGER',
+  'PLATFORM_ADMIN'
 ] as const;
 
 export interface InitialRoleDetail {
@@ -41,6 +43,18 @@ export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
     name: 'Técnico / Fixer',
     tag: 'Servicios',
     description: 'Técnico que registra su perfil, cotiza solicitudes y ejecuta trabajos.'
+  },
+  {
+    role: 'REAL_ESTATE_MANAGER',
+    name: 'Administrador Inmobiliaria',
+    tag: 'Gestión',
+    description: 'Administra el portafolio de propiedades, carga masiva y contratos de una inmobiliaria.'
+  },
+  {
+    role: 'PLATFORM_ADMIN',
+    name: 'Administrador Plataforma',
+    tag: 'Soporte',
+    description: 'Supervisa el panel SLA, revisa técnicos, importa propiedades y audita toda la plataforma FixUp.'
   }
 ] as const;
 

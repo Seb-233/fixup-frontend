@@ -67,6 +67,15 @@ import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.32l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.32 4.486c.09.435.12 1.05-.07 1.742z" />
                   </svg>
+                } @else if (option.role === 'REAL_ESTATE_MANAGER') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                  </svg>
+                } @else if (option.role === 'PLATFORM_ADMIN') {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9.75h.008v.008H8.25V9.75zm.008 4.5H8.25v.008h.008v-.008zM15.75 9.75h.008v.008h-.008V9.75zm.008 4.5h-.008v.008h.008v-.008zM12 14.25h.008v.008H12v-.008z" />
+                  </svg>
                 }
               </div>
 
@@ -86,6 +95,10 @@ import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth
                       <span>✓ Reporta solicitudes con seguimiento en tiempo real y soporte ágil</span>
                     } @else if (option.role === 'FIXER') {
                       <span>✓ Conecta con propietarios y postúlate a solicitudes de tu especialidad</span>
+                    } @else if (option.role === 'REAL_ESTATE_MANAGER') {
+                      <span>✓ Carga masiva de propiedades, gestiona contratos y reportes consolidados</span>
+                    } @else if (option.role === 'PLATFORM_ADMIN') {
+                      <span>✓ Panel SLA, revisar técnicos, auditoría general y carga masiva</span>
                     }
                   </div>
                 }
@@ -536,8 +549,9 @@ export class SelectRoleComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
-    // 9. Un usuario con roles existentes no vuelve a seleccionar un rol inicial
-    if (this.userStore.roles().length > 0) {
+    // Usuario con EXACTAMENTE 1 rol: ir al dashboard. Con 2+ roles: dejar escoger (ej: cuenta MANAGER/ADMIN demo).
+    if (this.userStore.roles().length === 1) {
+      this.userStore.setActiveRole(this.userStore.roles()[0]);
       this.router.navigate(['/dashboard'], { replaceUrl: true });
     }
   }

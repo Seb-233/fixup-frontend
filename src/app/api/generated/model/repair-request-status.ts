@@ -12,6 +12,10 @@
 export const RepairRequestStatus = {
     Open: 'OPEN',
     Assigned: 'ASSIGNED',
+    SlaWarning: 'SLA_WARNING',
+    SlaBreached: 'SLA_BREACHED',
+    Completed: 'COMPLETED',
+    Cancelled: 'CANCELLED',
 } as const;
 export type RepairRequestStatus = typeof RepairRequestStatus[keyof typeof RepairRequestStatus];
 

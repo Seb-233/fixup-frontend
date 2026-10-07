@@ -1,0 +1,97 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.dropzone-card {
+  margin: 0;
+  border: 2px dashed var(--ion-color-medium, #929498);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fff;
+
+  &.hover {
+    border-color: var(--ion-color-primary, #3880ff);
+    background: var(--ion-color-primary-tint, rgba(56, 128, 255, 0.08));
+    transform: scale(1.01);
+  }
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem !important;
+  text-align: center;
+  min-height: 220px;
+}
+
+.dropzone-icon {
+  color: var(--ion-color-primary, #3880ff);
+  opacity: 0.8;
+}
+
+.dropzone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  .dropzone-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ion-text-color, #222428);
+    font-family: var(--fixup-font-heading, 'Comfortaa', cursive);
+  }
+
+  .dropzone-description {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ion-color-medium, #6b7280);
+  }
+
+  .dropzone-template {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: var(--ion-color-medium-shade, #4b5563);
+
+    code {
+      background: var(--ion-color-light, #f4f5f8);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+  }
+}
+
+.select-btn {
+  margin-top: 0.5rem;
+  --border-radius: 8px;
+}
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+  }
+
+  .change-btn {
+    margin: 0;
+  }
+}
+
+.error-chip {
+  margin: 0.5rem 0 0;
+}

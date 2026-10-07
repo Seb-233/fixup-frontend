@@ -1,7 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { AuthApiService } from '../../../../api/auth-api.service';
 
 // Pantalla de inicio de sesión con estética Glassmorphism, fondo ambiental multitono arquitectónico y Auth0
 @Component({
@@ -167,6 +168,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
             Acceso seguro con cifrado Auth0 Enterprise
           </p>
         </footer>
+
       </main>
     </div>
   `,
@@ -608,6 +610,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 export class LoginComponent {
   protected readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly authApi = inject(AuthApiService);
 
   /**
    * Sanitización rigurosa de returnUrl para prevenir ataques de open redirect.

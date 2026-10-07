@@ -1,0 +1,107 @@
+<ion-header class="notification-header" [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" fill="clear" color="medium">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
+    <ion-title class="notification-title">Notificaciones</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button
+        (click)="onMarkAllRead()"
+        [disabled]="store.unreadCount() === 0"
+        fill="clear"
+        color="primary"
+        class="mark-all-btn"
+      >
+        <span class="mark-all-text">Marcar todas leídas</span>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <ion-toolbar class="segment-toolbar">
+    <ion-segment
+      [value]="segmentValueForFilter(store.filterType())"
+      (ionChange)="onSegmentChange($any($event))"
+      class="notification-segment"
+      color="primary"
+    >
+      <ion-segment-button value="ALL">
+        <ion-label>Todas</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="REQUEST">
+        <ion-label>Solicitudes</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="QUOTATION">
+        <ion-label>Cotizaciones</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="CONTRACT">
+        <ion-label>Contratos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="SLA">
+        <ion-label>SLA</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="SYSTEM">
+        <ion-label>Sistema</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <ion-buttons slot="end" class="unread-toggle-wrap">
+      <ion-button
+        (click)="store.toggleUnreadOnly()"
+        fill="clear"
+        [color]="store.unreadOnly() ? 'primary' : 'medium'"
+        class="unread-toggle-btn"
+        size="small"
+      >
+        <ion-icon name="eye-off-outline" slot="start"></ion-icon>
+        <ion-label>No leídas</ion-label>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="notification-content">
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)" pullFactor="0.9" pullMin="60" pullMax="200">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Despliega para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando notificaciones…"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  @if (store.loading() && store.notifications().length === 0) {
+    <div class="loading-placeholder">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p>Cargando notificaciones…</p>
+    </div>
+  } @else if (!hasNotifications()) {
+    <app-placeholder
+      title="Sin notificaciones"
+      description="Aquí aparecerán los avisos importantes sobre tus solicitudes, cotizaciones, contratos y mensajes."
+    ></app-placeholder>
+  } @else {
+    <ion-list lines="full" class="notification-list">
+      @for (
+        n of store.notifications()
+          | filterNotification : store.filterType()
+          | unread : store.unreadOnly();
+        track n.id
+      ) {
+        <app-notification-item
+          [notification]="n"
+          (markRead)="onMarkRead($event)"
+        ></app-notification-item>
+      }
+    </ion-list>
+
+    @if (store.loading() && store.notifications().length > 0) {
+      <div class="loading-more">
+        <ion-spinner name="dots" color="medium"></ion-spinner>
+      </div>
+    }
+  }
+</ion-content>
