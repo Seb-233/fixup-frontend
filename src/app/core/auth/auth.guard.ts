@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { filter, map, switchMap, take, of } from 'rxjs';
+import { filter, map, switchMap, take } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CurrentUserStore } from './current-user.store';
 
@@ -19,7 +19,7 @@ export const authGuard: CanActivateFn = (_route, state) => {
   return auth.isLoading$.pipe(
     filter((loading) => !loading),
     take(1),
-    switchMap(() => auth.sessionReady$.pipe(take(1), switchMap((profile) => of(profile)))),
+    switchMap(() => auth.sessionReady$),
     take(1),
     map((profile) => {
       if (profile && userStore.authenticated()) {

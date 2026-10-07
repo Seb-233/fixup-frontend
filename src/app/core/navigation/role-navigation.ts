@@ -10,10 +10,6 @@ export type NavigationIcon =
   | 'verification'
   | 'portfolio'
   | 'review'
-  | 'notifications'
-  | 'contracts'
-  | 'sla-board'
-  | 'bulk-properties'
   | 'profile';
 
 export interface RoleNavigationItem {
@@ -28,9 +24,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
   OWNER: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
     { path: '/properties', label: 'Mis propiedades', icon: 'properties', mobilePrimary: true },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
   FIXER: [
@@ -41,32 +35,21 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
     { path: '/payments/earnings', label: 'Mis ingresos', icon: 'earnings', mobilePrimary: false },
     { path: '/fixers/verification', label: 'Verificación', icon: 'verification', mobilePrimary: false },
     { path: '/fixers/portfolio', label: 'Mi portafolio', icon: 'portfolio', mobilePrimary: false },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
   PLATFORM_ADMIN: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/administration/sla-board', label: 'Panel SLA', icon: 'sla-board', mobilePrimary: true },
-    { path: '/administration/fixer-review', label: 'Revisión de técnicos', icon: 'review', mobilePrimary: false },
-    { path: '/administration/properties/bulk-upload', label: 'Carga masiva inmuebles', icon: 'bulk-properties', mobilePrimary: true },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: false },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
+    { path: '/administration/fixer-review', label: 'Revisión de técnicos', icon: 'review', mobilePrimary: true },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
   TENANT: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/contracts', label: 'Mis contratos', icon: 'contracts', mobilePrimary: true },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
   REAL_ESTATE_MANAGER: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/properties', label: 'Propiedades', icon: 'properties', mobilePrimary: true },
-    { path: '/administration/properties/bulk-upload', label: 'Carga masiva inmuebles', icon: 'bulk-properties', mobilePrimary: true },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ]
 };

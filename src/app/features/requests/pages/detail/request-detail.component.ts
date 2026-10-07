@@ -3,7 +3,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { IonicModule } from '@ionic/angular/lazy';
 import {
   QuotationControllerService,
   RepairRequestControllerService,
@@ -19,18 +18,11 @@ import {
   safeIntegerAmountValidator
 } from '../../../quotations/utils/quotation-ui.helpers';
 import { requestStatusLabel, specialtyLabel } from '../../utils/request-ui.helpers';
-import { SlaTimerComponent } from '../../../../shared/components/sla-timer/sla-timer.component';
-import {
-  RequestDetailExtended,
-  RepairRequestStatusExt,
-  STATUS_LABELS_EXT,
-  UrgencyLevel
-} from '../../models/request-extensions';
 
 @Component({
   selector: 'app-request-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule, SlaTimerComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
     <section class="detail">
       @if (loading()) {
@@ -38,42 +30,12 @@ import {
       } @else if (loadError()) {
         <p class="state error">{{ loadError() }}</p>
       } @else if (request(); as item) {
-        @if (slaOf(item)) {
-          <div class="sla-header-wrap">
-            <app-sla-timer
-              [deadlineIso]="slaOf(item)!"
-              [urgencyLevel]="urgencyOf(item)"
-            />
-          </div>
-        }
         <header class="head">
           <div class="head-meta">
             <span class="chip">{{ specialtyName(item.specialty) }}</span>
-            @switch (statusExt(item.status)) {
-              @case ('SLA_WARNING') {
-                <ion-chip color="warning" class="status-chip">
-                  <ion-label>{{ statusLabelOf(item.status) }}</ion-label>
-                </ion-chip>
-              }
-              @case ('SLA_BREACHED') {
-                <ion-chip color="danger" class="status-chip">
-                  <ion-label>{{ statusLabelOf(item.status) }}</ion-label>
-                </ion-chip>
-              }
-              @default {
-                <span class="status" [class.assigned]="item.status === 'ASSIGNED'">
-                  {{ statusName(item.status) }}
-                </span>
-              }
-            }
-            @if (urgencyOf(item) !== 'MEDIUM' || hasExplicitUrgency(item)) {
-              <span
-                class="urgency-chip"
-                [class]="'urgency-' + urgencyOf(item).toLowerCase()"
-              >
-                {{ urgencyLabel(urgencyOf(item)) }}
-              </span>
-            }
+            <span class="status" [class.assigned]="item.status === 'ASSIGNED'">
+              {{ statusName(item.status) }}
+            </span>
           </div>
           <h1 class="title">{{ item.title }}</h1>
           <p class="date">Publicada el {{ item.createdAt | date: 'dd/MM/yyyy' }}</p>
@@ -121,7 +83,9 @@ import {
           </a>
         }
 
-        <!-- FR-UC-24: chat solo con Fixer asignado -->
+        <!-- FR-UC-24: el chat solo existe una vez que la solicitud tiene Fixer asignado; el
+             backend rechaza con 409 tanto la lectura como el envío de mensajes antes de eso, así
+             que ni siquiera se ofrece el link mientras status es OPEN. -->
         @if (item.status === 'ASSIGNED') {
           <a class="board-link" [routerLink]="['/requests', item.requestId, 'messages']">
             Ver conversación →
@@ -215,36 +179,6 @@ import {
       font-size: 1.5rem; margin: 0 0 0.2rem 0;
     }
     .date { color: #999; font-size: 0.8rem; margin: 0; }
-    .sla-header-wrap {
-      margin-bottom: 0.75rem;
-    }
-    .status-chip {
-      margin: 0;
-      font-size: 0.76rem;
-      font-weight: 700;
-    }
-    .urgency-chip {
-      border-radius: 999px;
-      padding: 0.25rem 0.7rem;
-      font-size: 0.76rem;
-      font-weight: 700;
-    }
-    .urgency-chip.urgency-low {
-      background: rgba(59, 130, 246, 0.12);
-      color: #1e40af;
-    }
-    .urgency-chip.urgency-medium {
-      background: rgba(154, 148, 141, 0.2);
-      color: #57534e;
-    }
-    .urgency-chip.urgency-high {
-      background: rgba(245, 158, 11, 0.15);
-      color: #92400e;
-    }
-    .urgency-chip.urgency-urgent {
-      background: rgba(239, 68, 68, 0.15);
-      color: #b91c1c;
-    }
     .block {
       background: #fff; border: 1px solid rgba(154, 148, 141, 0.2);
       border-radius: var(--fixup-radius-lg); padding: 1.25rem;
@@ -397,42 +331,6 @@ export class RequestDetailComponent implements OnInit {
 
   statusName(status: RepairRequestStatus): string {
     return requestStatusLabel(status);
-  }
-
-  statusExt(status: RepairRequestStatus | string | null | undefined): RepairRequestStatusExt | string {
-    return (status ?? 'OPEN') as RepairRequestStatusExt;
-  }
-
-  statusLabelOf(status: RepairRequestStatus | string | null | undefined): string {
-    const key = (status ?? 'OPEN') as RepairRequestStatusExt;
-    return STATUS_LABELS_EXT[key] ?? requestStatusLabel(status as RepairRequestStatus);
-  }
-
-  private cast(item: RequestDetailResponse): RequestDetailExtended {
-    return item as unknown as RequestDetailExtended;
-  }
-
-  urgencyOf(item: RequestDetailResponse): UrgencyLevel {
-    const level = this.cast(item).urgencyLevel;
-    return level ?? 'MEDIUM';
-  }
-
-  slaOf(item: RequestDetailResponse): string | null | undefined {
-    return this.cast(item).slaDeadline;
-  }
-
-  hasExplicitUrgency(item: RequestDetailResponse): boolean {
-    return !!this.cast(item).urgencyLevel;
-  }
-
-  urgencyLabel(level: UrgencyLevel): string {
-    const labels: Record<UrgencyLevel, string> = {
-      LOW: 'Baja',
-      MEDIUM: 'Media',
-      HIGH: 'Alta',
-      URGENT: 'Urgente'
-    };
-    return labels[level] ?? level;
   }
 
   submit(): void {
