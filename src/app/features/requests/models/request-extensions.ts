@@ -1,4 +1,4 @@
-import type { RequestDetailResponse } from '../../../api/generated';
+import type { OpenRequest, RequestDetailResponse } from '../../../api/generated';
 
 export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
@@ -28,7 +28,7 @@ export const STATUS_LABELS_EXT: Record<RepairRequestStatusExt, string> = {
   CANCELLED: 'Cancelada'
 };
 
-export interface RequestDetailExtended extends Partial<RequestDetailResponse> {
+export interface RequestDetailExtended extends Omit<Partial<RequestDetailResponse>, 'status'> {
   urgencyLevel?: UrgencyLevel;
   slaDeadline?: string;
   status?: RepairRequestStatusExt;
@@ -40,4 +40,25 @@ export interface OpenRequestExtended {
   description: string;
   mediaIds?: string[];
   urgencyLevel: UrgencyLevel;
+}
+
+export function adaptRequestDetail(item: RequestDetailResponse | null | undefined): RequestDetailExtended | null {
+  if (!item) return null;
+  const raw = item as unknown as Record<string, unknown>;
+  return {
+    ...item,
+    urgencyLevel: (raw['urgencyLevel'] as UrgencyLevel) ?? 'MEDIUM',
+    slaDeadline: (raw['slaDeadline'] as string) ?? undefined,
+    status: (raw['status'] as RepairRequestStatusExt) ?? 'OPEN'
+  };
+}
+
+export function toOpenRequestPayload(extended: OpenRequestExtended): OpenRequest & { urgencyLevel: UrgencyLevel } {
+  return {
+    propertyId: extended.propertyId,
+    title: extended.title,
+    description: extended.description,
+    mediaIds: extended.mediaIds,
+    urgencyLevel: extended.urgencyLevel
+  };
 }

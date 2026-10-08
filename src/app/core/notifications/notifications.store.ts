@@ -3,7 +3,6 @@ import { forkJoin, interval, Subject, Subscription, takeUntil } from 'rxjs';
 import {
   NotificationItem,
   NotificationPage,
-  NotificationType,
   NotificationsApiService
 } from './notifications-api.service';
 
@@ -15,6 +14,7 @@ export class NotificationsStore implements OnDestroy {
   readonly notifications = signal<NotificationItem[]>([]);
   readonly unreadCount = signal<number>(0);
   readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
   readonly filterType = signal<string>('ALL');
   readonly unreadOnly = signal(false);
 
@@ -50,6 +50,7 @@ export class NotificationsStore implements OnDestroy {
     this.currentPage = 0;
     this.totalPages = 1;
     this.loading.set(false);
+    this.error.set(null);
   }
 
   /**
@@ -82,9 +83,11 @@ export class NotificationsStore implements OnDestroy {
         this.totalPages = page.totalPages;
         this.unreadCount.set(count.count);
         this.loading.set(false);
+        this.error.set(null);
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
+        this.error.set(err?.message || 'Error al cargar las notificaciones');
       }
     });
   }
@@ -99,9 +102,11 @@ export class NotificationsStore implements OnDestroy {
         this.currentPage = nextPage;
         this.totalPages = page.totalPages;
         this.loading.set(false);
+        this.error.set(null);
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
+        this.error.set(err?.message || 'Error al cargar más notificaciones');
       }
     });
   }
@@ -117,22 +122,32 @@ export class NotificationsStore implements OnDestroy {
   markOneRead(id: string): void {
     const target = this.notifications().find((n) => n.id === id);
     if (!target || target.readAt) return;
-    this.api.markAsRead(id).subscribe(() => {
-      this.notifications.update((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
-      );
-      this.unreadCount.update((c) => Math.max(0, c - 1));
+    this.api.markAsRead(id).subscribe({
+      next: () => {
+        this.notifications.update((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n))
+        );
+        this.unreadCount.update((c) => Math.max(0, c - 1));
+      },
+      error: (err) => {
+        this.error.set(err?.message || 'Error al marcar la notificación como leída');
+      }
     });
   }
 
   markAllRead(): void {
     if (this.unreadCount() === 0) return;
-    this.api.markAllAsRead().subscribe(() => {
-      const now = new Date().toISOString();
-      this.notifications.update((prev) =>
-        prev.map((n) => (n.readAt ? n : { ...n, readAt: now }))
-      );
-      this.unreadCount.set(0);
+    this.api.markAllAsRead().subscribe({
+      next: () => {
+        const now = new Date().toISOString();
+        this.notifications.update((prev) =>
+          prev.map((n) => (n.readAt ? n : { ...n, read: true, readAt: now }))
+        );
+        this.unreadCount.set(0);
+      },
+      error: (err) => {
+        this.error.set(err?.message || 'Error al marcar todas las notificaciones como leídas');
+      }
     });
   }
 }

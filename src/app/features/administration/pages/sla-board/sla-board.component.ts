@@ -26,85 +26,6 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   ASSIGNED: 'Asignadas'
 };
 
-function buildMockRows(): SlaBoardRow[] {
-  const now = Date.now();
-  const h = (ms: number) => now + ms * 60 * 60 * 1000;
-  return [
-    {
-      id: '1',
-      requestId: 'a1b2c3d4-0001-0000-0000-000000000001',
-      propertyName: 'Apartamento 402 – Torre Norte',
-      city: 'Bogotá',
-      title: 'Fuga de agua en baño principal',
-      slaDeadline: new Date(h(-2)).toISOString(),
-      urgencyLevel: 'URGENT',
-      status: 'SLA_BREACHED',
-      assignedFixerId: null,
-      assignedFixerName: null
-    },
-    {
-      id: '2',
-      requestId: 'a1b2c3d4-0002-0000-0000-000000000002',
-      propertyName: 'Casa Campestre El Pino',
-      city: 'Medellín',
-      title: 'Cambio de tomacorrientes en cocina',
-      slaDeadline: new Date(h(6)).toISOString(),
-      urgencyLevel: 'HIGH',
-      status: 'SLA_WARNING',
-      assignedFixerId: 'fixer-001',
-      assignedFixerName: 'Carlos Ramírez'
-    },
-    {
-      id: '3',
-      requestId: 'a1b2c3d4-0003-0000-0000-000000000003',
-      propertyName: 'Oficina Piso 8',
-      city: 'Cali',
-      title: 'Pintura de sala de reuniones',
-      slaDeadline: new Date(h(36)).toISOString(),
-      urgencyLevel: 'MEDIUM',
-      status: 'OPEN',
-      assignedFixerId: null,
-      assignedFixerName: null
-    },
-    {
-      id: '4',
-      requestId: 'a1b2c3d4-0004-0000-0000-000000000004',
-      propertyName: 'Local Comercial Centro',
-      city: 'Barranquilla',
-      title: 'Reparación de puerta de vidrio',
-      slaDeadline: new Date(h(2)).toISOString(),
-      urgencyLevel: 'HIGH',
-      status: 'SLA_WARNING',
-      assignedFixerId: null,
-      assignedFixerName: null
-    },
-    {
-      id: '5',
-      requestId: 'a1b2c3d4-0005-0000-0000-000000000005',
-      propertyName: 'Edificio Las Palmas Apto 101',
-      city: 'Bucaramanga',
-      title: 'Instalación de estante flotante',
-      slaDeadline: new Date(h(120)).toISOString(),
-      urgencyLevel: 'LOW',
-      status: 'ASSIGNED',
-      assignedFixerId: 'fixer-002',
-      assignedFixerName: 'María González'
-    },
-    {
-      id: '6',
-      requestId: 'a1b2c3d4-0006-0000-0000-000000000006',
-      propertyName: 'Chalet Santa Ana',
-      city: 'Cartagena',
-      title: 'Revisión general de instalación eléctrica',
-      slaDeadline: new Date(h(-5)).toISOString(),
-      urgencyLevel: 'URGENT',
-      status: 'SLA_BREACHED',
-      assignedFixerId: 'fixer-003',
-      assignedFixerName: 'Jorge Patiño'
-    }
-  ];
-}
-
 @Component({
   selector: 'app-sla-board',
   standalone: true,
@@ -143,10 +64,11 @@ export class SlaBoardComponent implements OnInit {
         return true;
       }
       return (
-        row.propertyName.toLowerCase().includes(query) ||
-        row.city.toLowerCase().includes(query) ||
         row.title.toLowerCase().includes(query) ||
-        (row.assignedFixerName || '').toLowerCase().includes(query)
+        row.city.toLowerCase().includes(query) ||
+        row.propertyId.toLowerCase().includes(query) ||
+        row.specialty.toLowerCase().includes(query) ||
+        (row.assignedFixerUserId || '').toLowerCase().includes(query)
       );
     });
   });
@@ -156,12 +78,7 @@ export class SlaBoardComponent implements OnInit {
   readonly warningCount = this.store.warningCount;
 
   ngOnInit(): void {
-    this.store.setLoading(true);
-    this.store.setError(null);
-    setTimeout(() => {
-      this.store.setRows(buildMockRows());
-      this.store.setLoading(false);
-    }, 350);
+    this.store.load();
   }
 
   statusChipColor(status: RepairRequestStatusExt): string {
@@ -203,26 +120,51 @@ export class SlaBoardComponent implements OnInit {
     this.setStatusFilter(target?.value);
   }
 
-  onReasignar(row: SlaBoardRow): void {
-    this.store.reassign(
-      row.requestId,
-      row.assignedFixerId ?? `pending-${row.requestId.slice(0, 8)}`,
-      row.assignedFixerName ?? `(En selección)`
-    );
-    this.actionFeedback.set({
-      type: 'success',
-      message: `Se inició la reasignación para "${row.title}".`
+  onReasignar(row: SlaBoardRow, fixerUserId?: string): void {
+    if (!fixerUserId) {
+      // PENDIENTE BACKEND: Selección de técnico requiere un mecanismo/modal con UUID real
+      this.actionFeedback.set({
+        type: 'error',
+        message: 'Reasignación deshabilitada: se requiere un UUID válido de técnico.'
+      });
+      this.clearFeedbackAfterDelay();
+      return;
+    }
+    this.store.reassign(row.requestId, fixerUserId).subscribe({
+      next: () => {
+        this.actionFeedback.set({
+          type: 'success',
+          message: `Solicitud "${row.title}" reasignada correctamente.`
+        });
+        this.clearFeedbackAfterDelay();
+      },
+      error: (err) => {
+        this.actionFeedback.set({
+          type: 'error',
+          message: err?.message || 'Error al reasignar técnico.'
+        });
+        this.clearFeedbackAfterDelay();
+      }
     });
-    this.clearFeedbackAfterDelay();
   }
 
   onMarcarAtendido(row: SlaBoardRow): void {
-    this.store.markAttended(row.requestId);
-    this.actionFeedback.set({
-      type: 'success',
-      message: `Solicitud "${row.title}" marcada como atendida.`
+    this.store.acknowledge(row.requestId).subscribe({
+      next: () => {
+        this.actionFeedback.set({
+          type: 'success',
+          message: `Solicitud "${row.title}" marcada como atendida.`
+        });
+        this.clearFeedbackAfterDelay();
+      },
+      error: (err) => {
+        this.actionFeedback.set({
+          type: 'error',
+          message: err?.message || 'Error al marcar como atendida.'
+        });
+        this.clearFeedbackAfterDelay();
+      }
     });
-    this.clearFeedbackAfterDelay();
   }
 
   private clearFeedbackAfterDelay(): void {

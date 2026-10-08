@@ -24,7 +24,8 @@ import {
   RequestDetailExtended,
   RepairRequestStatusExt,
   STATUS_LABELS_EXT,
-  UrgencyLevel
+  UrgencyLevel,
+  adaptRequestDetail
 } from '../../models/request-extensions';
 
 @Component({
@@ -408,21 +409,21 @@ export class RequestDetailComponent implements OnInit {
     return STATUS_LABELS_EXT[key] ?? requestStatusLabel(status as RepairRequestStatus);
   }
 
-  private cast(item: RequestDetailResponse): RequestDetailExtended {
-    return item as unknown as RequestDetailExtended;
+  private adapt(item: RequestDetailResponse): RequestDetailExtended {
+    return adaptRequestDetail(item) ?? item;
   }
 
   urgencyOf(item: RequestDetailResponse): UrgencyLevel {
-    const level = this.cast(item).urgencyLevel;
+    const level = this.adapt(item).urgencyLevel;
     return level ?? 'MEDIUM';
   }
 
   slaOf(item: RequestDetailResponse): string | null | undefined {
-    return this.cast(item).slaDeadline;
+    return this.adapt(item).slaDeadline;
   }
 
   hasExplicitUrgency(item: RequestDetailResponse): boolean {
-    return !!this.cast(item).urgencyLevel;
+    return !!this.adapt(item).urgencyLevel;
   }
 
   urgencyLabel(level: UrgencyLevel): string {

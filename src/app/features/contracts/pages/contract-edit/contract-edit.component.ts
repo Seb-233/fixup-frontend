@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular/lazy';
 import { ToastController, LoadingController } from '@ionic/angular';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
-import { debounceTime, of, switchMap, map, firstValueFrom, catchError } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of, map, firstValueFrom, catchError } from 'rxjs';
 import { ContractsService } from '../../services/contracts.service';
 import { ContractsStore } from '../../services/contracts.store';
 import { PropertyControllerService, PropertySummary } from '../../../../api/generated';
@@ -46,7 +46,7 @@ function createOverlapValidator(service: ContractsService, contractId: string | 
 @Component({
   selector: 'app-contract-edit',
   standalone: true,
-  imports: [CommonModule, IonicModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, IonicModule, ReactiveFormsModule],
   templateUrl: './contract-edit.component.html',
   styleUrls: ['./contract-edit.component.scss']
 })
@@ -134,15 +134,7 @@ export class ContractEditComponent {
         this.propertiesLoading.set(false);
       },
       error: () => {
-        this.properties.set([
-          { id: 'p1', name: 'Apartamento 301 - Chapinero' },
-          { id: 'p2', name: 'Casa Suba Pinar' },
-          { id: 'p3', name: 'Local Comercial Zona Rosa' },
-          { id: 'p4', name: 'Apartamento Cedritos' },
-          { id: 'p5', name: 'Apartamento Usaquén' },
-          { id: 'p6', name: 'Apartamento Kennedy' },
-          { id: 'p7', name: 'Casa Barrio La Floresta' }
-        ]);
+        this.properties.set([]);
         this.propertiesLoading.set(false);
       }
     });
@@ -309,7 +301,7 @@ export class ContractEditComponent {
     return this.form.get(controlName);
   }
 
-  delayHideTenantList(ms: number = 200): void {
+  delayHideTenantList(ms = 200): void {
     setTimeout(() => this.tenantListVisible.set(false), ms);
   }
 

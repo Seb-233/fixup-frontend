@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
-import { INITIAL_ROLE_DETAILS, SelectableRole } from '../../../../core/auth/auth.types';
+import { ALL_ROLE_DETAILS, INITIAL_ROLE_DETAILS, Role, RoleDetail, SelectableRole } from '../../../../core/auth/auth.types';
 
 // Pantalla de selección inicial de rol para cuentas nuevas con diseño interactivo Glassmorphism
 @Component({
@@ -544,19 +544,25 @@ export class SelectRoleComponent implements OnInit {
   private readonly auth = inject(AuthService);
   readonly userStore = inject(CurrentUserStore);
 
-  readonly roleOptions = INITIAL_ROLE_DETAILS;
-  readonly selectedRole = signal<SelectableRole | null>(null);
+  get roleOptions(): readonly RoleDetail[] {
+    const roles = this.userStore.roles();
+    if (roles.length > 1) {
+      return ALL_ROLE_DETAILS.filter((opt) => roles.includes(opt.role));
+    }
+    return INITIAL_ROLE_DETAILS;
+  }
+  readonly selectedRole = signal<Role | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
-    // Usuario con EXACTAMENTE 1 rol: ir al dashboard. Con 2+ roles: dejar escoger (ej: cuenta MANAGER/ADMIN demo).
+    // Usuario con EXACTAMENTE 1 rol: ir al dashboard. Con 2+ roles: dejar escoger cuál activar.
     if (this.userStore.roles().length === 1) {
       this.userStore.setActiveRole(this.userStore.roles()[0]);
       this.router.navigate(['/dashboard'], { replaceUrl: true });
     }
   }
 
-  selectRole(role: SelectableRole): void {
+  selectRole(role: Role): void {
     this.selectedRole.set(role);
     this.errorMessage.set(null);
   }
@@ -565,8 +571,21 @@ export class SelectRoleComponent implements OnInit {
     const role = this.selectedRole();
     if (!role) return;
 
+    // Si el usuario ya posee este rol asignado previamente por el backend (p. ej. cuenta multi-rol administrativa)
+    if (this.userStore.roles().includes(role)) {
+      this.userStore.setActiveRole(role);
+      this.router.navigate(['/dashboard'], { replaceUrl: true });
+      return;
+    }
+
+    // Autoasignación inicial: el frontend sólo permite autoasignar roles de SelectableRole (OWNER, TENANT, FIXER)
+    if (role === 'REAL_ESTATE_MANAGER' || role === 'PLATFORM_ADMIN') {
+      this.errorMessage.set('No está permitido autoasignarse un rol administrativo.');
+      return;
+    }
+
     this.errorMessage.set(null);
-    this.auth.selectInitialRole(role).subscribe({
+    this.auth.selectInitialRole(role as SelectableRole).subscribe({
       error: (err) => {
         const message =
           err?.error?.message ||

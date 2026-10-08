@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ContractEditComponent } from './contract-edit.component';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
@@ -9,7 +10,7 @@ describe('ContractEditComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ContractEditComponent],
+      imports: [ContractEditComponent, HttpClientTestingModule],
       providers: [
         {
           provide: ActivatedRoute,

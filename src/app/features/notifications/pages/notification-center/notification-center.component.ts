@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular/lazy';
 import type { SegmentChangeEventDetail } from '@ionic/core';
 import { NotificationsStore } from '../../../../core/notifications/notifications.store';
@@ -9,23 +9,6 @@ import { FilterNotificationPipe } from '../../../../core/notifications/filter-no
 import { UnreadPipe } from '../../../../core/notifications/unread.pipe';
 import { NotificationItemComponent } from '../../components/notification-item/notification-item.component';
 import { PlaceholderComponent } from '../../../../shared/components/placeholder/placeholder.component';
-
-const ALL_NOTIFICATION_TYPES: readonly string[] = [
-  'ALL',
-  'REQUEST_CREATED_URGENT',
-  'REQUEST_SLA_WARNING',
-  'REQUEST_SLA_BREACHED',
-  'QUOTATION_RECEIVED',
-  'QUOTATION_ACCEPTED',
-  'JOB_ASSIGNED',
-  'PROPERTY_PUBLISHED',
-  'PROPERTY_BULK_FINISHED',
-  'CONTRACT_CREATED',
-  'CONTRACT_EXPIRING_30D',
-  'CONTRACT_EXPIRING_7D',
-  'CONTRACT_EXPIRED',
-  'CHAT_MESSAGE_RECEIVED'
-] as const;
 
 const SEGMENT_TO_FILTER: Record<string, string> = {
   ALL: 'ALL',
@@ -64,7 +47,6 @@ const FILTER_TO_SEGMENT: Record<string, string> = {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
     IonicModule,
     FilterNotificationPipe,
     UnreadPipe,

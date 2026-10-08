@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, timer, map, catchError, switchMap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { apiUrl } from '../../api/api.routes';
 
 export type NotificationType =
@@ -20,7 +20,6 @@ export type NotificationType =
 
 export interface NotificationItem {
   id: string;
-  recipientUserId: string;
   type: NotificationType;
   title: string;
   body: string;
@@ -28,6 +27,7 @@ export interface NotificationItem {
   entityId?: string;
   entityType?: string;
   data?: Record<string, string>;
+  read?: boolean;
   readAt?: string;
   createdAt: string;
 }
@@ -54,30 +54,22 @@ export class NotificationsApiService {
     if (params.type) httpParams = httpParams.set('type', params.type);
     if (params.unreadOnly !== undefined) httpParams = httpParams.set('unreadOnly', params.unreadOnly.toString());
 
-    return this.http.get<NotificationPage>(apiUrl('/notifications/me'), { params: httpParams }).pipe(
-      catchError(() =>
-        timer(400).pipe(
-          map(() => ({ content: [], totalElements: 0, totalPages: 0 }))
-        )
-      )
-    );
+    return this.http.get<NotificationPage>(apiUrl('/notifications/me'), { params: httpParams });
   }
 
   markAsRead(id: string): Observable<void> {
-    return this.http.patch<void>(apiUrl(`/notifications/${id}/read`), {}).pipe(
-      catchError(() => of(undefined))
-    );
+    return this.http.patch<void>(apiUrl(`/notifications/${id}/read`), {});
   }
 
   markAllAsRead(): Observable<void> {
-    return this.http.patch<void>(apiUrl('/notifications/read-all'), {}).pipe(
-      catchError(() => of(undefined))
-    );
+    return this.http.patch<void>(apiUrl('/notifications/read-all'), {});
   }
 
   unreadCount(): Observable<{ count: number }> {
-    return this.http.get<{ count: number }>(apiUrl('/notifications/me/unread-count')).pipe(
-      catchError(() => of({ count: 0 }))
-    );
+    return this.http.get<{ count: number }>(apiUrl('/notifications/me/unread-count'));
+  }
+
+  registerDeviceToken(token: string): Observable<void> {
+    return this.http.post<void>(apiUrl('/notifications/device-token'), { token });
   }
 }

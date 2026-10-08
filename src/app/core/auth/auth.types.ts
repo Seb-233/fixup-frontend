@@ -7,25 +7,25 @@ export type Role =
   | 'PLATFORM_ADMIN';
 
 // Roles que el usuario puede autoasignarse en el registro inicial según el contrato del backend
-export type SelectableRole = 'OWNER' | 'TENANT' | 'FIXER' | 'REAL_ESTATE_MANAGER' | 'PLATFORM_ADMIN';
+export type SelectableRole = 'OWNER' | 'TENANT' | 'FIXER';
 export type SelfSelectableRole = SelectableRole;
 
 export const INITIAL_ROLE_OPTIONS: readonly SelectableRole[] = [
   'OWNER',
   'TENANT',
-  'FIXER',
-  'REAL_ESTATE_MANAGER',
-  'PLATFORM_ADMIN'
+  'FIXER'
 ] as const;
 
-export interface InitialRoleDetail {
-  role: SelectableRole;
+export interface RoleDetail {
+  role: Role;
   name: string;
   tag: string;
   description: string;
 }
 
-export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
+export type InitialRoleDetail = RoleDetail & { role: SelectableRole };
+
+export const ALL_ROLE_DETAILS: readonly RoleDetail[] = [
   {
     role: 'OWNER',
     name: 'Propietario',
@@ -57,6 +57,11 @@ export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
     description: 'Supervisa el panel SLA, revisa técnicos, importa propiedades y audita toda la plataforma FixUp.'
   }
 ] as const;
+
+export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = ALL_ROLE_DETAILS.filter(
+  (detail): detail is InitialRoleDetail =>
+    INITIAL_ROLE_OPTIONS.includes(detail.role as SelectableRole)
+);
 
 // Estados posibles de la cuenta (incluye PENDING para perfiles en verificación como FIXER)
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED' | 'PENDING';

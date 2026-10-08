@@ -73,6 +73,18 @@
     ></ion-refresher-content>
   </ion-refresher>
 
+  @if (store.error(); as err) {
+    <div class="notification-error-wrap">
+      <ion-item lines="none" color="danger" class="error-item">
+        <ion-icon name="alert-circle-outline" slot="start"></ion-icon>
+        <ion-label class="ion-text-wrap">{{ err }}</ion-label>
+        <ion-button slot="end" fill="outline" color="light" size="small" (click)="store.forceRefresh()">
+          Reintentar
+        </ion-button>
+      </ion-item>
+    </div>
+  }
+
   @if (store.loading() && store.notifications().length === 0) {
     <div class="loading-placeholder">
       <ion-spinner name="crescent" color="primary"></ion-spinner>

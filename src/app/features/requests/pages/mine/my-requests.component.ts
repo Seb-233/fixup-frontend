@@ -14,6 +14,7 @@ import {
   UploadTicketDto
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
+import { RequestsApiAdapterService } from '../../services/requests-api-adapter.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { NotificationsStore } from '../../../../core/notifications/notifications.store';
 import {
@@ -99,13 +100,14 @@ export interface RequestPhotoUploadItem {
             }
           </label>
 
-          <label class="field">
+          <div class="field">
             <span>Nivel de urgencia</span>
             <ion-select
               formControlName="urgencyLevel"
               interface="popover"
               placeholder="Selecciona un nivel"
               class="urgency-select"
+              aria-label="Nivel de urgencia"
             >
               <ion-select-option value="LOW">Baja</ion-select-option>
               <ion-select-option value="MEDIUM">Media</ion-select-option>
@@ -115,7 +117,7 @@ export interface RequestPhotoUploadItem {
             @if (form.controls.urgencyLevel.touched && form.controls.urgencyLevel.invalid) {
               <small class="field-error">Selecciona el nivel de urgencia.</small>
             }
-          </label>
+          </div>
 
           <!-- Sección de carga de fotos segura -->
           <div class="field wide photos-section">
@@ -392,6 +394,7 @@ export interface RequestPhotoUploadItem {
 })
 export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly repairRequestApi = inject(RepairRequestControllerService);
+  private readonly requestsApi = inject(RequestsApiAdapterService);
   private readonly propertyApi = inject(PropertyControllerService);
   private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
@@ -607,8 +610,8 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
       mediaIds: mediaIds.length > 0 ? mediaIds : undefined
     };
 
-    this.repairRequestApi
-      .open(body as any)
+    this.requestsApi
+      .open(body)
       .subscribe({
         next: (created) => {
           this.requests.update((current) => [created, ...current]);

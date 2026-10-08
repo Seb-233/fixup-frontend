@@ -21,8 +21,7 @@ export const API_ROUTES = {
     '/properties/',
     '/contracts/',
     '/notifications/',
-    '/administration/',
-    '/demo/'
+    '/administration/'
   ],
 } as const;
 

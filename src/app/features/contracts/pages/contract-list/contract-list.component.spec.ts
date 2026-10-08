@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ContractListComponent } from './contract-list.component';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
@@ -9,7 +10,7 @@ describe('ContractListComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ContractListComponent],
+      imports: [ContractListComponent, HttpClientTestingModule],
       providers: [
         {
           provide: ActivatedRoute,

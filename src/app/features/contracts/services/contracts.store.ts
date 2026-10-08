@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, effect } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { ContractsService } from './contracts.service';
 import { ContractResponse, ContractStatus } from '../models/contract.models';
 

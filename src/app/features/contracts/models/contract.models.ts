@@ -37,7 +37,7 @@ export interface CreateContractRequest {
 export type UpdateContractRequest = Partial<CreateContractRequest>;
 
 export interface ListContractsParams {
-  status?: ContractStatus;
+  status?: ContractStatus | 'ALL';
   expiringWithinDays?: number;
   propertyId?: string;
   tenantUserId?: string;

@@ -6,7 +6,6 @@ import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { DashboardComponent } from './dashboard.component';
 
 describe('DashboardComponent', () => {
-  let component: DashboardComponent;
   let fixture: ComponentFixture<DashboardComponent>;
   let userStore: CurrentUserStore;
   let verificationStore: FixerVerificationStore;
@@ -19,7 +18,6 @@ describe('DashboardComponent', () => {
     userStore = TestBed.inject(CurrentUserStore);
     verificationStore = TestBed.inject(FixerVerificationStore);
     fixture = TestBed.createComponent(DashboardComponent);
-    component = fixture.componentInstance;
   });
 
   function render(role: 'OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER', status: 'ACTIVE' | 'PENDING' = 'ACTIVE'): HTMLElement {
@@ -72,30 +70,39 @@ describe('DashboardComponent', () => {
     ]));
   });
 
-  it('limita PLATFORM_ADMIN a revisi�n y perfil', () => {
+  it('limita PLATFORM_ADMIN a panel SLA, carga masiva y perfil', () => {
     const links = paths(render('PLATFORM_ADMIN'));
-    expect(links).toEqual(['/administration/fixer-review', '/profile']);
+    expect(links).toEqual([
+      '/administration/sla-board',
+      '/administration/properties/bulk-upload',
+      '/profile'
+    ]);
     expect(links).not.toContain('/properties');
     expect(links).not.toContain('/requests');
     expect(links).not.toContain('/jobs/me');
   });
 
-  it('muestra solicitudes y perfil para TENANT sin capacidades OWNER o FIXER', () => {
+  it('muestra solicitudes, contratos y perfil para TENANT sin capacidades OWNER o FIXER', () => {
     const element = render('TENANT');
     const links = paths(element);
-    expect(links).toEqual(['/requests', '/profile']);
+    expect(links).toEqual(['/requests', '/contracts', '/profile']);
     expect(element.textContent).toContain('Consulta las solicitudes asociadas a tu cuenta.');
     expect(links).not.toContain('/properties');
     expect(links).not.toContain('/requests/inbox');
     expect(links).not.toContain('/jobs/me');
   });
 
-  it('muestra solicitudes y perfil para REAL_ESTATE_MANAGER sin capacidades OWNER o FIXER', () => {
+  it('muestra propiedades, carga masiva, contratos, solicitudes y perfil para REAL_ESTATE_MANAGER', () => {
     const element = render('REAL_ESTATE_MANAGER');
     const links = paths(element);
-    expect(links).toEqual(['/requests', '/profile']);
+    expect(links).toEqual([
+      '/properties',
+      '/administration/properties/bulk-upload',
+      '/contracts',
+      '/requests',
+      '/profile'
+    ]);
     expect(element.textContent).toContain('Consulta las solicitudes asociadas a tu cuenta.');
-    expect(links).not.toContain('/properties');
     expect(links).not.toContain('/requests/inbox');
     expect(links).not.toContain('/jobs/me');
   });

@@ -28,7 +28,7 @@ function avatarColorForType(type: NotificationType): string {
 @Component({
   selector: 'app-notification-item',
   standalone: true,
-  imports: [CommonModule, RouterModule, IonicModule, DatePipe],
+  imports: [CommonModule, RouterModule, IonicModule],
   providers: [DatePipe],
   template: `
     <ion-item

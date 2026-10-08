@@ -1,3 +1,4 @@
+<!-- eslint-disable @angular-eslint/template/prefer-control-flow -->
 <ion-header class="bulk-header">
   <ion-toolbar>
     <ion-title>Carga Masiva de Inmuebles</ion-title>
@@ -240,7 +241,7 @@
             <ion-list class="imported-list">
               <ion-item
                 button
-                *ngFor="let id of store.importResult()!.importedIds; track id"
+                *ngFor="let id of store.importResult()!.importedIds"
                 [routerLink]="['/properties', id]"
                 detail
               >

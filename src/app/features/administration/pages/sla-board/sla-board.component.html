@@ -68,11 +68,11 @@
     } @else {
       <ion-grid class="sla-grid" fixed="true">
         <ion-row class="grid-header-row">
-          <ion-col size="12" size-md="3">Propiedad</ion-col>
+          <ion-col size="12" size-md="3">Solicitud</ion-col>
           <ion-col size="12" size-md="2">Ciudad</ion-col>
           <ion-col size="12" size-md="3">SLA</ion-col>
           <ion-col size="12" size-md="1">Estado</ion-col>
-          <ion-col size="12" size-md="2">Asignado</ion-col>
+          <ion-col size="12" size-md="2">Técnico Asignado</ion-col>
           <ion-col size="12" size-md="1" class="col-actions">Acciones</ion-col>
         </ion-row>
 
@@ -81,9 +81,9 @@
             <ion-col size="12" size-md="3">
               <div class="cell-property">
                 <a class="property-link" [routerLink]="['/requests', row.requestId]">
-                  {{ row.propertyName }}
+                  {{ row.title }}
                 </a>
-                <small class="property-title">{{ row.title }}</small>
+                <small class="property-title">Propiedad: {{ row.propertyId }}</small>
               </div>
             </ion-col>
             <ion-col size="12" size-md="2">
@@ -102,8 +102,8 @@
             </ion-col>
             <ion-col size="12" size-md="2">
               <div class="cell-assigned">
-                @if (row.assignedFixerName) {
-                  <span class="fixer-name">{{ row.assignedFixerName }}</span>
+                @if (row.assignedFixerUserId) {
+                  <span class="fixer-name">ID: {{ row.assignedFixerUserId }}</span>
                 } @else {
                   <span class="no-fixer">Sin asignar</span>
                 }
@@ -116,7 +116,8 @@
                   color="tertiary"
                   fill="outline"
                   (click)="onReasignar(row)"
-                  [disabled]="storeLoading()"
+                  [disabled]="true"
+                  title="Reasignación pendiente de selección de técnico con UUID real"
                 >
                   Reasignar
                 </ion-button>

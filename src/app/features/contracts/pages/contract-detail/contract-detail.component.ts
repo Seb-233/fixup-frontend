@@ -6,7 +6,7 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { ContractsStore } from '../../services/contracts.store';
 import { ContractsService } from '../../services/contracts.service';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
-import { ContractResponse, ContractStatus, CONTRACT_STATUS_COLORS, CONTRACT_STATUS_LABELS, formatCurrencyCOP, formatDate } from '../../models/contract.models';
+import { ContractResponse, CONTRACT_STATUS_COLORS, CONTRACT_STATUS_LABELS, formatCurrencyCOP, formatDate } from '../../models/contract.models';
 import { Role } from '../../../../core/auth/auth.types';
 
 const ACTION_ROLES: readonly Role[] = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const;

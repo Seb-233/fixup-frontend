@@ -9,10 +9,8 @@ import {
 } from '@ionic/angular';
 import Papa from 'papaparse';
 import { FileUploadDropzoneComponent } from '../../../../shared/components/file-upload-dropzone/file-upload-dropzone.component';
-import { PlaceholderComponent } from '../../../../shared/components/placeholder/placeholder.component';
 import {
   BulkValidationError,
-  BulkValidationResult,
   PropertyBulkService
 } from '../../services/property-bulk.service';
 import { BulkPropertiesStore } from '../../services/bulk-properties.store';
@@ -32,8 +30,7 @@ interface ParsedRow {
     ReactiveFormsModule,
     RouterLink,
     IonicModule,
-    FileUploadDropzoneComponent,
-    PlaceholderComponent
+    FileUploadDropzoneComponent
   ],
   templateUrl: './bulk-properties-upload.component.html',
   styleUrls: ['./bulk-properties-upload.component.scss']
@@ -68,7 +65,7 @@ export class BulkPropertiesUploadComponent {
     Papa.parse<ParsedRow>(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (result) => {
+      complete: (result: Papa.ParseResult<ParsedRow>) => {
         this.parsedPreview.set(result.data.slice(0, 50));
       }
     });
