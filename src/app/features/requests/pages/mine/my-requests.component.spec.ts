@@ -130,7 +130,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     component.form.setValue({
       propertyId: mockProperty.id!,
       title: 'Reparar puerta',
-      description: 'La puerta no cierra bien.'
+      description: 'La puerta no cierra bien.',
+      urgencyLevel: 'MEDIUM'
     });
 
     expect(component.photos().length).toBe(0);
@@ -144,6 +145,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       propertyId: mockProperty.id,
       title: 'Reparar puerta',
       description: 'La puerta no cierra bien.',
+      urgencyLevel: 'MEDIUM',
       mediaIds: undefined
     });
     expect(postReq.request.body.specialty).toBeUndefined();
@@ -216,7 +218,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     component.form.setValue({
       propertyId: mockProperty.id!,
       title: 'Tubería rota',
-      description: 'Fuga evidente en la pared.'
+      description: 'Fuga evidente en la pared.',
+      urgencyLevel: 'MEDIUM'
     });
 
     component.submit();
@@ -227,6 +230,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       propertyId: mockProperty.id,
       title: 'Tubería rota',
       description: 'Fuga evidente en la pared.',
+      urgencyLevel: 'MEDIUM',
       mediaIds: ['media-foto-1']
     });
 
@@ -320,7 +324,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     component.form.setValue({
       propertyId: mockProperty.id!,
       title: 'Problema en casa',
-      description: 'Varios desperfectos.'
+      description: 'Varios desperfectos.',
+      urgencyLevel: 'MEDIUM'
     });
 
     // 1. Intento de publicación falla con 500
@@ -356,7 +361,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     component.form.setValue({
       propertyId: '',
       title: 'Reparar puerta',
-      description: 'La puerta no cierra bien.'
+      description: 'La puerta no cierra bien.',
+      urgencyLevel: 'MEDIUM'
     });
 
     component.submit();

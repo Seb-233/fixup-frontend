@@ -1,0 +1,64 @@
+<ion-card
+  class="dropzone-card"
+  [class.hover]="isHover()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  (click)="openFilePicker()"
+>
+  <ion-card-content class="dropzone-content">
+    <div class="dropzone-icon">
+      <ion-icon name="cloud-upload-outline" size="large"></ion-icon>
+    </div>
+
+    <div class="dropzone-text">
+      <h3 class="dropzone-title">Carga tu archivo CSV</h3>
+      <p class="dropzone-description">
+        Arrastra un archivo CSV aquí o haz clic para seleccionar. Tamaño máx
+        {{ maxSizeMb }}MB.
+      </p>
+      <p class="dropzone-template">
+        Plantilla: <code>name, address, city, areaM2</code>
+      </p>
+    </div>
+
+    <input
+      #fileInput
+      type="file"
+      hidden
+      [accept]="accept"
+      (change)="onFileChange($event)"
+    />
+
+    <ion-button type="button" class="select-btn" color="primary">
+      <ion-icon name="document-outline" slot="start"></ion-icon>
+      Seleccionar archivo
+    </ion-button>
+
+    @if (selectedFile()) {
+      <div class="selected-file">
+        <ion-note color="success" class="file-info">
+          <ion-icon name="checkmark-circle"></ion-icon>
+          <span>{{ selectedFile()?.name }} ({{ formatSize(selectedFile()?.size ?? 0) }})</span>
+        </ion-note>
+        <ion-button
+          type="button"
+          fill="clear"
+          size="small"
+          color="medium"
+          (click)="$event.stopPropagation(); changeFile()"
+          class="change-btn"
+        >
+          Cambiar
+        </ion-button>
+      </div>
+    }
+
+    @if (error()) {
+      <ion-chip color="danger" class="error-chip">
+        <ion-icon name="alert-circle"></ion-icon>
+        <ion-label>{{ error() }}</ion-label>
+      </ion-chip>
+    }
+  </ion-card-content>
+</ion-card>

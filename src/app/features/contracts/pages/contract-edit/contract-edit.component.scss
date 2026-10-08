@@ -1,0 +1,161 @@
+.edit-page {
+  --background: var(--ion-color-step-50, #f5f5f5);
+  padding-bottom: 2rem;
+}
+
+.edit-form {
+  width: 100%;
+}
+
+.form-card {
+  margin: 0.75rem 0.5rem;
+  border-radius: 1rem;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--fixup-font-heading);
+  color: var(--fixup-color-primary, #2D2E31);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.form-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --border-radius: 10px;
+  margin-bottom: 0.75rem;
+}
+
+.form-item.invalid {
+  --highlight-color-focused: var(--ion-color-danger);
+  --highlight-color-valid: var(--ion-color-danger);
+}
+
+.preview-amount {
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding-right: 0.35rem;
+}
+
+.tenant-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tenant-search {
+  --border-radius: 10px;
+  --padding-start: 0;
+}
+
+.tenant-search.invalid {
+  --background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+}
+
+.tenant-results {
+  --background: #fff;
+  border: 1px solid rgba(154, 148, 141, 0.3);
+  border-radius: 12px;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.tenant-results ion-item {
+  --min-height: 56px;
+  --padding-start: 0.75rem;
+  --inner-padding-end: 0.75rem;
+}
+
+.tenant-results ion-item.selected {
+  --background: #f0fbf4;
+}
+
+.tenant-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--fixup-color-accent, #ceac78);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 50%;
+}
+
+.tenant-avatar.selected {
+  background: #047857;
+}
+
+.selected-tenant {
+  --min-height: 60px;
+  background: #f6fbf8;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 0.35rem;
+  margin: 0.25rem 0 0;
+}
+
+.form-error {
+  margin: 0.25rem 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.form-error.block {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.overlap-note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.date-input-fallback {
+  display: none;
+}
+
+.content-spacer {
+  height: 100px;
+}
+
+.footer-actions {
+  background: #fff;
+  border-top: 1px solid rgba(154, 148, 141, 0.2);
+  padding-bottom: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.footer-actions ion-buttons {
+  display: flex;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 0.5rem;
+  gap: 0.65rem;
+  flex-direction: column;
+}
+
+.footer-actions ion-button {
+  width: 100%;
+  margin: 0;
+}
+
+@media (min-width: 560px) {
+  .footer-actions ion-buttons {
+    flex-direction: row;
+  }
+}

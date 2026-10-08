@@ -33,8 +33,8 @@ describe('BottomNavigationComponent', () => {
     return component.visibleItems().map((item) => item.path);
   }
 
-  it('muestra dashboard, propiedades, solicitudes y perfil para OWNER', () => {
-    expect(pathsFor('OWNER')).toEqual(['/dashboard', '/properties', '/requests', '/profile']);
+  it('muestra dashboard, propiedades, contratos, solicitudes y perfil para OWNER', () => {
+    expect(pathsFor('OWNER')).toEqual(['/dashboard', '/properties', '/contracts', '/requests', '/profile']);
   });
 
   it('oculta inbox del bottom nav para FIXER no verificado', () => {
@@ -46,18 +46,20 @@ describe('BottomNavigationComponent', () => {
     expect(pathsFor('FIXER')).toEqual(['/dashboard', '/requests/inbox', '/jobs/me', '/profile']);
   });
 
-  it('muestra dashboard, revisión y perfil para PLATFORM_ADMIN', () => {
+  it('muestra dashboard, panel SLA, carga masiva y perfil para PLATFORM_ADMIN', () => {
     expect(pathsFor('PLATFORM_ADMIN')).toEqual([
-      '/dashboard', '/administration/fixer-review', '/profile'
+      '/dashboard', '/administration/sla-board', '/administration/properties/bulk-upload', '/profile'
     ]);
   });
 
-  it('muestra dashboard, solicitudes y perfil para TENANT', () => {
-    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/requests', '/profile']);
+  it('muestra dashboard, solicitudes, contratos y perfil para TENANT', () => {
+    expect(pathsFor('TENANT')).toEqual(['/dashboard', '/requests', '/contracts', '/profile']);
   });
 
-  it('muestra dashboard, solicitudes y perfil para REAL_ESTATE_MANAGER', () => {
-    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual(['/dashboard', '/requests', '/profile']);
+  it('muestra dashboard, herramientas y perfil para REAL_ESTATE_MANAGER', () => {
+    expect(pathsFor('REAL_ESTATE_MANAGER')).toEqual([
+      '/dashboard', '/properties', '/administration/properties/bulk-upload', '/contracts', '/requests', '/profile'
+    ]);
   });
 
   it('no muestra elementos sin rol activo', () => {
