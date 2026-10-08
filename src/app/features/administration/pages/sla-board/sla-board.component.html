@@ -1,0 +1,140 @@
+<section class="sla-board">
+  <header class="board-header">
+    <div class="header-left">
+      <h1 class="title">Panel SLA</h1>
+      <p class="subtitle">
+        Supervisión de tiempos de atención. Las solicitudes marcadas en rojo han excedido el SLA.
+      </p>
+    </div>
+    <div class="header-stats">
+      <div class="stat-card breached">
+        <span class="stat-value">{{ breachedCount() }}</span>
+        <span class="stat-label">Vencidas</span>
+      </div>
+      <div class="stat-card warning">
+        <span class="stat-value">{{ warningCount() }}</span>
+        <span class="stat-label">En Warning</span>
+      </div>
+      <div class="stat-card total">
+        <span class="stat-value">{{ totalCount() }}</span>
+        <span class="stat-label">Total</span>
+      </div>
+    </div>
+  </header>
+
+  @if (actionFeedback(); as fb) {
+    <div class="feedback" [class]="'feedback-' + fb.type" role="status">
+      {{ fb.message }}
+    </div>
+  }
+
+  @if (storeError()) {
+    <p class="state error">{{ storeError() }}</p>
+  }
+
+  <ion-card class="filters-card">
+    <div class="filters-row">
+      <ion-searchbar
+        [formControl]="searchControl"
+        placeholder="Buscar por propiedad, ciudad, técnico…"
+        class="sla-search"
+        mode="ios"
+        animated="false"
+      ></ion-searchbar>
+    </div>
+
+    <ion-segment
+      [value]="statusFilter()"
+      (ionChange)="setStatusFilterFromEvent($event)"
+      mode="md"
+      class="sla-segment"
+    >
+      @for (seg of statusFilters; track seg) {
+        <ion-segment-button [value]="seg">
+          <ion-label>{{ statusFilterLabel(seg) }}</ion-label>
+        </ion-segment-button>
+      }
+    </ion-segment>
+  </ion-card>
+
+  <ion-content class="board-content" scroll-y="true">
+    @if (storeLoading()) {
+      <p class="state">Cargando panel SLA…</p>
+    } @else if (filteredRows().length === 0) {
+      <app-placeholder
+        title="Sin solicitudes SLA"
+        description="Todo bajo control."
+      ></app-placeholder>
+    } @else {
+      <ion-grid class="sla-grid" fixed="true">
+        <ion-row class="grid-header-row">
+          <ion-col size="12" size-md="3">Solicitud</ion-col>
+          <ion-col size="12" size-md="2">Ciudad</ion-col>
+          <ion-col size="12" size-md="3">SLA</ion-col>
+          <ion-col size="12" size-md="1">Estado</ion-col>
+          <ion-col size="12" size-md="2">Técnico Asignado</ion-col>
+          <ion-col size="12" size-md="1" class="col-actions">Acciones</ion-col>
+        </ion-row>
+
+        @for (row of filteredRows(); track row.id) {
+          <ion-row class="grid-row" [class.row-breached]="row.status === 'SLA_BREACHED'">
+            <ion-col size="12" size-md="3">
+              <div class="cell-property">
+                <a class="property-link" [routerLink]="['/requests', row.requestId]">
+                  {{ row.title }}
+                </a>
+                <small class="property-title">Propiedad: {{ row.propertyId }}</small>
+              </div>
+            </ion-col>
+            <ion-col size="12" size-md="2">
+              <span class="cell-city">{{ row.city }}</span>
+            </ion-col>
+            <ion-col size="12" size-md="3">
+              <app-sla-timer
+                [deadlineIso]="row.slaDeadline"
+                [urgencyLevel]="row.urgencyLevel"
+              ></app-sla-timer>
+            </ion-col>
+            <ion-col size="12" size-md="1">
+              <ion-chip [color]="statusChipColor(row.status)" class="row-status">
+                <ion-label>{{ statusLabel(row.status) }}</ion-label>
+              </ion-chip>
+            </ion-col>
+            <ion-col size="12" size-md="2">
+              <div class="cell-assigned">
+                @if (row.assignedFixerUserId) {
+                  <span class="fixer-name">ID: {{ row.assignedFixerUserId }}</span>
+                } @else {
+                  <span class="no-fixer">Sin asignar</span>
+                }
+              </div>
+            </ion-col>
+            <ion-col size="12" size-md="1" class="col-actions">
+              <div class="row-actions">
+                <ion-button
+                  size="small"
+                  color="tertiary"
+                  fill="outline"
+                  (click)="onReasignar(row)"
+                  [disabled]="true"
+                  title="Reasignación pendiente de selección de técnico con UUID real"
+                >
+                  Reasignar
+                </ion-button>
+                <ion-button
+                  size="small"
+                  color="primary"
+                  fill="solid"
+                  (click)="onMarcarAtendido(row)"
+                  [disabled]="storeLoading()"
+                >
+                  Marcar Atendido
+                </ion-button>
+              </div>
+            </ion-col>
+          </ion-row>
+        }
+      </ion-grid>
+    }
+  </ion-content>
+</section>

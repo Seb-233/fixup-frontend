@@ -135,4 +135,22 @@ describe('SelectRoleComponent (Selección de Rol Inicial en Onboarding)', () => 
     expect(banner).toBeTruthy();
     expect(banner?.textContent).toContain('PENDING');
   });
+
+  it('un usuario que ya posee un rol administrativo puede activar dicho rol sin llamar selectInitialRole', () => {
+    userStore.setRoles(['OWNER', 'PLATFORM_ADMIN']);
+    createComponent();
+
+    // No debe redirigir inmediatamente porque tiene 2 roles para elegir
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
+
+    // Opciones deben ser únicamente los roles que ya posee
+    expect(component.roleOptions.map((opt) => opt.role)).toEqual(['OWNER', 'PLATFORM_ADMIN']);
+
+    component.selectRole('PLATFORM_ADMIN');
+    component.confirmSelection();
+
+    expect(authServiceMock.selectInitialRole).not.toHaveBeenCalled();
+    expect(userStore.activeRole()).toBe('PLATFORM_ADMIN');
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/dashboard'], { replaceUrl: true });
+  });
 });
