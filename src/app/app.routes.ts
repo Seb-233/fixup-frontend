@@ -90,6 +90,19 @@ export const routes: Routes = [
           roles: ['OWNER']
         }
       },
+      // FR-UC-06: búsqueda geográfica. DECISIÓN PENDIENTE de autorización: se usa roleGuard sin
+      // 'roles' (exige sesión con rol activo, sin fijar una lista) porque la RLS actual de
+      // properties solo da lectura a OWNER (propias) y PLATFORM_ADMIN, y FR-UC-06 podría
+      // requerir acceso a propiedades PUBLISHED. Definir roles al confirmar el backend.
+      {
+        path: 'properties/search',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/properties/pages/property-search/property-search.component').then(
+            (m) => m.PropertySearchComponent
+          ),
+        data: { title: 'Buscar Propiedades' }
+      },
       {
         path: 'fixers',
         canActivate: [roleGuard],

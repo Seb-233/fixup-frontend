@@ -1,0 +1,29 @@
+:host { display: block; }
+
+.search-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+h1, h2 { color: var(--fixup-color-primary); font-family: var(--fixup-font-heading); }
+h1 { margin: 0; font-size: 1.5rem; }
+h2 { margin: 0 0 0.85rem; font-size: 1.05rem; }
+header p { color: #666; margin: 0.25rem 0 0; }
+
+.block {
+  background: #fff;
+  border: 1px solid rgba(154, 148, 141, 0.2);
+  border-radius: var(--fixup-radius-lg);
+  padding: 1.25rem;
+}
+
+.status { margin: 1rem 0 0; color: #444; font-size: 0.9rem; overflow-wrap: anywhere; }
+.status-error { color: #92400e; background: #fffbeb; border-left: 3px solid #d97706; padding: 0.6rem 0.75rem; }
+.parameters { margin: 0.75rem 0 0; color: #047857; font-size: 0.9rem; font-weight: 600; }
+
+@media (max-width: 767px) {
+  .block { padding: 1rem; }
+}
