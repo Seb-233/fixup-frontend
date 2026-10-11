@@ -23,6 +23,7 @@ export * from './photo-response';
 export * from './piece-request';
 export * from './piece-response';
 export * from './portfolio-status-response';
+export * from './property-search-result';
 export * from './property-summary';
 export * from './quotation-request';
 export * from './quotation-response';

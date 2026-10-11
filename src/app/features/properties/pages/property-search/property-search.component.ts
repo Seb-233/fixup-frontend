@@ -1,5 +1,6 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
+import { PropertySearchResult } from '../../../../api/generated';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { LocationCoordinates, LocationFailureReason } from '../../models/location.models';
 import {
@@ -9,8 +10,10 @@ import {
   PropertySearchFormValue,
   PropertySearchParameters
 } from '../../models/property-search.models';
+import { PropertyResultListComponent } from '../../components/property-result-list/property-result-list.component';
 import { PropertySearchFiltersComponent } from '../../components/property-search-filters/property-search-filters.component';
 import { LocationService } from '../../services/location.service';
+import { PropertySearchStore } from '../../services/property-search.store';
 
 const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
   permissionDenied:
@@ -22,18 +25,10 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
     'Este dispositivo o navegador no ofrece geolocalización. Escribe una dirección.'
 };
 
-// FR-UC-06 (primera versión): captura de la ubicación de referencia (GPS o dirección), radio y,
-// para OWNER, alcance. Todavía no consulta propiedades.
-//
-// Punto de integración futuro (geocodificación): hoy una dirección escrita queda en
-// 'addressPending' porque no existe proveedor. Cuando se elija uno, debe resolver la dirección a
-// LocationCoordinates y asignarlas a `coordinates` para pasar a 'locationReady' con la fuente
-// 'address'. No se inventan coordenadas mientras tanto, y onSearch() hoy solo acepta la fuente
-// 'gps'; habrá que admitir también 'address' con coordenadas resueltas.
 @Component({
   selector: 'app-property-search',
   standalone: true,
-  imports: [PropertySearchFiltersComponent],
+  imports: [PropertySearchFiltersComponent, PropertyResultListComponent],
   template: `
     <section class="search-page">
       <header>
@@ -75,6 +70,33 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
             }}.
           </p>
         }
+
+        @if (searchStore.isSearching()) {
+          <p id="search-loading" class="loading-status" role="status">
+            Buscando inmuebles cercanos…
+          </p>
+        }
+
+        @if (searchStore.state() === 'apiError') {
+          <div id="api-error" class="api-error-block" role="alert">
+            <p class="api-error-message">{{ searchStore.error() }}</p>
+            <button
+              type="button"
+              id="search-retry"
+              class="retry-button"
+              (click)="searchStore.retry()"
+            >
+              Reintentar búsqueda
+            </button>
+          </div>
+        }
+
+        @if (searchStore.state() === 'success' || searchStore.state() === 'empty') {
+          <app-property-result-list
+            [results]="searchStore.results()"
+            (propertySelected)="onPropertySelected($event)"
+          />
+        }
       </article>
     </section>
   `,
@@ -83,6 +105,7 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
 export class PropertySearchComponent {
   private readonly locationService = inject(LocationService);
   private readonly userStore = inject(CurrentUserStore);
+  readonly searchStore = inject(PropertySearchStore);
   private locationSubscription?: Subscription;
 
   readonly state = signal<LocationUiState>('idle');
@@ -90,7 +113,7 @@ export class PropertySearchComponent {
   readonly locationSource = signal<LocationSource>('address');
   /** Coordenadas internas de la ubicación de referencia; no se muestran al usuario. */
   readonly coordinates = signal<LocationCoordinates | null>(null);
-  /** Último parámetro completo y válido; todavía no se envía a ningún servicio. */
+  /** Último parámetro de búsqueda registrado en la página. */
   readonly searchParameters = signal<PropertySearchParameters | null>(null);
   /** El usuario pulsó buscar sin tener una ubicación utilizable. */
   readonly locationRequired = signal(false);
@@ -137,7 +160,6 @@ export class PropertySearchComponent {
 
     this.locationSubscription = this.locationService.getCurrentLocation().subscribe((result) => {
       if (result.status === 'success') {
-        // Objeto nuevo en cada éxito para que los consumidores reaccionen aunque se repitan valores.
         this.coordinates.set({ ...result.coordinates });
         this.locationSource.set('gps');
         this.state.set('locationReady');
@@ -149,8 +171,6 @@ export class PropertySearchComponent {
   }
 
   onAddressEdited(text: string): void {
-    // Escribir una dirección cancela una lectura de GPS en curso y descarta las coordenadas del
-    // GPS: ya no corresponden a lo escrito, y la dirección aún no tiene coordenadas.
     this.locationSubscription?.unsubscribe();
     this.coordinates.set(null);
     this.locationSource.set('address');
@@ -158,23 +178,35 @@ export class PropertySearchComponent {
     this.locationRequired.set(false);
     this.searchParameters.set(null);
     this.state.set(text.trim() ? 'addressPending' : 'idle');
+    this.searchStore.reset();
   }
 
   onSearch(value: PropertySearchFormValue): void {
     const coordinates = this.coordinates();
     if (this.locationSource() !== 'gps' || !coordinates) {
-      // Sin coordenadas finales (dirección sin geocodificar o nada indicado) no hay búsqueda.
       this.searchParameters.set(null);
       this.locationRequired.set(true);
       return;
     }
 
     this.locationRequired.set(false);
+    const ownership = this.isOwner() ? value.ownership : undefined;
     this.searchParameters.set({
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
       radiusKm: value.radiusKm,
-      ...(this.isOwner() ? { ownership: value.ownership } : {})
+      ...(ownership ? { ownership } : {})
     });
+
+    this.searchStore.search({
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      radiusKm: value.radiusKm,
+      ownershipScope: this.isOwner() ? value.ownership : 'ALL'
+    });
+  }
+
+  onPropertySelected(property: PropertySearchResult): void {
+    this.searchStore.selectProperty(property.id);
   }
 }

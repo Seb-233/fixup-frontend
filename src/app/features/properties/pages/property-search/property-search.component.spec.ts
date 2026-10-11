@@ -2,14 +2,16 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, provideRouter } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
+import { PropertyControllerService, PropertySearchResult } from '../../../../api/generated';
 import { routes } from '../../../../app.routes';
 import { Role } from '../../../../core/auth/auth.types';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { roleGuard } from '../../../../core/auth/role.guard';
 import { LocationFailureReason, LocationResult } from '../../models/location.models';
 import { LocationService } from '../../services/location.service';
+import { PropertySearchStore } from '../../services/property-search.store';
 import { PropertySearchComponent } from './property-search.component';
 
 describe('PropertySearchComponent (FR-UC-06)', () => {
@@ -17,18 +19,37 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
   let host: HTMLElement;
   let httpTesting: HttpTestingController;
   let getCurrentLocation: ReturnType<typeof vi.fn>;
+  let searchApiSpy: ReturnType<typeof vi.fn>;
 
   const gpsSuccess = of<LocationResult>({
     status: 'success',
     coordinates: { latitude: 4.65, longitude: -74.05 }
   });
 
+  const mockApiResults: PropertySearchResult[] = [
+    {
+      id: 'prop-101',
+      name: 'Apartamento Chapinero Central',
+      address: 'Cra 7 # 53-10',
+      city: 'Bogotá',
+      areaM2: 70,
+      latitude: 4.651,
+      longitude: -74.052,
+      distanceKm: 0.15,
+      ownedByCurrentUser: false
+    }
+  ];
+
   beforeEach(() => {
     getCurrentLocation = vi.fn();
+    searchApiSpy = vi.fn().mockReturnValue(of([]));
+
     TestBed.configureTestingModule({
       imports: [PropertySearchComponent],
       providers: [
         { provide: LocationService, useValue: { getCurrentLocation } },
+        { provide: PropertyControllerService, useValue: { search: searchApiSpy } },
+        PropertySearchStore,
         provideHttpClient(),
         provideHttpClientTesting()
       ]
@@ -37,7 +58,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
   });
 
   afterEach(() => {
-    // La feature no debe haber hecho ninguna petición HTTP.
+    // La infraestructura HTTP directa no debe usarse fuera del cliente generado
     httpTesting.expectNone(() => true);
     httpTesting.verify();
   });
@@ -110,7 +131,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(radius.options[radius.selectedIndex].textContent?.trim()).toBe('10 km');
   });
 
-  it('con GPS listo "Buscar propiedades" produce los parámetros (TENANT sin alcance)', () => {
+  it('con GPS listo "Buscar propiedades" llama al store con coordenadas, radio y ALL (TENANT)', () => {
     create('TENANT');
     getCurrentLocation.mockReturnValue(gpsSuccess);
     clickUseLocation();
@@ -122,6 +143,13 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
       longitude: -74.05,
       radiusKm: 5
     });
+    expect(page().searchStore.lastParams()).toEqual({
+      latitude: 4.65,
+      longitude: -74.05,
+      radiusKm: 5,
+      ownershipScope: 'ALL'
+    });
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '5', 'ALL');
     expect(host.querySelector('#search-parameters')?.textContent).toContain('ubicación actual');
     expect(host.querySelector('#search-parameters')?.textContent).toContain('radio 5 km');
     expect(page().locationRequired()).toBe(false);
@@ -131,7 +159,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     ['#ownership-all', 'ALL'],
     ['#ownership-mine', 'MINE'],
     ['#ownership-others', 'OTHERS']
-  ])('OWNER incluye el alcance elegido (%s) en los parámetros', (selector, expected) => {
+  ])('OWNER envía el alcance elegido (%s) al store', (selector, expected) => {
     create('OWNER');
     getCurrentLocation.mockReturnValue(gpsSuccess);
     clickUseLocation();
@@ -141,6 +169,8 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     clickSearch();
 
     expect(page().searchParameters()?.ownership).toBe(expected);
+    expect(page().searchStore.lastParams()?.ownershipScope).toBe(expected);
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '5', expected);
   });
 
   it('OWNER ve Todos / Mis inmuebles / Otros inmuebles', () => {
@@ -152,11 +182,16 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(labels).toEqual(['Todos', 'Mis inmuebles', 'Otros inmuebles']);
   });
 
-  it('TENANT no ve el filtro de alcance', () => {
+  it('TENANT no ve el filtro de alcance y siempre envía ALL', () => {
     create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
 
     expect(el('#search-ownership')).toBeNull();
     expect(host.textContent).not.toContain('Otros inmuebles');
+
+    clickSearch();
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '5', 'ALL');
   });
 
   it('una dirección escrita queda pendiente y no genera coordenadas', () => {
@@ -170,7 +205,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(status()).toContain('Aún no se ha convertido');
   });
 
-  it('buscar con una dirección sin geocodificar no produce parámetros y pide una ubicación válida', () => {
+  it('buscar con una dirección sin geocodificar no llama al backend ni al store', () => {
     create('TENANT');
     typeAddress('Calle 10 # 20-30');
 
@@ -178,22 +213,24 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
 
     expect(page().searchParameters()).toBeNull();
     expect(page().coordinates()).toBeNull();
+    expect(searchApiSpy).not.toHaveBeenCalled();
     expect(host.querySelector('#search-hint')?.textContent).toContain(
       'Selecciona una ubicación válida para continuar.'
     );
     expect(host.querySelector('#search-parameters')).toBeNull();
   });
 
-  it('buscar sin indicar nada tampoco produce parámetros', () => {
+  it('buscar sin indicar nada tampoco llama al backend', () => {
     create('TENANT');
 
     clickSearch();
 
     expect(page().searchParameters()).toBeNull();
+    expect(searchApiSpy).not.toHaveBeenCalled();
     expect(host.querySelector('#search-hint')).not.toBeNull();
   });
 
-  it('escribir una dirección después del GPS descarta las coordenadas del GPS', () => {
+  it('escribir una dirección después del GPS descarta las coordenadas del GPS y resetea el store', () => {
     create('TENANT');
     getCurrentLocation.mockReturnValue(gpsSuccess);
     clickUseLocation();
@@ -202,8 +239,10 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
 
     expect(page().coordinates()).toBeNull();
     expect(page().state()).toBe('addressPending');
+    expect(page().searchStore.state()).toBe('idle');
     clickSearch();
     expect(page().searchParameters()).toBeNull();
+    expect(searchApiSpy).not.toHaveBeenCalled();
   });
 
   it('el GPS reemplaza el texto de dirección escrito', () => {
@@ -249,6 +288,60 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
 
     typeAddress('Calle 1');
     expect(page().state()).toBe('addressPending');
+  });
+
+  it('renderiza resultados reales cuando el backend responde satisfactoriamente', () => {
+    searchApiSpy.mockReturnValue(of(mockApiResults));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+
+    clickSearch();
+
+    expect(page().searchStore.state()).toBe('success');
+    const cards = host.querySelectorAll('.property-card');
+    expect(cards.length).toBe(1);
+    expect(cards[0].textContent).toContain('Apartamento Chapinero Central');
+    expect(cards[0].textContent).toContain('Cra 7 # 53-10, Bogotá');
+    expect(cards[0].textContent).toContain('150 m');
+  });
+
+  it('muestra estado vacío cuando el backend devuelve 0 resultados', () => {
+    searchApiSpy.mockReturnValue(of([]));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+
+    clickSearch();
+
+    expect(page().searchStore.state()).toBe('empty');
+    expect(host.querySelector('#property-empty-state')?.textContent).toContain(
+      'No encontramos inmuebles dentro de este radio.'
+    );
+  });
+
+  it('muestra bloque de error y botón de reintentar si el backend falla', () => {
+    searchApiSpy.mockReturnValue(throwError(() => new Error('Error al conectar con el servidor')));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+
+    clickSearch();
+
+    expect(page().searchStore.state()).toBe('apiError');
+    const errorBlock = host.querySelector('#api-error');
+    expect(errorBlock).not.toBeNull();
+    expect(errorBlock?.textContent).toContain('Error al conectar con el servidor');
+
+    const retryBtn = host.querySelector('#search-retry') as HTMLButtonElement;
+    expect(retryBtn).not.toBeNull();
+
+    searchApiSpy.mockReturnValue(of(mockApiResults));
+    retryBtn.click();
+    fixture.detectChanges();
+
+    expect(page().searchStore.state()).toBe('success');
+    expect(host.querySelectorAll('.property-card').length).toBe(1);
   });
 });
 

@@ -1,7 +1,14 @@
+import { PropertySearchResult } from '../../../api/generated';
 import { LocationFailureReason } from './location.models';
 
+export type OwnershipScope = 'ALL' | 'MINE' | 'OTHERS';
+
+/**
+ * Qué inmuebles muestra la exploración (solo OWNER). Mapea al ownershipScope del backend.
+ */
+export type OwnershipFilter = OwnershipScope;
+
 // FR-UC-06: parámetros de entrada de la búsqueda geográfica tal como los captura la UI.
-// No es un contrato de la API: los resultados y la petición provendrán del cliente OpenAPI.
 export interface PropertySearchParameters {
   latitude: number;
   longitude: number;
@@ -24,12 +31,6 @@ export type { LocationFailureReason };
 /** Origen de la ubicación de referencia: GPS del dispositivo o dirección escrita. */
 export type LocationSource = 'gps' | 'address';
 
-/**
- * Qué inmuebles muestra la exploración (solo OWNER). Se mapeará al ownershipScope del backend
- * cuando exista el contrato OpenAPI.
- */
-export type OwnershipFilter = 'ALL' | 'MINE' | 'OTHERS';
-
 export const OWNERSHIP_OPTIONS: readonly { value: OwnershipFilter; label: string }[] = [
   { value: 'ALL', label: 'Todos' },
   { value: 'MINE', label: 'Mis inmuebles' },
@@ -46,3 +47,8 @@ export interface PropertySearchFormValue {
 /** Radios de búsqueda ofrecidos en la primera versión, en kilómetros. */
 export const RADIUS_OPTIONS_KM: readonly number[] = [1, 3, 5, 10];
 export const DEFAULT_RADIUS_KM = 5;
+
+/** Estados de la búsqueda HTTP en el store. */
+export type PropertySearchUiState = 'idle' | 'searching' | 'success' | 'empty' | 'apiError';
+
+export type { PropertySearchResult };
