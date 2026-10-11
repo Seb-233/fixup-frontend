@@ -410,7 +410,7 @@ export class RequestDetailComponent implements OnInit {
   }
 
   private adapt(item: RequestDetailResponse): RequestDetailExtended {
-    return adaptRequestDetail(item) ?? item;
+    return adaptRequestDetail(item) ?? (item as unknown as RequestDetailExtended);
   }
 
   urgencyOf(item: RequestDetailResponse): UrgencyLevel {

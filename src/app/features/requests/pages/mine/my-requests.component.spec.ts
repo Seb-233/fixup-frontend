@@ -10,6 +10,7 @@ import {
   PropertyControllerService,
   PropertySummary,
   Specialty,
+  UrgencyLevel,
   provideApi
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
@@ -37,7 +38,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     ],
     status: RepairRequestStatus.Open,
     assignedFixerUserId: null,
-    createdAt: '2026-09-19T10:00:00Z'
+    createdAt: '2026-09-19T10:00:00Z',
+    urgencyLevel: UrgencyLevel.Medium
   };
 
   const mockProperty: PropertySummary = {

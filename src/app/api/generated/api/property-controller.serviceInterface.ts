@@ -11,6 +11,8 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { BulkImportResult } from '../model/models';
+import { BulkValidationResult } from '../model/models';
 import { NewProperty } from '../model/models';
 import { PropertySearchResult } from '../model/models';
 import { PropertySummary } from '../model/models';
@@ -27,6 +29,22 @@ export interface PropertyControllerServiceInterface {
     /**
      *
      *
+     * @endpoint post /properties/bulk/import
+     * @param file
+     */
+    bulkImport(file: Blob, extraHttpRequestParams?: any): Observable<BulkImportResult>;
+
+    /**
+     *
+     *
+     * @endpoint post /properties/bulk/validate
+     * @param file
+     */
+    bulkValidate(file: Blob, extraHttpRequestParams?: any): Observable<BulkValidationResult>;
+
+    /**
+     *
+     *
      * @endpoint post /properties
      * @param newProperty
      */
@@ -38,7 +56,7 @@ export interface PropertyControllerServiceInterface {
      * @endpoint get /properties/{propertyId}
      * @param propertyId
      */
-    get(propertyId: string, extraHttpRequestParams?: any): Observable<PropertySummary>;
+    get1(propertyId: string, extraHttpRequestParams?: any): Observable<PropertySummary>;
 
     /**
      *

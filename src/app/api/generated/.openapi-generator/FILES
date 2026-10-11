@@ -13,6 +13,8 @@ api/fixer-verification-controller.service.ts
 api/fixer-verification-controller.serviceInterface.ts
 api/job-controller.service.ts
 api/job-controller.serviceInterface.ts
+api/location-controller.service.ts
+api/location-controller.serviceInterface.ts
 api/market-indicators-controller.service.ts
 api/market-indicators-controller.serviceInterface.ts
 api/media-uploads-controller.service.ts
@@ -54,6 +56,7 @@ model/earning-status.ts
 model/earnings-response.ts
 model/error-response.ts
 model/fixer-verification-document-type.ts
+model/geocoding-candidate.ts
 model/indicators-response.ts
 model/job-response.ts
 model/job-status.ts
