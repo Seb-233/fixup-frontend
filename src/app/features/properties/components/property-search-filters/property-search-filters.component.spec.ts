@@ -1,55 +1,50 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LocationCoordinates } from '../../models/location.models';
-import { PropertySearchParameters } from '../../models/property-search.models';
+import { PropertySearchFormValue } from '../../models/property-search.models';
 import { PropertySearchFiltersComponent } from './property-search-filters.component';
 
 describe('PropertySearchFiltersComponent (FR-UC-06)', () => {
   let fixture: ComponentFixture<PropertySearchFiltersComponent>;
   let component: PropertySearchFiltersComponent;
+  let host: HTMLElement;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [PropertySearchFiltersComponent] });
     fixture = TestBed.createComponent(PropertySearchFiltersComponent);
     component = fixture.componentInstance;
+    host = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
   });
 
-  function valid(): void {
-    component.form.setValue({ latitude: 4.65, longitude: -74.05, radiusKm: 5 });
+  const q = (selector: string) => host.querySelector(selector) as HTMLElement | null;
+
+  function typeAddress(value: string): void {
+    const input = q('#search-address') as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
   }
 
-  it('el formulario es inválido inicialmente', () => {
-    expect(component.form.invalid).toBe(true);
-    expect(component.form.controls.latitude.hasError('required')).toBe(true);
-    expect(component.form.controls.longitude.hasError('required')).toBe(true);
+  it('no muestra latitud ni longitud como campos', () => {
+    expect(q('#search-latitude')).toBeNull();
+    expect(q('#search-longitude')).toBeNull();
+    expect(host.querySelector('input[type="number"]')).toBeNull();
   });
 
-  it.each([-90.1, 91])('rechaza latitud fuera de rango (%s)', (latitude) => {
-    valid();
-    component.form.controls.latitude.setValue(latitude);
-    expect(component.form.controls.latitude.invalid).toBe(true);
+  it('muestra el campo de dirección con su etiqueta', () => {
+    expect(q('#search-address')).not.toBeNull();
+    expect(q('label[for="search-address"]')?.textContent).toContain('Dirección o zona');
   });
 
-  it.each([-90, 90])('acepta latitud en el límite (%s)', (latitude) => {
-    valid();
-    component.form.controls.latitude.setValue(latitude);
-    expect(component.form.controls.latitude.valid).toBe(true);
-  });
-
-  it.each([-180.1, 181])('rechaza longitud fuera de rango (%s)', (longitude) => {
-    valid();
-    component.form.controls.longitude.setValue(longitude);
-    expect(component.form.controls.longitude.invalid).toBe(true);
-  });
-
-  it.each([-180, 180])('acepta longitud en el límite (%s)', (longitude) => {
-    valid();
-    component.form.controls.longitude.setValue(longitude);
-    expect(component.form.controls.longitude.valid).toBe(true);
+  it('ofrece exactamente los radios 1, 3, 5 y 10 km, con 5 km por defecto', () => {
+    const labels = Array.from(host.querySelectorAll('#search-radius option')).map((o) =>
+      o.textContent?.trim()
+    );
+    expect(labels).toEqual(['1 km', '3 km', '5 km', '10 km']);
+    expect(component.form.controls.radiusKm.value).toBe(5);
   });
 
   it('exige radio y que sea estrictamente mayor que 0', () => {
-    valid();
     component.form.controls.radiusKm.setValue(null);
     expect(component.form.controls.radiusKm.hasError('required')).toBe(true);
     component.form.controls.radiusKm.setValue(0);
@@ -58,65 +53,90 @@ describe('PropertySearchFiltersComponent (FR-UC-06)', () => {
     expect(component.form.controls.radiusKm.valid).toBe(true);
   });
 
-  it('ofrece exactamente los radios 1, 3, 5 y 10 km', () => {
-    const labels = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('#search-radius option')
-    ).map((o) => o.textContent?.trim());
-    expect(labels).toEqual(['1 km', '3 km', '5 km', '10 km']);
+  it('emite addressEdited cuando el usuario escribe', () => {
+    const edits: string[] = [];
+    component.addressEdited.subscribe((v) => edits.push(v));
+
+    typeAddress('Carrera 7');
+
+    expect(edits).toEqual(['Carrera 7']);
   });
 
-  it('emite los parámetros cuando el formulario es válido', () => {
-    const emitted: PropertySearchParameters[] = [];
-    component.searchRequested.subscribe((p) => emitted.push(p));
-    component.form.setValue({ latitude: 4.65, longitude: -74.05, radiusKm: 3 });
+  it('emite la búsqueda con la dirección recortada, el radio y el alcance', () => {
+    const emitted: PropertySearchFormValue[] = [];
+    component.searchRequested.subscribe((v) => emitted.push(v));
+    typeAddress('  Calle 10  ');
+    component.form.controls.radiusKm.setValue(3);
 
     component.submit();
 
-    expect(emitted).toEqual([{ latitude: 4.65, longitude: -74.05, radiusKm: 3 }]);
+    expect(emitted).toEqual([{ addressQuery: 'Calle 10', radiusKm: 3, ownership: 'ALL' }]);
   });
 
-  it('no emite y muestra errores cuando el formulario es inválido', () => {
-    const emitted: PropertySearchParameters[] = [];
-    component.searchRequested.subscribe((p) => emitted.push(p));
+  it('no emite si el radio es inválido y muestra el error', () => {
+    const emitted: PropertySearchFormValue[] = [];
+    component.searchRequested.subscribe((v) => emitted.push(v));
+    component.form.controls.radiusKm.setValue(null);
 
     component.submit();
     fixture.detectChanges();
 
     expect(emitted).toEqual([]);
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Ingresa la latitud.');
-    expect(text).toContain('Ingresa la longitud.');
+    expect(host.textContent).toContain('Selecciona un radio de búsqueda.');
   });
 
-  it('conserva el radio elegido al recibir coordenadas', () => {
+  it('al recibir coordenadas GPS limpia la dirección sin emitir addressEdited y conserva radio y alcance', () => {
+    fixture.componentRef.setInput('showOwnership', true);
+    fixture.detectChanges();
+    typeAddress('Calle 1');
     component.form.controls.radiusKm.setValue(10);
-    const coordinates: LocationCoordinates = { latitude: 4.6, longitude: -74.1 };
+    component.form.controls.ownership.setValue('MINE');
+    const edits: string[] = [];
+    component.addressEdited.subscribe((v) => edits.push(v));
 
+    const coordinates: LocationCoordinates = { latitude: 4.6, longitude: -74.1 };
     fixture.componentRef.setInput('coordinates', coordinates);
     fixture.detectChanges();
 
     expect(component.form.getRawValue()).toEqual({
-      latitude: 4.6,
-      longitude: -74.1,
-      radiusKm: 10
+      addressQuery: '',
+      radiusKm: 10,
+      ownership: 'MINE'
     });
+    expect(edits).toEqual([]);
+  });
+
+  it('oculta el filtro de alcance por defecto (TENANT)', () => {
+    expect(q('#search-ownership')).toBeNull();
+    expect(host.textContent).not.toContain('Mis inmuebles');
+  });
+
+  it('muestra Todos / Mis inmuebles / Otros inmuebles cuando showOwnership es true (OWNER)', () => {
+    fixture.componentRef.setInput('showOwnership', true);
+    fixture.detectChanges();
+
+    const labels = Array.from(host.querySelectorAll('#search-ownership label')).map((l) =>
+      l.textContent?.trim()
+    );
+    expect(labels).toEqual(['Todos', 'Mis inmuebles', 'Otros inmuebles']);
+    expect((q('#ownership-all') as HTMLInputElement).checked).toBe(true);
+    expect(q('#search-ownership legend')?.textContent).toContain('Mostrar');
   });
 
   it('deshabilita las acciones mientras se obtiene la ubicación', () => {
     fixture.componentRef.setInput('locating', true);
     fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
 
-    expect((host.querySelector('#use-my-location') as HTMLButtonElement).disabled).toBe(true);
-    expect((host.querySelector('#search-submit') as HTMLButtonElement).disabled).toBe(true);
-    expect(host.querySelector('#use-my-location')?.textContent).toContain('Obteniendo ubicación');
+    expect((q('#use-my-location') as HTMLButtonElement).disabled).toBe(true);
+    expect((q('#search-submit') as HTMLButtonElement).disabled).toBe(true);
+    expect(q('#use-my-location')?.textContent).toContain('Obteniendo ubicación');
   });
 
   it('emite useLocation al pulsar "Usar mi ubicación"', () => {
     let count = 0;
     component.useLocation.subscribe(() => count++);
 
-    ((fixture.nativeElement as HTMLElement).querySelector('#use-my-location') as HTMLElement).click();
+    q('#use-my-location')?.click();
 
     expect(count).toBe(1);
   });

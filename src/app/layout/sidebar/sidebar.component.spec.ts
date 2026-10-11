@@ -122,7 +122,14 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
 
   it('muestra solicitudes y contratos para TENANT sin exponer propiedades', () => {
     const paths = setRole('TENANT');
-    expect(paths).toEqual(['/dashboard', '/requests', '/contracts', '/notifications', '/profile']);
+    expect(paths).toEqual([
+      '/dashboard',
+      '/properties/search',
+      '/requests',
+      '/contracts',
+      '/notifications',
+      '/profile'
+    ]);
     expect(paths).not.toContain('/properties');
   });
 

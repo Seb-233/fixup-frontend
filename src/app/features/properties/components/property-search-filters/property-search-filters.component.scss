@@ -2,19 +2,22 @@
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) auto;
   gap: 1rem;
-  align-items: start;
+  align-items: end;
 }
 
-.location-action,
+.address { grid-column: 1; }
+.location-action { grid-column: 2; }
+.ownership,
 .submit-action { grid-column: 1 / -1; }
 
 .field { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
 
-label { color: #555; font-size: 0.85rem; font-weight: 600; }
+.field label,
+legend { color: #555; font-size: 0.85rem; font-weight: 600; }
 
-input,
+input[type='text'],
 select {
   width: 100%;
   box-sizing: border-box;
@@ -33,10 +36,14 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-input[aria-invalid='true'],
 select[aria-invalid='true'] { border-color: #b91c1c; }
 
 .error { color: #b91c1c; font-size: 0.8rem; }
+
+.ownership { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ownership-options { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.4rem; }
+.radio { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 44px; font-size: 0.95rem; color: #333; cursor: pointer; }
+.radio input { width: 1.1rem; height: 1.1rem; accent-color: var(--fixup-color-primary); }
 
 button {
   min-height: 44px;
@@ -63,5 +70,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 @media (max-width: 767px) {
   .filters { grid-template-columns: 1fr; }
+  .address,
+  .location-action { grid-column: 1; }
   button { width: 100%; }
 }

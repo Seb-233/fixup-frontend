@@ -12,7 +12,7 @@ import { FixerVerificationStore } from '../../features/fixers/pages/verification
   template: `
     <nav class="bottom-nav">
       @for (item of visibleItems(); track item.path) {
-        <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }" class="nav-item">
+        <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/properties' }" class="nav-item">
           <span class="nav-label">{{ item.label }}</span>
         </a>
       }

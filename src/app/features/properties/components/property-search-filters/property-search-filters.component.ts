@@ -1,4 +1,5 @@
 import { Component, effect, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -10,7 +11,9 @@ import {
 import { LocationCoordinates } from '../../models/location.models';
 import {
   DEFAULT_RADIUS_KM,
-  PropertySearchParameters,
+  OWNERSHIP_OPTIONS,
+  OwnershipFilter,
+  PropertySearchFormValue,
   RADIUS_OPTIONS_KM
 } from '../../models/property-search.models';
 
@@ -21,14 +24,25 @@ function greaterThanZero(control: AbstractControl): ValidationErrors | null {
   return Number(value) > 0 ? null : { greaterThanZero: true };
 }
 
-// FR-UC-06: formulario de coordenadas y radio. No consulta ubicación ni backend: delega
-// en la página mediante eventos y recibe las coordenadas por entrada.
+// FR-UC-06: dirección o zona, ubicación actual, radio y (solo OWNER) alcance de propiedad.
+// No consulta ubicación ni backend ni geocodifica: delega en la página mediante eventos.
 @Component({
   selector: 'app-property-search-filters',
   standalone: true,
   imports: [ReactiveFormsModule],
   template: `
     <form [formGroup]="form" (ngSubmit)="submit()" class="filters" novalidate>
+      <div class="field address">
+        <label for="search-address">Dirección o zona</label>
+        <input
+          id="search-address"
+          type="text"
+          formControlName="addressQuery"
+          autocomplete="off"
+          placeholder="Escribe una dirección, barrio o zona"
+        />
+      </div>
+
       <div class="location-action">
         <button
           type="button"
@@ -39,40 +53,6 @@ function greaterThanZero(control: AbstractControl): ValidationErrors | null {
         >
           {{ locating() ? 'Obteniendo ubicación…' : 'Usar mi ubicación' }}
         </button>
-      </div>
-
-      <div class="field">
-        <label for="search-latitude">Latitud</label>
-        <input
-          id="search-latitude"
-          type="number"
-          inputmode="decimal"
-          step="any"
-          formControlName="latitude"
-          [attr.aria-invalid]="latitudeError() ? 'true' : null"
-          [attr.aria-describedby]="latitudeError() ? 'search-latitude-error' : null"
-          placeholder="Ej. 4.6533"
-        />
-        @if (latitudeError(); as message) {
-          <small id="search-latitude-error" class="error">{{ message }}</small>
-        }
-      </div>
-
-      <div class="field">
-        <label for="search-longitude">Longitud</label>
-        <input
-          id="search-longitude"
-          type="number"
-          inputmode="decimal"
-          step="any"
-          formControlName="longitude"
-          [attr.aria-invalid]="longitudeError() ? 'true' : null"
-          [attr.aria-describedby]="longitudeError() ? 'search-longitude-error' : null"
-          placeholder="Ej. -74.0836"
-        />
-        @if (longitudeError(); as message) {
-          <small id="search-longitude-error" class="error">{{ message }}</small>
-        }
       </div>
 
       <div class="field">
@@ -92,6 +72,25 @@ function greaterThanZero(control: AbstractControl): ValidationErrors | null {
         }
       </div>
 
+      @if (showOwnership()) {
+        <fieldset class="ownership" id="search-ownership">
+          <legend>Mostrar</legend>
+          <div class="ownership-options">
+            @for (option of ownershipOptions; track option.value) {
+              <label class="radio">
+                <input
+                  type="radio"
+                  formControlName="ownership"
+                  [value]="option.value"
+                  [id]="'ownership-' + option.value.toLowerCase()"
+                />
+                <span>{{ option.label }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      }
+
       <div class="submit-action">
         <button type="submit" id="search-submit" class="primary" [disabled]="locating()">
           Buscar propiedades
@@ -102,42 +101,40 @@ function greaterThanZero(control: AbstractControl): ValidationErrors | null {
   styleUrls: ['./property-search-filters.component.scss']
 })
 export class PropertySearchFiltersComponent {
-  /** Coordenadas obtenidas del dispositivo; al cambiar rellenan latitud y longitud. */
+  /** Coordenadas obtenidas del GPS; al llegar sustituyen el texto de dirección. */
   readonly coordinates = input<LocationCoordinates | null>(null);
   /** Mientras es true se bloquean las acciones que dependen de la ubicación. */
   readonly locating = input(false);
+  /** Solo OWNER ve el filtro Todos / Mis inmuebles / Otros inmuebles. */
+  readonly showOwnership = input(false);
 
   readonly useLocation = output<void>();
-  readonly searchRequested = output<PropertySearchParameters>();
+  /** El usuario modificó el texto de dirección (no se emite al limpiarlo por código). */
+  readonly addressEdited = output<string>();
+  readonly searchRequested = output<PropertySearchFormValue>();
 
   readonly radiusOptions = RADIUS_OPTIONS_KM;
+  readonly ownershipOptions = OWNERSHIP_OPTIONS;
 
   readonly form = new FormGroup({
-    latitude: new FormControl<number | null>(null, [
-      Validators.required,
-      Validators.min(-90),
-      Validators.max(90)
-    ]),
-    longitude: new FormControl<number | null>(null, [
-      Validators.required,
-      Validators.min(-180),
-      Validators.max(180)
-    ]),
+    addressQuery: new FormControl<string>('', { nonNullable: true }),
     radiusKm: new FormControl<number | null>(DEFAULT_RADIUS_KM, [
       Validators.required,
       greaterThanZero
-    ])
+    ]),
+    ownership: new FormControl<OwnershipFilter>('ALL', { nonNullable: true })
   });
 
   constructor() {
+    this.form.controls.addressQuery.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((value) => this.addressEdited.emit(value));
+
     effect(() => {
-      const coordinates = this.coordinates();
-      // patchValue no toca radiusKm: el radio elegido se conserva.
-      if (coordinates) {
-        this.form.patchValue({
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude
-        });
+      // Con GPS el texto escrito deja de describir la ubicación: se limpia sin avisar a la
+      // página (emitEvent: false). El radio y el alcance se conservan.
+      if (this.coordinates()) {
+        this.form.controls.addressQuery.setValue('', { emitEvent: false });
       }
     });
   }
@@ -147,28 +144,12 @@ export class PropertySearchFiltersComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const { latitude, longitude, radiusKm } = this.form.getRawValue();
+    const { addressQuery, radiusKm, ownership } = this.form.getRawValue();
     this.searchRequested.emit({
-      latitude: latitude as number,
-      longitude: longitude as number,
-      radiusKm: radiusKm as number
+      addressQuery: addressQuery.trim(),
+      radiusKm: radiusKm as number,
+      ownership
     });
-  }
-
-  latitudeError(): string | null {
-    const control = this.form.controls.latitude;
-    if (!control.touched || control.valid) return null;
-    return control.hasError('required')
-      ? 'Ingresa la latitud.'
-      : 'La latitud debe estar entre -90 y 90.';
-  }
-
-  longitudeError(): string | null {
-    const control = this.form.controls.longitude;
-    if (!control.touched || control.valid) return null;
-    return control.hasError('required')
-      ? 'Ingresa la longitud.'
-      : 'La longitud debe estar entre -180 y 180.';
   }
 
   radiusError(): string | null {
