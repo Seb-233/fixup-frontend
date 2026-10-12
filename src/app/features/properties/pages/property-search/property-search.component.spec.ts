@@ -1,17 +1,19 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import { PropertyControllerService, PropertySearchResult } from '../../../../api/generated';
+import { LocationControllerService, PropertyControllerService, PropertySearchResult } from '../../../../api/generated';
 import { routes } from '../../../../app.routes';
 import { Role } from '../../../../core/auth/auth.types';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { roleGuard } from '../../../../core/auth/role.guard';
 import { LocationFailureReason, LocationResult } from '../../models/location.models';
+import { GeocodingCandidate } from '../../models/geocoding.models';
 import { LocationService } from '../../services/location.service';
 import { PropertySearchStore } from '../../services/property-search.store';
+import { GeocodingStore } from '../../services/geocoding.store';
 import { PropertySearchComponent } from './property-search.component';
 
 describe('PropertySearchComponent (FR-UC-06)', () => {
@@ -20,6 +22,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
   let httpTesting: HttpTestingController;
   let getCurrentLocation: ReturnType<typeof vi.fn>;
   let searchApiSpy: ReturnType<typeof vi.fn>;
+  let geocodeApiSpy: ReturnType<typeof vi.fn>;
 
   const gpsSuccess = of<LocationResult>({
     status: 'success',
@@ -40,16 +43,24 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     }
   ];
 
+  const mockGeocodingCandidates: GeocodingCandidate[] = [
+    { displayName: 'Carrera 7 # 53-10, Bogotá', latitude: 4.651, longitude: -74.052 },
+    { displayName: 'Carrera 7 # 100-20, Bogotá', latitude: 4.685, longitude: -74.032 }
+  ];
+
   beforeEach(() => {
     getCurrentLocation = vi.fn();
     searchApiSpy = vi.fn().mockReturnValue(of([]));
+    geocodeApiSpy = vi.fn().mockReturnValue(of(new HttpResponse({ body: [] })));
 
     TestBed.configureTestingModule({
       imports: [PropertySearchComponent],
       providers: [
         { provide: LocationService, useValue: { getCurrentLocation } },
         { provide: PropertyControllerService, useValue: { search: searchApiSpy } },
+        { provide: LocationControllerService, useValue: { geocode: geocodeApiSpy } },
         PropertySearchStore,
+        GeocodingStore,
         provideHttpClient(),
         provideHttpClientTesting()
       ]
@@ -88,17 +99,23 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     fixture.detectChanges();
   }
 
+  function clickResolveAddress(): void {
+    el('#resolve-address').click();
+    fixture.detectChanges();
+  }
+
   function clickSearch(): void {
     el('#search-submit').click();
     fixture.detectChanges();
   }
 
-  it('no muestra latitud ni longitud y sí un campo de dirección', () => {
+  it('no muestra latitud ni longitud y sí un campo de dirección y botón Buscar dirección', () => {
     create('TENANT');
 
     expect(el('#search-latitude')).toBeNull();
     expect(el('#search-longitude')).toBeNull();
     expect(el('#search-address')).not.toBeNull();
+    expect(el('#resolve-address')).not.toBeNull();
     expect(host.querySelector('h1')?.textContent).toContain('Explorar inmuebles');
   });
 
@@ -203,6 +220,221 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(page().locationSource()).toBe('address');
     expect(page().coordinates()).toBeNull();
     expect(status()).toContain('Aún no se ha convertido');
+  });
+
+  it('escribir en el campo de dirección NO llama al backend (sin autocomplete)', () => {
+    create('TENANT');
+
+    typeAddress('Carrera 7');
+
+    expect(geocodeApiSpy).not.toHaveBeenCalled();
+    expect(searchApiSpy).not.toHaveBeenCalled();
+  });
+
+  it('pulsar "Buscar dirección" llama al backend con la query recortada', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+
+    typeAddress('  Carrera 7 # 53-10  ');
+    clickResolveAddress();
+
+    expect(geocodeApiSpy).toHaveBeenCalledWith('Carrera 7 # 53-10', 'response');
+  });
+
+  it('recibir candidatos muestra sus displayName sin seleccionar automáticamente el primero', () => {
+    create('TENANT');
+    const headers = new HttpHeaders({ 'X-Data-Attribution': '© OpenStreetMap contributors' });
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates, headers })));
+
+    typeAddress('Carrera 7');
+    clickResolveAddress();
+
+    const candidateButtons = host.querySelectorAll('.candidate-option');
+    expect(candidateButtons.length).toBe(2);
+    expect(candidateButtons[0].textContent).toContain('Carrera 7 # 53-10, Bogotá');
+    expect(candidateButtons[1].textContent).toContain('Carrera 7 # 100-20, Bogotá');
+    expect(host.querySelector('#geocoding-attribution')?.textContent).toContain('© OpenStreetMap contributors');
+
+    // No se seleccionan coordenadas automáticamente
+    expect(page().coordinates()).toBeNull();
+    expect(page().state()).toBe('addressPending');
+  });
+
+  it('seleccionar explícitamente un candidato fija coordenadas internas y habilita la búsqueda de propiedades', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+
+    typeAddress('Carrera 7');
+    clickResolveAddress();
+
+    // El usuario selecciona el segundo candidato
+    const candidateButtons = host.querySelectorAll('.candidate-option');
+    (candidateButtons[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(page().coordinates()).toEqual({ latitude: 4.685, longitude: -74.032 });
+    expect(page().locationSource()).toBe('address');
+    expect(page().state()).toBe('locationReady');
+    expect(status()).toContain('Usando la dirección seleccionada');
+    expect(host.textContent).not.toContain('4.685');
+    expect(host.textContent).not.toContain('-74.032');
+
+    // Ahora busca propiedades con las coordenadas del candidato seleccionado
+    clickSearch();
+
+    expect(searchApiSpy).toHaveBeenCalledWith('4.685', '-74.032', '5', 'ALL');
+    expect(host.querySelector('#search-parameters')?.textContent).toContain('dirección indicada');
+  });
+
+  it('editar el texto de dirección después de seleccionar un candidato invalida inmediatamente las coordenadas', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+
+    typeAddress('Carrera 7');
+    clickResolveAddress();
+    const candidateButtons = host.querySelectorAll('.candidate-option');
+    (candidateButtons[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(page().coordinates()).not.toBeNull();
+
+    // El usuario modifica el texto de la dirección
+    typeAddress('Carrera 7 bis');
+
+    expect(page().coordinates()).toBeNull();
+    expect(page().state()).toBe('addressPending');
+
+    // Intentar buscar propiedades queda bloqueado
+    clickSearch();
+    expect(searchApiSpy).not.toHaveBeenCalled();
+    expect(page().searchParameters()).toBeNull();
+    expect(host.querySelector('#search-hint')?.textContent).toContain('Selecciona una ubicación válida');
+  });
+
+  it('muestra mensaje informativo cuando la geocodificación no encuentra ubicaciones (empty)', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: [] })));
+
+    typeAddress('DireccionInexistente123');
+    clickResolveAddress();
+
+    expect(host.querySelector('#geocoding-empty')?.textContent).toContain(
+      'No encontramos ubicaciones para esa dirección'
+    );
+    expect(page().coordinates()).toBeNull();
+  });
+
+  it('maneja error 400 en geocodificación con mensaje de entrada inválida', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+
+    typeAddress('???');
+    clickResolveAddress();
+
+    const errorBlock = host.querySelector('#geocoding-error');
+    expect(errorBlock).not.toBeNull();
+    expect(errorBlock?.textContent).toContain('La dirección ingresada no es válida');
+  });
+
+  it('maneja error 429 en geocodificación con mensaje de límite de peticiones y botón de reintento', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+
+    typeAddress('Calle 100');
+    clickResolveAddress();
+
+    const errorBlock = host.querySelector('#geocoding-error');
+    expect(errorBlock).not.toBeNull();
+    expect(errorBlock?.textContent).toContain('Temporalmente no se pueden realizar nuevas búsquedas');
+
+    // Reintento exitoso
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+    const retryBtn = host.querySelector('#geocoding-retry') as HTMLButtonElement;
+    expect(retryBtn).not.toBeNull();
+    retryBtn.click();
+    fixture.detectChanges();
+
+    expect(geocodeApiSpy).toHaveBeenCalledTimes(2);
+    expect(host.querySelectorAll('.candidate-option').length).toBe(2);
+  });
+
+  it('maneja error 503 en geocodificación indicando indisponibilidad del servicio', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+    typeAddress('Calle 80');
+    clickResolveAddress();
+
+    const errorBlock = host.querySelector('#geocoding-error');
+    expect(errorBlock).not.toBeNull();
+    expect(errorBlock?.textContent).toContain('El servicio de ubicación por dirección está temporalmente no disponible');
+  });
+
+  it('un error en geocodificación no rompe la búsqueda por GPS', () => {
+    create('TENANT');
+    geocodeApiSpy.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+    typeAddress('Calle 80');
+    clickResolveAddress();
+    expect(host.querySelector('#geocoding-error')).not.toBeNull();
+
+    // El usuario pulsa GPS inmediatamente después
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+
+    expect(page().state()).toBe('locationReady');
+    expect(page().locationSource()).toBe('gps');
+    expect(page().coordinates()).toEqual({ latitude: 4.65, longitude: -74.05 });
+
+    clickSearch();
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '5', 'ALL');
+  });
+
+  it('un error en GPS no rompe la geocodificación por dirección', () => {
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(of<LocationResult>({ status: 'failure', reason: 'permissionDenied' }));
+
+    clickUseLocation();
+    expect(page().state()).toBe('locationError');
+    expect(status()).toContain('No tenemos permiso');
+
+    // El usuario resuelve una dirección
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+    typeAddress('Carrera 7');
+    clickResolveAddress();
+
+    const candidateButtons = host.querySelectorAll('.candidate-option');
+    expect(candidateButtons.length).toBe(2);
+    (candidateButtons[0] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(page().state()).toBe('locationReady');
+    expect(page().locationSource()).toBe('address');
+
+    clickSearch();
+    expect(searchApiSpy).toHaveBeenCalledWith('4.651', '-74.052', '5', 'ALL');
+  });
+
+  it('OWNER puede buscar propiedades con dirección y scopes MINE y OTHERS', () => {
+    create('OWNER');
+    geocodeApiSpy.mockReturnValue(of(new HttpResponse({ body: mockGeocodingCandidates })));
+
+    typeAddress('Carrera 7');
+    clickResolveAddress();
+    (host.querySelector('.candidate-option') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    el('#ownership-mine').click();
+    fixture.detectChanges();
+    clickSearch();
+
+    expect(searchApiSpy).toHaveBeenCalledWith('4.651', '-74.052', '5', 'MINE');
+
+    el('#ownership-others').click();
+    fixture.detectChanges();
+    clickSearch();
+
+    expect(searchApiSpy).toHaveBeenCalledWith('4.651', '-74.052', '5', 'OTHERS');
   });
 
   it('buscar con una dirección sin geocodificar no llama al backend ni al store', () => {

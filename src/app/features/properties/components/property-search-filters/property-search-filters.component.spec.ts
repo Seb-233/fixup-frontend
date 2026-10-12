@@ -1,12 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LocationCoordinates } from '../../models/location.models';
 import { PropertySearchFormValue } from '../../models/property-search.models';
+import { GeocodingCandidate } from '../../models/geocoding.models';
 import { PropertySearchFiltersComponent } from './property-search-filters.component';
 
 describe('PropertySearchFiltersComponent (FR-UC-06)', () => {
   let fixture: ComponentFixture<PropertySearchFiltersComponent>;
   let component: PropertySearchFiltersComponent;
   let host: HTMLElement;
+
+  const mockCandidates: GeocodingCandidate[] = [
+    { displayName: 'Carrera 7 # 53-10, Bogotá', latitude: 4.65, longitude: -74.06 },
+    { displayName: 'Carrera 7 # 100-20, Bogotá', latitude: 4.68, longitude: -74.04 }
+  ];
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [PropertySearchFiltersComponent] });
@@ -31,9 +37,92 @@ describe('PropertySearchFiltersComponent (FR-UC-06)', () => {
     expect(host.querySelector('input[type="number"]')).toBeNull();
   });
 
-  it('muestra el campo de dirección con su etiqueta', () => {
+  it('muestra el campo de dirección con su etiqueta y el botón Buscar dirección', () => {
     expect(q('#search-address')).not.toBeNull();
     expect(q('label[for="search-address"]')?.textContent).toContain('Dirección o zona');
+    expect(q('#resolve-address')).not.toBeNull();
+    expect(q('#resolve-address')?.textContent).toContain('Buscar dirección');
+  });
+
+  it('deshabilita el botón Buscar dirección si el campo está vacío', () => {
+    expect((q('#resolve-address') as HTMLButtonElement).disabled).toBe(true);
+    typeAddress('  ');
+    expect((q('#resolve-address') as HTMLButtonElement).disabled).toBe(true);
+    typeAddress('Calle 72');
+    expect((q('#resolve-address') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('no emite resolveAddress al teclear (sin autocomplete)', () => {
+    const resolves: string[] = [];
+    component.resolveAddress.subscribe((v) => resolves.push(v));
+
+    typeAddress('Carrera 7');
+
+    expect(resolves).toEqual([]);
+  });
+
+  it('emite resolveAddress únicamente al pulsar el botón Buscar dirección', () => {
+    const resolves: string[] = [];
+    component.resolveAddress.subscribe((v) => resolves.push(v));
+
+    typeAddress('  Calle 100 # 15-20  ');
+    (q('#resolve-address') as HTMLButtonElement).click();
+
+    expect(resolves).toEqual(['Calle 100 # 15-20']);
+  });
+
+  it('muestra estado de carga de geocodificación', () => {
+    fixture.componentRef.setInput('geocoding', true);
+    fixture.detectChanges();
+
+    expect(q('#geocoding-loading')?.textContent).toContain('Buscando dirección');
+    expect((q('#resolve-address') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('muestra mensaje cuando no hay resultados de dirección', () => {
+    fixture.componentRef.setInput('geocodingState', 'empty');
+    fixture.detectChanges();
+
+    expect(q('#geocoding-empty')?.textContent).toContain('No encontramos ubicaciones para esa dirección');
+  });
+
+  it('muestra bloque de error de geocodificación y reintento en error 429', () => {
+    fixture.componentRef.setInput('geocodingState', 'error');
+    fixture.componentRef.setInput('geocodingError', 'Temporalmente no se pueden realizar nuevas búsquedas');
+    fixture.componentRef.setInput('geocodingErrorType', 'rate_limit');
+    fixture.detectChanges();
+
+    expect(q('#geocoding-error')?.textContent).toContain('Temporalmente no se pueden realizar nuevas búsquedas');
+
+    let retried = false;
+    component.retryGeocoding.subscribe(() => { retried = true; });
+    (q('#geocoding-retry') as HTMLButtonElement).click();
+    expect(retried).toBe(true);
+  });
+
+  it('renderiza la lista de candidatos y su atribución, emitiendo candidateSelected al hacer click', () => {
+    fixture.componentRef.setInput('candidates', mockCandidates);
+    fixture.componentRef.setInput('attribution', '© OpenStreetMap contributors');
+    fixture.detectChanges();
+
+    const options = host.querySelectorAll('.candidate-option');
+    expect(options.length).toBe(2);
+    expect(options[0].textContent).toContain('Carrera 7 # 53-10, Bogotá');
+    expect(options[1].textContent).toContain('Carrera 7 # 100-20, Bogotá');
+    expect(q('#geocoding-attribution')?.textContent).toContain('© OpenStreetMap contributors');
+
+    const selected: GeocodingCandidate[] = [];
+    component.candidateSelected.subscribe((c) => selected.push(c));
+    (options[0] as HTMLButtonElement).click();
+
+    expect(selected).toEqual([mockCandidates[0]]);
+  });
+
+  it('muestra el distintivo de dirección seleccionada', () => {
+    fixture.componentRef.setInput('selectedCandidate', mockCandidates[0]);
+    fixture.detectChanges();
+
+    expect(q('#selected-address-badge')?.textContent).toContain('Carrera 7 # 53-10, Bogotá');
   });
 
   it('ofrece exactamente los radios 1, 3, 5 y 10 km, con 5 km por defecto', () => {
@@ -87,6 +176,7 @@ describe('PropertySearchFiltersComponent (FR-UC-06)', () => {
 
   it('al recibir coordenadas GPS limpia la dirección sin emitir addressEdited y conserva radio y alcance', () => {
     fixture.componentRef.setInput('showOwnership', true);
+    fixture.componentRef.setInput('locationSource', 'gps');
     fixture.detectChanges();
     typeAddress('Calle 1');
     component.form.controls.radiusKm.setValue(10);

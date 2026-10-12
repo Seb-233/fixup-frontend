@@ -4,6 +4,9 @@ import { PropertySearchResult } from '../../../../api/generated';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { LocationCoordinates, LocationFailureReason } from '../../models/location.models';
 import {
+  GeocodingCandidate
+} from '../../models/geocoding.models';
+import {
   LocationSource,
   LocationUiState,
   OWNERSHIP_OPTIONS,
@@ -14,6 +17,7 @@ import { PropertyResultListComponent } from '../../components/property-result-li
 import { PropertySearchFiltersComponent } from '../../components/property-search-filters/property-search-filters.component';
 import { LocationService } from '../../services/location.service';
 import { PropertySearchStore } from '../../services/property-search.store';
+import { GeocodingStore } from '../../services/geocoding.store';
 
 const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
   permissionDenied:
@@ -42,8 +46,19 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
           [coordinates]="coordinates()"
           [locating]="state() === 'locating'"
           [showOwnership]="isOwner()"
+          [locationSource]="locationSource()"
+          [geocoding]="geocodingStore.isGeocoding()"
+          [geocodingState]="geocodingStore.state()"
+          [geocodingError]="geocodingStore.errorMessage()"
+          [geocodingErrorType]="geocodingStore.errorType()"
+          [candidates]="geocodingStore.candidates()"
+          [selectedCandidate]="geocodingStore.selectedCandidate()"
+          [attribution]="geocodingStore.attribution()"
           (useLocation)="requestLocation()"
           (addressEdited)="onAddressEdited($event)"
+          (resolveAddress)="onResolveAddress($event)"
+          (candidateSelected)="onCandidateSelected($event)"
+          (retryGeocoding)="onRetryGeocoding()"
           (searchRequested)="onSearch($event)"
         />
 
@@ -106,6 +121,7 @@ export class PropertySearchComponent {
   private readonly locationService = inject(LocationService);
   private readonly userStore = inject(CurrentUserStore);
   readonly searchStore = inject(PropertySearchStore);
+  readonly geocodingStore = inject(GeocodingStore);
   private locationSubscription?: Subscription;
 
   readonly state = signal<LocationUiState>('idle');
@@ -125,7 +141,9 @@ export class PropertySearchComponent {
       case 'locating':
         return 'Obteniendo tu ubicación…';
       case 'locationReady':
-        return 'Usando tu ubicación actual.';
+        return this.locationSource() === 'gps'
+          ? 'Usando tu ubicación actual.'
+          : 'Usando la dirección seleccionada.';
       case 'addressPending':
         return 'Dirección escrita. Aún no se ha convertido en una ubicación válida.';
       case 'locationError': {
@@ -153,6 +171,7 @@ export class PropertySearchComponent {
 
   requestLocation(): void {
     this.locationSubscription?.unsubscribe();
+    this.geocodingStore.reset();
     this.state.set('locating');
     this.failureReason.set(null);
     this.locationRequired.set(false);
@@ -177,13 +196,38 @@ export class PropertySearchComponent {
     this.failureReason.set(null);
     this.locationRequired.set(false);
     this.searchParameters.set(null);
+    this.geocodingStore.reset();
     this.state.set(text.trim() ? 'addressPending' : 'idle');
     this.searchStore.reset();
   }
 
+  onResolveAddress(query: string): void {
+    this.locationSubscription?.unsubscribe();
+    this.coordinates.set(null);
+    this.failureReason.set(null);
+    this.locationRequired.set(false);
+    this.searchParameters.set(null);
+    this.geocodingStore.geocode(query);
+  }
+
+  onCandidateSelected(candidate: GeocodingCandidate): void {
+    this.geocodingStore.selectCandidate(candidate);
+    this.coordinates.set({
+      latitude: candidate.latitude,
+      longitude: candidate.longitude
+    });
+    this.locationSource.set('address');
+    this.state.set('locationReady');
+    this.locationRequired.set(false);
+  }
+
+  onRetryGeocoding(): void {
+    this.geocodingStore.retry();
+  }
+
   onSearch(value: PropertySearchFormValue): void {
     const coordinates = this.coordinates();
-    if (this.locationSource() !== 'gps' || !coordinates) {
+    if (!coordinates) {
       this.searchParameters.set(null);
       this.locationRequired.set(true);
       return;
