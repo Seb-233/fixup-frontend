@@ -119,4 +119,15 @@ describe('PropertyResultListComponent (FR-UC-06)', () => {
 
     expect(selected).toEqual(sampleResults[0]);
   });
+
+  it('resalta la tarjeta correspondiente al selectedPropertyId', () => {
+    fixture.componentRef.setInput('results', sampleResults);
+    fixture.componentRef.setInput('selectedPropertyId', 'prop-2');
+    fixture.detectChanges();
+
+    const cards = host.querySelectorAll('.property-card');
+    expect(cards[0].classList.contains('is-selected')).toBe(false);
+    expect(cards[1].classList.contains('is-selected')).toBe(true);
+    expect(cards[1].getAttribute('aria-selected')).toBe('true');
+  });
 });

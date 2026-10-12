@@ -11,6 +11,7 @@ import { CurrentUserStore } from '../../../../core/auth/current-user.store';
 import { roleGuard } from '../../../../core/auth/role.guard';
 import { LocationFailureReason, LocationResult } from '../../models/location.models';
 import { GeocodingCandidate } from '../../models/geocoding.models';
+import { MAP_TILE_CONFIG } from '../../services/tile-provider.config';
 import { LocationService } from '../../services/location.service';
 import { PropertySearchStore } from '../../services/property-search.store';
 import { GeocodingStore } from '../../services/geocoding.store';
@@ -40,6 +41,17 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
       longitude: -74.052,
       distanceKm: 0.15,
       ownedByCurrentUser: false
+    },
+    {
+      id: 'prop-102',
+      name: 'Oficina El Poblado',
+      address: 'Calle 10 # 43-20',
+      city: 'Medellín',
+      areaM2: 120,
+      latitude: 4.66,
+      longitude: -74.04,
+      distanceKm: 1.2,
+      ownedByCurrentUser: true
     }
   ];
 
@@ -59,6 +71,14 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
         { provide: LocationService, useValue: { getCurrentLocation } },
         { provide: PropertyControllerService, useValue: { search: searchApiSpy } },
         { provide: LocationControllerService, useValue: { geocode: geocodeApiSpy } },
+        {
+          provide: MAP_TILE_CONFIG,
+          useValue: {
+            tileUrl: 'https://example.com/tiles/{z}/{x}/{y}.png',
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+          }
+        },
         PropertySearchStore,
         GeocodingStore,
         provideHttpClient(),
@@ -522,7 +542,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(page().state()).toBe('addressPending');
   });
 
-  it('renderiza resultados reales cuando el backend responde satisfactoriamente', () => {
+  it('renderiza mapa y listado de resultados cuando el backend responde satisfactoriamente', () => {
     searchApiSpy.mockReturnValue(of(mockApiResults));
     create('TENANT');
     getCurrentLocation.mockReturnValue(gpsSuccess);
@@ -531,11 +551,95 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     clickSearch();
 
     expect(page().searchStore.state()).toBe('success');
+    expect(host.querySelector('#property-map-container')).not.toBeNull();
     const cards = host.querySelectorAll('.property-card');
-    expect(cards.length).toBe(1);
+    expect(cards.length).toBe(2);
     expect(cards[0].textContent).toContain('Apartamento Chapinero Central');
-    expect(cards[0].textContent).toContain('Cra 7 # 53-10, Bogotá');
-    expect(cards[0].textContent).toContain('150 m');
+    expect(cards[1].textContent).toContain('Oficina El Poblado');
+  });
+
+  it('sincroniza selección bidireccionalmente: click en tarjeta actualiza selectedPropertyId y resalta mapa', () => {
+    searchApiSpy.mockReturnValue(of(mockApiResults));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+    clickSearch();
+
+    const cards = host.querySelectorAll('.property-card');
+    (cards[1] as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(page().searchStore.selectedPropertyId()).toBe('prop-102');
+    expect(cards[1].classList.contains('is-selected')).toBe(true);
+    expect(cards[0].classList.contains('is-selected')).toBe(false);
+  });
+
+  it('sincroniza selección bidireccionalmente: seleccionar propiedad desde el mapa actualiza la lista', () => {
+    searchApiSpy.mockReturnValue(of(mockApiResults));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+    clickSearch();
+
+    // Seleccionar mediante store (equivalente a evento de marcador del mapa)
+    page().onPropertySelected(mockApiResults[0]);
+    fixture.detectChanges();
+
+    expect(page().searchStore.selectedPropertyId()).toBe('prop-101');
+    const cards = host.querySelectorAll('.property-card');
+    expect(cards[0].classList.contains('is-selected')).toBe(true);
+    expect(cards[1].classList.contains('is-selected')).toBe(false);
+  });
+
+  it('modo degradado: si el mapa falla, se muestra aviso y el listado sigue completo y funcional', () => {
+    // Reconfigurar con simulateFailure: true en MAP_TILE_CONFIG
+    TestBed.resetTestingModule();
+    getCurrentLocation = vi.fn().mockReturnValue(gpsSuccess);
+    searchApiSpy = vi.fn().mockReturnValue(of(mockApiResults));
+    geocodeApiSpy = vi.fn().mockReturnValue(of(new HttpResponse({ body: [] })));
+
+    TestBed.configureTestingModule({
+      imports: [PropertySearchComponent],
+      providers: [
+        { provide: LocationService, useValue: { getCurrentLocation } },
+        { provide: PropertyControllerService, useValue: { search: searchApiSpy } },
+        { provide: LocationControllerService, useValue: { geocode: geocodeApiSpy } },
+        {
+          provide: MAP_TILE_CONFIG,
+          useValue: {
+            tileUrl: 'https://example.com/tiles/{z}/{x}/{y}.png',
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18,
+            simulateFailure: true
+          }
+        },
+        PropertySearchStore,
+        GeocodingStore,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+
+    create('TENANT');
+    clickUseLocation();
+    clickSearch();
+
+    // El aviso de mapa no disponible está en el DOM
+    expect(host.querySelector('#map-degraded-state')).not.toBeNull();
+    expect(host.querySelector('#map-degraded-state')?.textContent).toContain(
+      'El mapa no está disponible temporalmente'
+    );
+
+    // El listado sigue completamente visible y funcional
+    const cards = host.querySelectorAll('.property-card');
+    expect(cards.length).toBe(2);
+    expect(cards[0].textContent).toContain('Apartamento Chapinero Central');
+
+    // Se puede interactuar con el listado normalmente
+    (cards[0] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(page().searchStore.selectedPropertyId()).toBe('prop-101');
+    expect(cards[0].classList.contains('is-selected')).toBe(true);
   });
 
   it('muestra estado vacío cuando el backend devuelve 0 resultados', () => {
@@ -573,7 +677,7 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     fixture.detectChanges();
 
     expect(page().searchStore.state()).toBe('success');
-    expect(host.querySelectorAll('.property-card').length).toBe(1);
+    expect(host.querySelectorAll('.property-card').length).toBe(2);
   });
 });
 

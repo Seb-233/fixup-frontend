@@ -29,6 +29,12 @@
     border-color: rgba(37, 99, 235, 0.4);
     background: #f8fafc;
   }
+
+  &.is-selected {
+    border-color: var(--fixup-color-primary, #0f172a);
+    box-shadow: 0 0 0 2px var(--fixup-color-accent, #2563eb), 0 4px 12px rgba(0, 0, 0, 0.12);
+    background: #eff6ff;
+  }
 }
 
 .card-header {

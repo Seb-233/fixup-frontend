@@ -1,0 +1,188 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: var(--fixup-radius-md, 8px);
+  overflow: hidden;
+  border: 1px solid rgba(154, 148, 141, 0.4);
+  background: #f1f5f9;
+}
+
+.map-container {
+  width: 100%;
+  height: 420px;
+  background: #e2e8f0;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--fixup-color-accent, #2563eb);
+    outline-offset: -2px;
+  }
+}
+
+.map-attribution-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0.35rem 0 0;
+  text-align: right;
+  padding: 0 0.5rem;
+}
+
+.map-degraded-alert {
+  padding: 1.5rem;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: var(--fixup-radius-md, 8px);
+  color: #92400e;
+}
+
+.degraded-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.degraded-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
+// Marcadores personalizados mediante DivIcon
+::ng-deep {
+  .custom-property-marker {
+    background: transparent;
+    border: none;
+  }
+
+  .marker-pin {
+    width: 26px;
+    height: 26px;
+    border-radius: 50% 50% 50% 0;
+    background: #2563eb;
+    position: absolute;
+    transform: rotate(-45deg);
+    left: 50%;
+    top: 50%;
+    margin: -13px 0 0 -13px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s ease-in-out, background 0.15s ease;
+
+    .marker-dot {
+      width: 10px;
+      height: 10px;
+      margin: 8px 0 0 8px;
+      background: #fff;
+      position: absolute;
+      border-radius: 50%;
+    }
+
+    &.marker-mine {
+      background: #059669; // Verde esmeralda para inmuebles propios
+    }
+
+    &.marker-selected {
+      background: #dc2626; // Rojo brillante para el inmueble seleccionado
+      transform: rotate(-45deg) scale(1.25);
+      z-index: 1000;
+      box-shadow: 0 3px 8px rgba(220, 38, 38, 0.5);
+    }
+  }
+
+  .custom-center-marker {
+    background: transparent;
+    border: none;
+  }
+
+  .center-pin {
+    width: 20px;
+    height: 20px;
+    position: relative;
+
+    .center-pulse {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      top: -2px;
+      left: -2px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.25);
+      animation: pulse 2s infinite ease-out;
+    }
+
+    .center-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      top: 4px;
+      left: 4px;
+      border-radius: 50%;
+      background: #1d4ed8;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    70% { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  .property-popup {
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #1e293b;
+    padding: 0.2rem;
+    min-width: 160px;
+  }
+
+  .popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .popup-mine-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #065f46;
+    background: #d1fae5;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+  }
+
+  .popup-address {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+  }
+
+  .popup-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.25rem;
+  }
+
+  .popup-distance {
+    color: #2563eb;
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 767px) {
+  .map-container {
+    height: 320px;
+  }
+}

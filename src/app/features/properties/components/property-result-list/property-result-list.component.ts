@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, effect, input, output } from '@angular/core';
 import { PropertySearchResult } from '../../../../api/generated';
 
 export function formatDistance(distanceKm: number): string {
@@ -24,6 +24,9 @@ export function formatDistance(distanceKm: number): string {
           <article
             class="property-card"
             [class.is-mine]="property.ownedByCurrentUser"
+            [class.is-selected]="property.id === selectedPropertyId()"
+            [attr.aria-selected]="property.id === selectedPropertyId() ? 'true' : null"
+            [id]="'property-card-' + property.id"
             role="listitem"
             tabindex="0"
             (click)="propertySelected.emit(property)"
@@ -51,7 +54,20 @@ export function formatDistance(distanceKm: number): string {
 })
 export class PropertyResultListComponent {
   readonly results = input<PropertySearchResult[]>([]);
+  readonly selectedPropertyId = input<string | null>(null);
   readonly propertySelected = output<PropertySearchResult>();
 
   readonly formatDistance = formatDistance;
+
+  constructor() {
+    effect(() => {
+      const id = this.selectedPropertyId();
+      if (id && typeof document !== 'undefined') {
+        const el = document.getElementById(`property-card-${id}`);
+        if (typeof el?.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    });
+  }
 }

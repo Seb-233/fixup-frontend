@@ -13,6 +13,7 @@ import {
   PropertySearchFormValue,
   PropertySearchParameters
 } from '../../models/property-search.models';
+import { PropertyMapComponent } from '../../components/property-map/property-map.component';
 import { PropertyResultListComponent } from '../../components/property-result-list/property-result-list.component';
 import { PropertySearchFiltersComponent } from '../../components/property-search-filters/property-search-filters.component';
 import { LocationService } from '../../services/location.service';
@@ -32,7 +33,11 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
 @Component({
   selector: 'app-property-search',
   standalone: true,
-  imports: [PropertySearchFiltersComponent, PropertyResultListComponent],
+  imports: [
+    PropertySearchFiltersComponent,
+    PropertyMapComponent,
+    PropertyResultListComponent
+  ],
   template: `
     <section class="search-page">
       <header>
@@ -107,10 +112,25 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
         }
 
         @if (searchStore.state() === 'success' || searchStore.state() === 'empty') {
-          <app-property-result-list
-            [results]="searchStore.results()"
-            (propertySelected)="onPropertySelected($event)"
-          />
+          <div class="search-results-layout" id="search-results-layout">
+            <div class="map-column">
+              <app-property-map
+                [results]="searchStore.results()"
+                [searchCenter]="coordinates()"
+                [radiusKm]="searchParameters()?.radiusKm ?? 5"
+                [selectedPropertyId]="searchStore.selectedPropertyId()"
+                (propertySelected)="onPropertySelected($event)"
+              />
+            </div>
+
+            <div class="list-column">
+              <app-property-result-list
+                [results]="searchStore.results()"
+                [selectedPropertyId]="searchStore.selectedPropertyId()"
+                (propertySelected)="onPropertySelected($event)"
+              />
+            </div>
+          </div>
         }
       </article>
     </section>
