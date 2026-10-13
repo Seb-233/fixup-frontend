@@ -1,87 +1,93 @@
 import { Role } from '../auth/auth.types';
 
-export type NavigationIcon =
-  | 'dashboard'
-  | 'properties'
-  | 'requests'
-  | 'quotations'
-  | 'jobs'
-  | 'earnings'
-  | 'verification'
-  | 'portfolio'
-  | 'review'
-  | 'notifications'
-  | 'contracts'
-  | 'explore'
-  | 'sla-board'
-  | 'bulk-properties'
-  | 'remodelings'
-  | 'profile';
-
 export interface RoleNavigationItem {
   path: string;
   label: string;
-  icon: NavigationIcon;
+  /** Versión corta para la barra inferior del móvil, donde cada acceso mide un quinto del ancho. */
+  shortLabel?: string;
+  icon: string;
+  /** Aparece en la barra inferior del móvil (máximo cuatro por rol). */
   mobilePrimary: boolean;
+  /** Para técnicos aún sin verificar: el destino real queda detrás de la verificación. */
   requiresVerification?: boolean;
 }
 
+const item = (path: string, label: string, icon: string, mobilePrimary = false, shortLabel?: string): RoleNavigationItem => ({
+  path,
+  label,
+  shortLabel,
+  icon,
+  mobilePrimary
+});
+
+// Cada rol ve solo los destinos de su trabajo, en el orden en que los usa. Notificaciones y perfil
+// viven en la barra superior, así que no se repiten aquí.
 const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
   OWNER: [
-    { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/properties', label: 'Mis propiedades', icon: 'properties', mobilePrimary: true },
-    { path: '/properties/search', label: 'Explorar inmuebles', icon: 'explore', mobilePrimary: false },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
-    { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/remodelings', label: 'Remodelaciones', icon: 'remodelings', mobilePrimary: false },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
-    { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
-  ],
-  FIXER: [
-    { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/requests/inbox', label: 'Solicitudes disponibles', icon: 'requests', mobilePrimary: true },
-    { path: '/quotations/me', label: 'Mis cotizaciones', icon: 'quotations', mobilePrimary: false },
-    { path: '/jobs/me', label: 'Mis trabajos', icon: 'jobs', mobilePrimary: true },
-    { path: '/payments/earnings', label: 'Mis ingresos', icon: 'earnings', mobilePrimary: false },
-    { path: '/fixers/verification', label: 'Verificación', icon: 'verification', mobilePrimary: false },
-    { path: '/fixers/portfolio', label: 'Mi portafolio', icon: 'portfolio', mobilePrimary: false },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
-    { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
-  ],
-  PLATFORM_ADMIN: [
-    { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/administration/sla-board', label: 'Panel SLA', icon: 'sla-board', mobilePrimary: true },
-    { path: '/administration/fixer-review', label: 'Revisión de técnicos', icon: 'review', mobilePrimary: false },
-    { path: '/administration/properties/bulk-upload', label: 'Carga masiva inmuebles', icon: 'bulk-properties', mobilePrimary: true },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: false },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
-    { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
+    item('/dashboard', 'Inicio', 'home', true),
+    item('/properties', 'Mis inmuebles', 'building', true, 'Inmuebles'),
+    item('/requests', 'Solicitudes', 'wrench', true),
+    item('/visits', 'Agenda', 'calendar', true),
+    item('/payments', 'Pagos', 'card'),
+    item('/expenses', 'Gastos', 'chart'),
+    item('/contracts', 'Contratos', 'file'),
+    item('/remodelings', 'Remodelaciones', 'hammer'),
+    item('/catalog', 'Catálogo', 'search'),
+    item('/fixers', 'Técnicos', 'users'),
+    item('/analytics/market-indicators', 'Mercado', 'map')
   ],
   TENANT: [
-    { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/properties/search', label: 'Explorar inmuebles', icon: 'explore', mobilePrimary: false },
-    { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/contracts', label: 'Mis contratos', icon: 'contracts', mobilePrimary: true },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
-    { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
+    item('/dashboard', 'Inicio', 'home', true),
+    item('/catalog', 'Catálogo', 'search', true),
+    item('/requests', 'Solicitudes', 'wrench', true),
+    item('/contracts', 'Mi contrato', 'file', true),
+    item('/visits', 'Agenda', 'calendar'),
+    item('/fixers', 'Técnicos', 'users'),
+    item('/analytics/market-indicators', 'Mercado', 'map')
+  ],
+  FIXER: [
+    item('/dashboard', 'Inicio', 'home', true),
+    item('/requests/inbox', 'Disponibles', 'clipboard', true),
+    item('/jobs/me', 'Trabajos', 'wrench', true),
+    item('/visits', 'Agenda', 'calendar', true),
+    item('/quotations/me', 'Cotizaciones', 'file'),
+    item('/payments/earnings', 'Ingresos', 'wallet'),
+    item('/fixers/portfolio', 'Portafolio', 'image'),
+    item('/fixers/verification', 'Verificación', 'shield')
   ],
   REAL_ESTATE_MANAGER: [
-    { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
-    { path: '/properties', label: 'Propiedades', icon: 'properties', mobilePrimary: true },
-    { path: '/administration/properties/bulk-upload', label: 'Carga masiva inmuebles', icon: 'bulk-properties', mobilePrimary: true },
-    { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
-    { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
-    { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
-    { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
+    item('/dashboard', 'Inicio', 'home', true),
+    item('/management', 'Mantenimiento', 'clipboard', true, 'Tablero'),
+    item('/properties', 'Inmuebles', 'building', true),
+    item('/requests', 'Solicitudes', 'wrench', true),
+    item('/visits', 'Agenda', 'calendar'),
+    item('/payments', 'Pagos', 'card'),
+    item('/expenses', 'Gastos', 'chart'),
+    item('/contracts', 'Contratos', 'file'),
+    item('/administration/properties/bulk-upload', 'Carga masiva', 'upload'),
+    item('/catalog', 'Catálogo', 'search'),
+    item('/fixers', 'Técnicos', 'users')
+  ],
+  PLATFORM_ADMIN: [
+    item('/dashboard', 'Inicio', 'home', true),
+    item('/administration/sla-board', 'Plazos', 'clock', true),
+    item('/administration/fixer-review', 'Verificaciones', 'shield', true, 'Revisión'),
+    item('/administration/properties/bulk-upload', 'Carga masiva', 'upload', true, 'Carga'),
+    item('/contracts', 'Contratos', 'file'),
+    item('/catalog', 'Catálogo', 'search'),
+    item('/fixers', 'Técnicos', 'users')
   ]
 };
+
+const GATED_FOR_UNVERIFIED = new Set(['/requests/inbox', '/fixers/portfolio']);
 
 export function getNavigationForRole(role: Role | null, fixerVerified = true): readonly RoleNavigationItem[] {
   if (!role) return [];
   const items = ROLE_NAVIGATION[role];
-  return role === 'FIXER' && !fixerVerified
-    ? items.map((item) => (item.path === '/requests/inbox' || item.path === '/fixers/portfolio')
-      ? { ...item, path: '/fixers/verification', mobilePrimary: false, requiresVerification: true }
-      : item)
-    : items;
+  if (role !== 'FIXER' || fixerVerified) return items;
+  return items.map((entry) =>
+    GATED_FOR_UNVERIFIED.has(entry.path)
+      ? { ...entry, path: '/fixers/verification', requiresVerification: true }
+      : entry
+  );
 }

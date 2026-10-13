@@ -4,6 +4,7 @@
 export const environmentExample = {
   production: false,
   apiOrigin: 'http://localhost:8080',
+  demoLogin: false,
   auth0: {
     domain: 'your-tenant.us.auth0.com',
     clientId: 'your-client-id',
