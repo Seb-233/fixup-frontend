@@ -9,6 +9,7 @@ import {
   ProjectResponse,
   PropertySummary,
   RemodelingProgressStatus,
+  UploadTicketDto,
   provideApi
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../../requests/services/request-media.service';
@@ -258,7 +259,7 @@ describe('RemodelingCreateComponent', () => {
       urgencyLevel: 'MEDIUM'
     });
 
-    const pendingTicket = new Subject<any>();
+    const pendingTicket = new Subject<UploadTicketDto>();
     const file = new File(['fake-img'], 'pendiente.jpg', { type: 'image/jpeg' });
     vi.spyOn(mediaService, 'validateFile').mockReturnValue({ valid: true });
     vi.spyOn(mediaService, 'requestUploadTicket').mockReturnValue(pendingTicket);
