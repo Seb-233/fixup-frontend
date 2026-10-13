@@ -117,4 +117,36 @@ describe('DashboardComponent', () => {
     expect(text).not.toContain('14 t�cnicos');
     expect(fixture.nativeElement.querySelector('.kpi-card')).toBeNull();
   });
+
+  it('las tarjetas de acciones no contienen "?" ni emojis y renderizan iconos SVG reales', () => {
+    const roles: ('OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER')[] = [
+      'OWNER',
+      'FIXER',
+      'PLATFORM_ADMIN',
+      'TENANT',
+      'REAL_ESTATE_MANAGER'
+    ];
+
+    roles.forEach((r) => {
+      const el = render(r);
+      const actionCards = el.querySelectorAll('.action-card');
+      expect(actionCards.length).toBeGreaterThan(0);
+
+      actionCards.forEach((card) => {
+        const iconSpan = card.querySelector('.action-icon');
+        expect(iconSpan).toBeTruthy();
+        expect(iconSpan?.textContent?.trim()).toBe('');
+        expect(iconSpan?.textContent).not.toContain('?');
+        expect(iconSpan?.querySelector('svg')).toBeTruthy();
+      });
+    });
+  });
+
+  it('el widget de contratos muestra un empty state compacto sin ocupar una sección desproporcionada', () => {
+    const el = render('OWNER');
+    const emptyState = el.querySelector('#contracts-empty-state');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState?.textContent).toContain('Sin contratos próximos a vencer');
+    expect(el.querySelector('.placeholder-card')).toBeNull();
+  });
 });
