@@ -46,6 +46,14 @@ export interface RemodelingControllerServiceInterface {
      * 
      * @endpoint get /remodelings/me
      */
-    mine1(extraHttpRequestParams?: any): Observable<Array<ProjectSummaryResponse>>;
+    mine2(extraHttpRequestParams?: any): Observable<Array<ProjectSummaryResponse>>;
+
+    /**
+     * Publish the property for rent at the target rent (FR-UC-26)
+     * Only for a pre-rental remodeling whose requirements are all completed.
+     * @endpoint post /remodelings/{projectId}/publish-listing
+     * @param projectId 
+     */
+    publishListing(projectId: string, extraHttpRequestParams?: any): Observable<ProjectResponse>;
 
 }

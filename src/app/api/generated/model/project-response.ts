@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { RemodelingProgressStatus } from './remodeling-progress-status';
+import { RemodelingGoal } from './remodeling-goal';
 import { RequirementResponse } from './requirement-response';
 
 
@@ -24,6 +25,11 @@ export interface ProjectResponse {
     requirements: Array<RequirementResponse>;
     createdAt: string;
     updatedAt: string;
+    goal?: RemodelingGoal;
+    targetRent?: number | null;
+    targetReadyDate?: string | null;
+    listingPublishedAt?: string | null;
+    readyToPublish?: boolean;
 }
 export namespace ProjectResponse {
 }

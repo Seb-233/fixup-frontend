@@ -289,12 +289,12 @@ export class PortfolioControllerService extends BaseService implements Portfolio
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public publish(pieceRequest: PieceRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PieceResponse>;
-    public publish(pieceRequest: PieceRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PieceResponse>>;
-    public publish(pieceRequest: PieceRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<PieceResponse>>;
-    public publish(pieceRequest: PieceRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+    public publish1(pieceRequest: PieceRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<PieceResponse>;
+    public publish1(pieceRequest: PieceRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<PieceResponse>>;
+    public publish1(pieceRequest: PieceRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<PieceResponse>>;
+    public publish1(pieceRequest: PieceRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (pieceRequest === null || pieceRequest === undefined) {
-            throw new Error('Required parameter pieceRequest was null or undefined when calling publish.');
+            throw new Error('Required parameter pieceRequest was null or undefined when calling publish1.');
         }
 
         let localVarHeaders = this.defaultHeaders;

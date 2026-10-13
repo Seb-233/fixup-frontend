@@ -18,6 +18,15 @@ export interface JobResponse {
     status: JobStatus;
     createdAt: string;
     completedAt?: string | null;
+    scheduledFor?: string | null;
+    startedAt?: string | null;
+    progressNote?: string | null;
+    requestTitle?: string | null;
+    specialty?: string | null;
+    propertyName?: string | null;
+    propertyAddress?: string | null;
+    propertyCity?: string | null;
+    ownerName?: string | null;
 }
 export namespace JobResponse {
 }

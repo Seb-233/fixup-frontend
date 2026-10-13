@@ -13,6 +13,7 @@ import { Observable }                                        from 'rxjs';
 
 import { EarningsResponse } from '../model/models';
 import { ErrorResponse } from '../model/models';
+import { PayRequest } from '../model/models';
 import { PayoutResponse } from '../model/models';
 
 
@@ -25,11 +26,35 @@ export interface PaymentControllerServiceInterface {
     configuration: Configuration;
 
     /**
+     * The charge of a repair request, for the payer, the fixer or a platform admin
+     * 
+     * @endpoint get /payments/charges/for-request/{requestId}
+     * @param requestId 
+     */
+    chargeForRequest(requestId: string, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
      * Read the current fixer\&#39;s balance, commissions and history
      * Amounts are whole Colombian pesos. The available balance is what can be transferred today; the held balance belongs to jobs that are not closed yet.
      * @endpoint get /payments/me/earnings
      */
     earnings(extraHttpRequestParams?: any): Observable<EarningsResponse>;
+
+    /**
+     * Charges the current owner or manager must pay or already paid (FR-UC-05)
+     * 
+     * @endpoint get /payments/charges/me
+     */
+    myCharges(extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
+     * Pay a charge in the sandbox gateway (FR-UC-22)
+     * Academic scope: no card, account or phone data is sent or stored. The gateway checks that the payer, the reference and the amount match the charge. scenario&#x3D;DECLINE_FUNDS or DECLINE_BANK simulates a rejection.
+     * @endpoint post /payments/charges/{chargeId}/pay
+     * @param chargeId 
+     * @param payRequest 
+     */
+    pay(chargeId: string, payRequest: PayRequest, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
      * Request the transfer of the available balance

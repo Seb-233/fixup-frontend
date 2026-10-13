@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { RemodelingProgressStatus } from './remodeling-progress-status';
+import { RemodelingGoal } from './remodeling-goal';
 
 
 export interface ProjectSummaryResponse { 
@@ -19,6 +20,9 @@ export interface ProjectSummaryResponse {
     assignedCount: number;
     completedCount: number;
     createdAt: string;
+    goal?: RemodelingGoal;
+    targetRent?: number | null;
+    listingPublishedAt?: string | null;
 }
 export namespace ProjectSummaryResponse {
 }
