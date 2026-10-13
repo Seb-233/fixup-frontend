@@ -228,8 +228,8 @@ export class MyJobsComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
 
-    this.jobsApi.mine3().subscribe({
-      next: (jobs) => {
+    this.jobsApi.mine4().subscribe({
+      next: (jobs: JobResponse[]) => {
         this.jobs.set(jobs);
         this.loading.set(false);
       },

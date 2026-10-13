@@ -29,6 +29,8 @@ api/property-controller.service.ts
 api/property-controller.serviceInterface.ts
 api/quotation-controller.service.ts
 api/quotation-controller.serviceInterface.ts
+api/remodeling-controller.service.ts
+api/remodeling-controller.serviceInterface.ts
 api/rental-contract-controller.service.ts
 api/rental-contract-controller.serviceInterface.ts
 api/repair-request-controller.service.ts
@@ -47,6 +49,7 @@ model/confirm-response-dto.ts
 model/contract-response.ts
 model/contract-status.ts
 model/create-contract-request.ts
+model/create-project-request.ts
 model/device-token-request.ts
 model/device-token-response.ts
 model/document-request.ts
@@ -80,6 +83,8 @@ model/photo-response.ts
 model/piece-request.ts
 model/piece-response.ts
 model/portfolio-status-response.ts
+model/project-response.ts
+model/project-summary-response.ts
 model/property-search-result.ts
 model/property-summary.ts
 model/quotation-request.ts
@@ -87,8 +92,11 @@ model/quotation-response.ts
 model/quotation-status.ts
 model/reassign-fixer-request.ts
 model/rejection-request.ts
+model/remodeling-progress-status.ts
 model/repair-request-status.ts
 model/request-detail-response.ts
+model/requirement-request.ts
+model/requirement-response.ts
 model/review-document-response.ts
 model/review-response.ts
 model/role-request.ts

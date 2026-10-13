@@ -109,8 +109,8 @@ export class MyQuotationsComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.quotationsApi.mine1().subscribe({
-      next: (quotations) => {
+    this.quotationsApi.mine2().subscribe({
+      next: (quotations: QuotationResponse[]) => {
         this.quotations.set(quotations);
         this.loading.set(false);
       },
