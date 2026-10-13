@@ -8,7 +8,7 @@
   </div>
 
   <p class="text-sm text-muted">
-    {{ isFixer() ? 'Cliente' : 'Técnico' }}: {{ counterpart() || '—' }}
+    {{ isFixer() ? 'Cliente' : 'Técnico' }}: {{ counterpart() || 'sin registrar' }}
     @if (visit().address) { · {{ visit().address }} }
   </p>
   @if (visit().notes) { <p class="text-sm">{{ visit().notes }}</p> }

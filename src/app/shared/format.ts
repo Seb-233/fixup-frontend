@@ -33,7 +33,7 @@ export function money(value: number | null | undefined): string {
 }
 
 export function num(value: number | null | undefined): string {
-  return value === null || value === undefined ? '—' : NUMBER.format(value);
+  return value === null || value === undefined ? 'Sin dato' : NUMBER.format(value);
 }
 
 function toDate(value: string | Date | null | undefined): Date | null {
@@ -45,22 +45,22 @@ function toDate(value: string | Date | null | undefined): Date | null {
 
 export function date(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? DATE.format(d) : '—';
+  return d ? DATE.format(d) : 'Sin fecha';
 }
 
 export function dateShort(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? DATE_SHORT.format(d) : '—';
+  return d ? DATE_SHORT.format(d) : 'Sin fecha';
 }
 
 export function dateTime(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? keepTogether(DATE_TIME.format(d)) : '—';
+  return d ? keepTogether(DATE_TIME.format(d)) : 'Sin fecha';
 }
 
 export function time(value: string | Date | null | undefined): string {
   const d = toDate(value);
-  return d ? keepTogether(TIME.format(d)) : '—';
+  return d ? keepTogether(TIME.format(d)) : 'Sin hora';
 }
 
 export function month(value: string): string {
@@ -73,7 +73,7 @@ export function month(value: string): string {
 /** "hace 3 h", "en 2 días": para plazos y actividad reciente. */
 export function relative(value: string | Date | null | undefined, now: Date = new Date()): string {
   const d = toDate(value);
-  if (!d) return '—';
+  if (!d) return 'sin fecha';
   const minutes = Math.round((d.getTime() - now.getTime()) / 60000);
   const abs = Math.abs(minutes);
   const unit =
@@ -285,11 +285,11 @@ export const CHECKLIST_RESULT: Record<string, string> = {
 };
 
 export function pick(map: Record<string, Label>, key: string | null | undefined): Label {
-  return (key && map[key]) || label(key ?? '—');
+  return (key && map[key]) || label(key ?? 'Sin dato');
 }
 
 export function name(map: Record<string, string>, key: string | null | undefined): string {
-  return (key && map[key]) || key || '—';
+  return (key && map[key]) || key || 'Sin dato';
 }
 
 /** Mensaje legible a partir del error del backend ({code, message}) o de la red. */

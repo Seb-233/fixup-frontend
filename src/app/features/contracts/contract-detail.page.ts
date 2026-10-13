@@ -44,14 +44,14 @@ import { daysUntil } from './contracts.page';
 
         <section class="panel">
           <dl class="facts">
-            <div><dt>Arrendador</dt><dd>{{ c.ownerName || '—' }}</dd></div>
-            <div><dt>Arrendatario</dt><dd>{{ c.tenantName || '—' }}</dd></div>
+            <div><dt>Arrendador</dt><dd>{{ c.ownerName || 'Sin registrar' }}</dd></div>
+            <div><dt>Arrendatario</dt><dd>{{ c.tenantName || 'Sin registrar' }}</dd></div>
             <div><dt>Inicio</dt><dd>{{ c.startDate | day }}</dd></div>
             <div><dt>Fin</dt><dd>{{ c.endDate | day }}</dd></div>
             <div><dt>Canon mensual</dt><dd>{{ c.monthlyRentAmount | money }}</dd></div>
-            <div><dt>Depósito</dt><dd>{{ c.depositAmount ? (c.depositAmount | money) : '—' }}</dd></div>
-            <div><dt>Día de pago</dt><dd>{{ c.paymentDayOfMonth ? 'Día ' + c.paymentDayOfMonth : '—' }}</dd></div>
-            <div><dt>Aviso de renovación</dt><dd>{{ c.renewalNoticeDays ? c.renewalNoticeDays + ' días antes' : '—' }}</dd></div>
+            <div><dt>Depósito</dt><dd>{{ c.depositAmount ? (c.depositAmount | money) : 'Sin depósito' }}</dd></div>
+            <div><dt>Día de pago</dt><dd>{{ c.paymentDayOfMonth ? 'Día ' + c.paymentDayOfMonth : 'Sin definir' }}</dd></div>
+            <div><dt>Aviso de renovación</dt><dd>{{ c.renewalNoticeDays ? c.renewalNoticeDays + ' días antes' : 'Sin definir' }}</dd></div>
           </dl>
           @if (c.notes) { <p class="notes text-sm">{{ c.notes }}</p> }
         </section>

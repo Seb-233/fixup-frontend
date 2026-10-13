@@ -77,7 +77,7 @@ const TEMPLATE_ROW =
                 @for (e of v.errors; track $index) {
                   <tr>
                     <td data-label="Fila">{{ e.rowNumber }}</td>
-                    <td data-label="Campo"><code>{{ e.field || '—' }}</code></td>
+                    <td data-label="Campo">@if (e.field) { <code>{{ e.field }}</code> } @else { Fila completa }</td>
                     <td data-label="Problema">{{ e.message }}</td>
                   </tr>
                 }

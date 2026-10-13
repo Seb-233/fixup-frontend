@@ -51,7 +51,7 @@ export function daysUntil(dateText: string | undefined): number | null {
                   <span class="row-title">{{ c.propertyName || 'Inmueble' }}</span>
                   <span class="row-meta">{{ c.propertyAddress }}{{ c.propertyCity ? ', ' + c.propertyCity : '' }}</span>
                   <span class="row-meta">
-                    {{ isTenant() ? 'Arrendador: ' + (c.ownerName || '—') : 'Arrendatario: ' + (c.tenantName || '—') }} ·
+                    {{ isTenant() ? 'Arrendador: ' + (c.ownerName || 'sin registrar') : 'Arrendatario: ' + (c.tenantName || 'sin registrar') }} ·
                     {{ c.startDate | day }} a {{ c.endDate | day }}
                   </span>
                 </span>
