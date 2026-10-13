@@ -69,7 +69,7 @@ import {
               <article class="req-card">
                 <div class="req-header">
                   <div class="req-badges">
-                    <span class="position-badge">#{{ req.position }}</span>
+                    <span class="position-badge">#{{ req.position + 1 }}</span>
                     <span class="specialty-badge">{{ specialty(req.specialty) }}</span>
                     <span class="req-status-badge" [attr.data-status]="req.requestStatus">
                       {{ statusLabel(req.requestStatus) }}
@@ -109,7 +109,7 @@ import {
 
                   @if (canChat(req)) {
                     <a [routerLink]="['/requests', req.requestId, 'messages']" class="action-link chat-link" [id]="'link-chat-' + req.position">
-                      💬 Conversación →
+                      Conversación →
                     </a>
                   }
                 </footer>
