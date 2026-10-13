@@ -6,11 +6,12 @@ import { Subscription } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole } from '../../core/navigation/role-navigation';
 import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, NavIconComponent],
   template: `
     <aside
       class="sidebar floating-sidebar"
@@ -53,80 +54,14 @@ import { FixerVerificationStore } from '../../features/fixers/pages/verification
               <a
                 [routerLink]="item.path"
                 routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/properties' }"
+                [routerLinkActiveOptions]="isExactNav(item.path)"
                 [attr.title]="item.label"
                 class="nav-link"
                 (click)="onSelectNav(item.path)"
               >
                 <!-- Íconos Vectoriales Propios según Ruta -->
                 <span class="nav-icon-wrapper" aria-hidden="true">
-                  @switch (item.icon) {
-                    @case ('dashboard') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="9" rx="1.5" />
-                        <rect x="14" y="3" width="7" height="5" rx="1.5" />
-                        <rect x="14" y="12" width="7" height="9" rx="1.5" />
-                        <rect x="3" y="16" width="7" height="5" rx="1.5" />
-                      </svg>
-                    }
-                    @case ('properties') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 21h18M4 21V7l8-4 8 4v14" />
-                        <path d="M9 10h2M13 10h2M9 14h2M13 14h2M10 21v-3a1 1 0 011-1h2a1 1 0 011 1v3" />
-                      </svg>
-                    }
-                    @case ('quotations') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 3h12v18H6z" />
-                        <path d="M9 8h6M9 12h6M9 16h3" />
-                      </svg>
-                    }
-                    @case ('requests') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-                        <rect x="9" y="3" width="6" height="4" rx="1" />
-                        <path d="M9 14l2 2 4-4" />
-                      </svg>
-                    }
-                    @case ('profile') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="8" r="4" />
-                        <path d="M6 20v-1a6 6 0 0112 0v1" />
-                      </svg>
-                    }
-                    @case ('verification') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 12l2 2 4-4" />
-                        <circle cx="12" cy="12" r="9" />
-                      </svg>
-                    }
-                    @case ('jobs') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="7" width="18" height="13" rx="2" />
-                        <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 12h18" />
-                      </svg>
-                    }
-                    @case ('earnings') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                        <path d="M7 12h.01M16 12h1M12 8v8M14 10c0-1-4-1-4 1s4 1 4 3-4 2-4 1" />
-                      </svg>
-                    }
-                    @case ('portfolio') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="4" width="18" height="16" rx="2" />
-                        <circle cx="8" cy="9" r="1.5" />
-                        <path d="M3 17l5-5 4 4 3-3 6 6" />
-                      </svg>
-                    }
-                    @case ('review') {
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-                        <rect x="9" y="3" width="6" height="4" rx="1" />
-                        <path d="M9 14l2 2 4-4" />
-                      </svg>
-                    }
-                  }
+                  <app-nav-icon [name]="item.icon" />
                 </span>
 
                 <span class="nav-label">{{ item.label }}</span>
@@ -177,16 +112,41 @@ export class SidebarComponent implements OnDestroy {
       });
   }
 
+  isExactNav(path: string): { exact: boolean } {
+    const items = this.visibleItems();
+    const hasMoreSpecificSibling = items.some(
+      (other) => other.path !== path && other.path.startsWith(path + '/')
+    );
+    return { exact: hasMoreSpecificSibling || path === '/dashboard' };
+  }
+
   readonly activeIndex = computed<number>(() => {
     const items = this.visibleItems();
-    const url = this.currentUrl();
-    const index = items.findIndex((item) => {
-      if (item.path === '/dashboard') {
-        return url === '/dashboard' || url === '/' || url.startsWith('/dashboard');
+    const rawUrl = this.currentUrl();
+    const url = rawUrl.split('?')[0].split('#')[0];
+
+    let bestIndex = -1;
+    let bestMatchLength = -1;
+
+    items.forEach((item, index) => {
+      const itemPath = item.path.split('?')[0];
+      let matches = false;
+
+      if (itemPath === '/dashboard') {
+        matches = url === '/dashboard' || url === '/' || url.startsWith('/dashboard/');
+      } else if (url === itemPath) {
+        matches = true;
+      } else if (url.startsWith(itemPath + '/')) {
+        matches = true;
       }
-      return url.startsWith(item.path);
+
+      if (matches && itemPath.length > bestMatchLength) {
+        bestMatchLength = itemPath.length;
+        bestIndex = index;
+      }
     });
-    return index >= 0 ? index : 0;
+
+    return bestIndex >= 0 ? bestIndex : 0;
   });
 
   @HostListener('mouseenter')
