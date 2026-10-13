@@ -109,6 +109,14 @@ import { NavigationIcon } from '../../../core/navigation/role-navigation';
           <line x1="17" y1="17" x2="17" y2="17.01" />
         </svg>
       }
+      @case ('remodelings') {
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9" />
+          <path d="M17.64 15 22 10.64" />
+          <path d="m20.91 3.26-6.36 6.36" />
+          <path d="m16.67 1.13 6.2 6.2" />
+        </svg>
+      }
       @case ('profile') {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="8" r="4" />

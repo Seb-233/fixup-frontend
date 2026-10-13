@@ -28,7 +28,10 @@ describe('api.routes', () => {
       '/properties',
       '/properties/me',
       '/properties/550e8400-e29b-41d4-a716-446655440000',
-      '/locations/geocode?query=Carrera%207'
+      '/locations/geocode?query=Carrera%207',
+      '/remodelings',
+      '/remodelings/me',
+      '/remodelings/550e8400-e29b-41d4-a716-446655440000'
     ];
 
     for (const ruta of protegidas) {
@@ -39,6 +42,12 @@ describe('api.routes', () => {
   it('debe comprobar que isFixUpApiUrl retorna true para /locations/geocode', () => {
     expect(
       isFixUpApiUrl(`${environment.apiOrigin}/locations/geocode?query=Bogota`)
+    ).toBe(true);
+  });
+
+  it('debe comprobar que isFixUpApiUrl retorna true para /remodelings/me', () => {
+    expect(
+      isFixUpApiUrl(`${environment.apiOrigin}/remodelings/me`)
     ).toBe(true);
   });
 

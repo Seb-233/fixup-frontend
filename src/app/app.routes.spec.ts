@@ -87,4 +87,27 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(dashboardRoute?.canActivate).toContain(roleGuard);
     expect(dashboardRoute?.data?.['roles']).toBeUndefined();
   });
+
+  it('6. /remodelings y /remodelings/new exigen rol OWNER y cargan de forma diferida', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const listRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings');
+    const newRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings/new');
+
+    expect(listRoute).toBeDefined();
+    expect(listRoute?.loadComponent).toBeDefined();
+    expect(listRoute?.data?.['roles']).toEqual(['OWNER']);
+
+    expect(newRoute).toBeDefined();
+    expect(newRoute?.loadComponent).toBeDefined();
+    expect(newRoute?.data?.['roles']).toEqual(['OWNER']);
+  });
+
+  it('7. /remodelings/:projectId permite OWNER y PLATFORM_ADMIN para soporte de solo lectura', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const detailRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings/:projectId');
+
+    expect(detailRoute).toBeDefined();
+    expect(detailRoute?.loadComponent).toBeDefined();
+    expect(detailRoute?.data?.['roles']).toEqual(['OWNER', 'PLATFORM_ADMIN']);
+  });
 });

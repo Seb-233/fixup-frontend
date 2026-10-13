@@ -157,7 +157,9 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
       { method: 'POST', path: '/quotations', body: { requestId: 'r1', price: 100 } },
       { method: 'GET', path: '/quotations/me' },
       { method: 'POST', path: '/quotations/quot-123/accept', body: {} },
-      { method: 'POST', path: '/quotations/quot-123/reject', body: {} }
+      { method: 'POST', path: '/quotations/quot-123/reject', body: {} },
+      { method: 'GET', path: '/remodelings/me' },
+      { method: 'POST', path: '/remodelings', body: { title: 'Remodelación' } }
     ];
 
     for (const op of operaciones) {
