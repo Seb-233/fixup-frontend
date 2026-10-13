@@ -109,6 +109,30 @@ describe('MyPropertiesComponent (FR-UC-06 Geolocation Integration)', () => {
     expect(component.geocodingStore.state()).toBe('candidates');
   });
 
+  it('editar la dirección después de buscar limpia candidatos obsoletos aunque no se haya seleccionado uno', () => {
+    initialize();
+    component.form.setValue({
+      name: 'Casa',
+      address: 'Calle 10 # 20-30',
+      city: 'Bogotá',
+      areaM2: 80
+    });
+
+    component.lookupLocation();
+    const req = httpTesting.expectOne((r) => r.url.includes('/locations/geocode'));
+    req.flush([candidate]);
+
+    expect(component.geocodingStore.candidates()).toEqual([candidate]);
+    expect(component.selectedLocation()).toBeNull();
+
+    component.form.controls.address.setValue('Calle 11 # 20-30');
+    fixture.detectChanges();
+
+    expect(component.geocodingStore.candidates()).toEqual([]);
+    expect(component.geocodingStore.state()).toBe('idle');
+    expect(component.selectedLocation()).toBeNull();
+  });
+
   it('seleccionar candidato habilita creación y POST /properties envía latitude y longitude exactas', () => {
     initialize();
     component.form.setValue({
