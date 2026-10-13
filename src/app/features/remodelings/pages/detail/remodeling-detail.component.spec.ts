@@ -35,7 +35,7 @@ describe('RemodelingDetailComponent', () => {
       {
         requirementId: 'req-1',
         requestId: 'rep-req-open',
-        position: 1,
+        position: 0,
         specialty: Specialty.Plumbing,
         requestStatus: RepairRequestStatus.Open,
         assignedFixerUserId: null,
@@ -45,7 +45,7 @@ describe('RemodelingDetailComponent', () => {
       {
         requirementId: 'req-2',
         requestId: 'rep-req-assigned',
-        position: 2,
+        position: 1,
         specialty: Specialty.Masonry,
         requestStatus: RepairRequestStatus.Assigned,
         assignedFixerUserId: 'fixer-john-doe',
