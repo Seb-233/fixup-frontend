@@ -6,6 +6,7 @@ import { getNavigationForRole, RoleNavigationItem } from '../../core/navigation/
 import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
 import { ContractExpirationCardComponent } from '../contracts/components/contract-expiration-card/contract-expiration-card.component';
 import { ContractsStore } from '../contracts/services/contracts.store';
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component';
 
 interface DashboardAction extends RoleNavigationItem {
   description: string;
@@ -16,7 +17,7 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, ContractExpirationCardComponent],
+  imports: [CommonModule, RouterLink, ContractExpirationCardComponent, NavIconComponent],
   template: `
     <div class="dashboard-container">
       <header class="welcome-hero">
@@ -57,11 +58,13 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
         <div class="actions-list">
           @for (action of primaryActions(); track action.label) {
             <a class="action-card" [routerLink]="action.path">
-              <span class="action-icon" aria-hidden="true">?</span>
-              <span>
+              <span class="action-icon" aria-hidden="true">
+                <app-nav-icon [name]="action.icon" />
+              </span>
+              <span class="action-details">
                 <strong>{{ action.label }}</strong>
                 <small>{{ action.description }}</small>
-                @if (action.requiresVerification) { <small>Requiere verificación</small> }
+                @if (action.requiresVerification) { <small class="verification-tag">Requiere verificación</small> }
               </span>
             </a>
           }
@@ -77,11 +80,13 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
           <div class="actions-list compact">
             @for (action of secondaryActions(); track action.path) {
               <a class="action-card" [routerLink]="action.path">
-                <span class="action-icon" aria-hidden="true">?</span>
-                <span>
+                <span class="action-icon" aria-hidden="true">
+                  <app-nav-icon [name]="action.icon" />
+                </span>
+                <span class="action-details">
                   <strong>{{ action.label }}</strong>
                   <small>{{ action.description }}</small>
-                @if (action.requiresVerification) { <small>Requiere verificación</small> }
+                  @if (action.requiresVerification) { <small class="verification-tag">Requiere verificación</small> }
                 </span>
               </a>
             }
@@ -103,12 +108,18 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
     .section-header { margin-bottom: 1rem; }
     .section-title { margin: 0; font-family: var(--fixup-font-heading); color: var(--fixup-color-primary, #2d2e31); }
     .section-header p { margin: .4rem 0 0; color: #666; }
-    .actions-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: .85rem; }
-    .action-card { display: flex; gap: .8rem; align-items: flex-start; padding: 1rem; color: inherit; text-decoration: none; border: 1px solid rgba(45,46,49,.12); border-radius: .8rem; background: #fcfbf8; }
-    .action-card:hover { border-color: var(--fixup-color-accent, #ceac78); }
+    .actions-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 1rem; }
+    .action-card { display: flex; gap: .9rem; align-items: flex-start; padding: 1.1rem; color: inherit; text-decoration: none; border: 1px solid rgba(45,46,49,.1); border-radius: .85rem; background: #fff; box-shadow: 0 2px 6px -2px rgba(45,46,49,.04); transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+    .action-card:hover { border-color: var(--fixup-color-accent, #ceac78); transform: translateY(-2px); box-shadow: 0 6px 14px -3px rgba(206,172,120,.25); }
     .action-card strong, .action-card small { display: block; }
-    .action-card small { margin-top: .25rem; color: #666; line-height: 1.45; }
-    .action-icon { display: grid; place-items: center; flex: 0 0 2rem; height: 2rem; border-radius: .55rem; color: #2d2e31; background: #eadfcf; font-weight: 800; }
+    .action-card strong { font-size: .98rem; color: var(--fixup-color-primary, #2d2e31); }
+    .action-card small { margin-top: .25rem; color: #666; line-height: 1.45; font-size: .84rem; }
+    .action-details { flex: 1; }
+    .verification-tag { display: inline-block !important; margin-top: .4rem !important; color: #b45309 !important; font-weight: 600; font-size: .75rem !important; background: #fef3c7; padding: .15rem .45rem; border-radius: 4px; }
+    .action-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; border-radius: .6rem; color: #2d2e31; background: #f6f1e8; border: 1px solid rgba(206,172,120,.3); flex-shrink: 0; }
+    .action-icon app-nav-icon { width: 1.25rem; height: 1.25rem; color: #837c72; }
+    .action-card:hover .action-icon { background: #ecd9ba; color: #2d2e31; }
+    .action-card:hover .action-icon app-nav-icon { color: #2d2e31; }
     .secondary-panel { background: #f8f6f2; }
     @media (max-width: 720px) { .welcome-hero { flex-direction: column; padding: 1.5rem; } .hero-badges { grid-template-columns: 1fr 1fr; width: 100%; } }
   `]
