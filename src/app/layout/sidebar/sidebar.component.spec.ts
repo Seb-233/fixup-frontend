@@ -3,6 +3,8 @@ import { provideRouter } from '@angular/router';
 import { vi, afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { NavigationIcon } from '../../core/navigation/role-navigation';
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component';
 import { SidebarComponent } from './sidebar.component';
 
 describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)', () => {
@@ -144,5 +146,56 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
       '/notifications',
       '/profile'
     ]);
+  });
+
+  it('selecciona /properties para "Mis propiedades" y /properties/search para "Explorar inmuebles" (resolución más específica)', () => {
+    setRole('OWNER');
+    // Para OWNER:
+    // 0: /dashboard
+    // 1: /properties (Mis propiedades)
+    // 2: /properties/search (Explorar inmuebles)
+    component.onSelectNav('/properties');
+    expect(component.activeIndex()).toBe(1);
+
+    component.onSelectNav('/properties/search');
+    expect(component.activeIndex()).toBe(2);
+  });
+
+  it('reconoce rutas anidadas como /requests/req-123 seleccionando "Mis solicitudes"', () => {
+    setRole('OWNER');
+    // 4: /requests (Mis solicitudes)
+    component.onSelectNav('/requests/req-123');
+    expect(component.activeIndex()).toBe(4);
+  });
+
+  it('todos los NavigationIcon tienen representación visual SVG válida sin "?" ni emojis', () => {
+    const allIcons: NavigationIcon[] = [
+      'dashboard',
+      'properties',
+      'requests',
+      'quotations',
+      'jobs',
+      'earnings',
+      'verification',
+      'portfolio',
+      'review',
+      'notifications',
+      'contracts',
+      'explore',
+      'sla-board',
+      'bulk-properties',
+      'profile'
+    ];
+
+    allIcons.forEach((iconName) => {
+      const iconFixture = TestBed.createComponent(NavIconComponent);
+      iconFixture.componentRef.setInput('name', iconName);
+      iconFixture.detectChanges();
+      const el = iconFixture.nativeElement as HTMLElement;
+      const svg = el.querySelector('svg');
+      expect(svg).toBeTruthy();
+      expect(el.textContent?.trim()).toBe('');
+      expect(el.textContent).not.toContain('?');
+    });
   });
 });

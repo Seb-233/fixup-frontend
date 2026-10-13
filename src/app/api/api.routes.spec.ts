@@ -27,12 +27,19 @@ describe('api.routes', () => {
       '/payments/me/payouts',
       '/properties',
       '/properties/me',
-      '/properties/550e8400-e29b-41d4-a716-446655440000'
+      '/properties/550e8400-e29b-41d4-a716-446655440000',
+      '/locations/geocode?query=Carrera%207'
     ];
 
     for (const ruta of protegidas) {
       expect(isFixUpApiUrl(`${environment.apiOrigin}${ruta}`)).toBe(true);
     }
+  });
+
+  it('debe comprobar que isFixUpApiUrl retorna true para /locations/geocode', () => {
+    expect(
+      isFixUpApiUrl(`${environment.apiOrigin}/locations/geocode?query=Bogota`)
+    ).toBe(true);
   });
 
   it('no debe adjuntar el token a un origen ajeno aunque la ruta coincida', () => {

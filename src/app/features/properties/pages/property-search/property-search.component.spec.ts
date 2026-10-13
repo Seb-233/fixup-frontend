@@ -139,6 +139,13 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(host.querySelector('h1')?.textContent).toContain('Explorar inmuebles');
   });
 
+  it('muestra tarjeta de estado inicial con guía de uso sin dejar espacio vacío desproporcionado', () => {
+    create('TENANT');
+    const initialCard = host.querySelector('#property-search-initial');
+    expect(initialCard).not.toBeNull();
+    expect(initialCard?.textContent).toContain('Explora inmuebles cercanos');
+  });
+
   it('"Usar mi ubicación" llama a LocationService y pasa a locating', () => {
     create('TENANT');
     getCurrentLocation.mockReturnValue(new Subject<LocationResult>());

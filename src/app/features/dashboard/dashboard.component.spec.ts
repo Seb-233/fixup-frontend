@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { ContractsStore } from '../contracts/services/contracts.store';
 import { DashboardComponent } from './dashboard.component';
 
 describe('DashboardComponent', () => {
@@ -13,7 +16,12 @@ describe('DashboardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
-      providers: [CurrentUserStore, provideRouter([])]
+      providers: [
+        CurrentUserStore,
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
     }).compileComponents();
     userStore = TestBed.inject(CurrentUserStore);
     verificationStore = TestBed.inject(FixerVerificationStore);
@@ -116,5 +124,74 @@ describe('DashboardComponent', () => {
     expect(text).not.toContain('85%');
     expect(text).not.toContain('14 t�cnicos');
     expect(fixture.nativeElement.querySelector('.kpi-card')).toBeNull();
+  });
+
+  it('las tarjetas de acciones no contienen "?" ni emojis y renderizan iconos SVG reales', () => {
+    const roles: ('OWNER' | 'FIXER' | 'PLATFORM_ADMIN' | 'TENANT' | 'REAL_ESTATE_MANAGER')[] = [
+      'OWNER',
+      'FIXER',
+      'PLATFORM_ADMIN',
+      'TENANT',
+      'REAL_ESTATE_MANAGER'
+    ];
+
+    roles.forEach((r) => {
+      const el = render(r);
+      const actionCards = el.querySelectorAll('.action-card');
+      expect(actionCards.length).toBeGreaterThan(0);
+
+      actionCards.forEach((card) => {
+        const iconSpan = card.querySelector('.action-icon');
+        expect(iconSpan).toBeTruthy();
+        expect(iconSpan?.textContent?.trim()).toBe('');
+        expect(iconSpan?.textContent).not.toContain('?');
+        expect(iconSpan?.querySelector('svg')).toBeTruthy();
+      });
+    });
+  });
+
+  it('el widget de contratos muestra un empty state compacto sin ocupar una sección desproporcionada', () => {
+    const el = render('OWNER');
+    const emptyState = el.querySelector('#contracts-empty-state');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState?.textContent).toContain('Sin contratos próximos a vencer');
+    expect(el.querySelector('.placeholder-card')).toBeNull();
+  });
+
+  it('FIXER entrando al dashboard NO ejecuta GET /contracts/me ni invoca carga de contratos', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('FIXER');
+
+    expect(loadSpy).not.toHaveBeenCalled();
+    const requests = httpTesting.match((req) => req.url.includes('/contracts/me'));
+    expect(requests.length).toBe(0);
+  });
+
+  it('TENANT entrando al dashboard NO ejecuta GET /contracts/me para el widget', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('TENANT');
+
+    expect(loadSpy).not.toHaveBeenCalled();
+    const requests = httpTesting.match((req) => req.url.includes('/contracts/me'));
+    expect(requests.length).toBe(0);
+  });
+
+  it('OWNER entrando al dashboard puede cargar contratos para el widget y ejecuta GET /contracts/me', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('OWNER');
+
+    expect(loadSpy).toHaveBeenCalled();
+    const req = httpTesting.expectOne((r) => r.url.includes('/contracts/me'));
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 });

@@ -3,12 +3,11 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular/lazy';
 import { RouterModule } from '@angular/router';
 import { ContractResponse, daysUntil, formatDate, formatCurrencyCOP } from '../../models/contract.models';
-import { PlaceholderComponent } from '../../../../shared/components/placeholder/placeholder.component';
 
 @Component({
   selector: 'app-contract-expiration-card',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, PlaceholderComponent],
+  imports: [CommonModule, IonicModule, RouterModule],
   template: `
     <ion-card class="expiration-card">
       <ion-card-header>
@@ -28,7 +27,18 @@ import { PlaceholderComponent } from '../../../../shared/components/placeholder/
 
       <ion-card-content>
         @if (slice().length === 0) {
-          <app-placeholder [title]="'No hay contratos próximos a vencer'" />
+          <div class="empty-state-compact" id="contracts-empty-state" role="status">
+            <div class="empty-state-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </div>
+            <div class="empty-state-content">
+              <p class="empty-title">Sin contratos próximos a vencer</p>
+              <p class="empty-desc">No hay vencimientos pendientes en los próximos 30 días.</p>
+            </div>
+          </div>
         } @else {
           <ion-list lines="inset" class="contracts-list">
             @for (c of slice(); track c.id) {

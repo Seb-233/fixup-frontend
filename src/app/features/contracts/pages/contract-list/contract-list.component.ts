@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular/lazy';
 import { ReactiveFormsModule, FormControl, FormBuilder, FormGroup } from '@angular/forms';
@@ -33,7 +33,7 @@ const WIDGET_ROLES: readonly Role[] = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM
   templateUrl: './contract-list.component.html',
   styleUrls: ['./contract-list.component.scss']
 })
-export class ContractListComponent {
+export class ContractListComponent implements OnInit {
   readonly store = inject(ContractsStore);
   private readonly userStore = inject(CurrentUserStore);
   private readonly fb = inject(FormBuilder);
@@ -84,6 +84,10 @@ export class ContractListComponent {
         }
       }
     }, { allowSignalWrites: true });
+  }
+
+  ngOnInit(): void {
+    this.store.load();
   }
 
   applyFilters(): void {
