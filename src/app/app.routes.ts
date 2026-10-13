@@ -163,6 +163,44 @@ export const routes: Routes = [
         }
       },
 
+      // FR-UC-01: Proyectos de remodelación multiprofesionales
+      {
+        path: 'remodelings',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/remodelings/pages/list/remodeling-list.component').then(
+            (m) => m.RemodelingListComponent
+          ),
+        data: {
+          title: 'Mis Remodelaciones',
+          roles: ['OWNER']
+        }
+      },
+      {
+        path: 'remodelings/new',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/remodelings/pages/create/remodeling-create.component').then(
+            (m) => m.RemodelingCreateComponent
+          ),
+        data: {
+          title: 'Nueva Remodelación',
+          roles: ['OWNER']
+        }
+      },
+      {
+        path: 'remodelings/:projectId',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/remodelings/pages/detail/remodeling-detail.component').then(
+            (m) => m.RemodelingDetailComponent
+          ),
+        data: {
+          title: 'Detalle de Remodelación',
+          roles: ['OWNER', 'PLATFORM_ADMIN']
+        }
+      },
+
       // FR-UC-18: cotizaciones
       {
         path: 'quotations/me',

@@ -15,6 +15,7 @@ export type NavigationIcon =
   | 'explore'
   | 'sla-board'
   | 'bulk-properties'
+  | 'remodelings'
   | 'profile';
 
 export interface RoleNavigationItem {
@@ -32,6 +33,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
     { path: '/properties/search', label: 'Explorar inmuebles', icon: 'explore', mobilePrimary: false },
     { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
+    { path: '/remodelings', label: 'Remodelaciones', icon: 'remodelings', mobilePrimary: false },
     { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
     { path: '/profile', label: 'Mi perfil', icon: 'profile', mobilePrimary: true }
   ],
