@@ -93,8 +93,26 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
 
         @if (searchStore.isSearching()) {
           <p id="search-loading" class="loading-status" role="status">
+            <span class="loading-spinner" aria-hidden="true"></span>
             Buscando inmuebles cercanos…
           </p>
+        }
+
+        @if (searchStore.state() === 'idle' && !searchStore.isSearching()) {
+          <div id="property-search-initial" class="initial-search-card" role="region" aria-label="Guía de búsqueda inicial">
+            <div class="initial-icon-box" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            </div>
+            <div class="initial-content">
+              <h3 class="initial-title">Explora inmuebles cercanos</h3>
+              <p class="initial-subtitle">
+                Escribe una dirección o pulsa <strong>Usar mi ubicación</strong> para explorar inmuebles cercanos en el mapa y la lista.
+              </p>
+            </div>
+          </div>
         }
 
         @if (searchStore.state() === 'apiError') {
