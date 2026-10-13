@@ -2,7 +2,7 @@ import { HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   CreateProjectRequest,
@@ -204,6 +204,76 @@ describe('RemodelingCreateComponent', () => {
     component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
 
     expect(component.mediaState(0).mediaIds).toEqual(['media-uuid-1']);
+  });
+
+  it('respeta el límite contractual de seis fotos por necesidad', () => {
+    initialize();
+
+    let sequence = 0;
+    const file = new File(['fake-img'], 'soporte.jpg', { type: 'image/jpeg' });
+    vi.spyOn(mediaService, 'validateFile').mockReturnValue({ valid: true });
+    vi.spyOn(mediaService, 'requestUploadTicket').mockImplementation(() => {
+      const mediaId = `media-${++sequence}`;
+      return of({
+        mediaId,
+        uploadUrl: 'http://storage/test',
+        method: 'PUT',
+        headers: {},
+        expiresAt: '2026-10-13T12:00:00Z'
+      });
+    });
+    vi.spyOn(mediaService, 'uploadBinary').mockReturnValue(of(new HttpResponse({ status: 200 })));
+    vi.spyOn(mediaService, 'confirmUpload').mockImplementation((mediaId: string) =>
+      of({ mediaId, status: 'CONFIRMED' })
+    );
+
+    for (let i = 0; i < 6; i++) {
+      component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
+    }
+
+    expect(component.maxPhotos).toBe(6);
+    expect(component.mediaState(0).mediaIds).toHaveLength(6);
+
+    component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
+
+    expect(component.mediaState(0).mediaIds).toHaveLength(6);
+    expect(component.mediaState(0).error).toContain('Máximo 6 fotos');
+  });
+
+  it('no permite enviar ni eliminar necesidades mientras existe una carga de media en curso', () => {
+    initialize();
+    component.addRequirement();
+    component.form.patchValue({
+      propertyId: 'prop-111',
+      title: 'Remodelación'
+    });
+    component.requirementsArray.at(0).patchValue({
+      title: 'Pintura',
+      description: 'Pintar sala',
+      urgencyLevel: 'LOW'
+    });
+    component.requirementsArray.at(1).patchValue({
+      title: 'Electricidad',
+      description: 'Actualizar tomas',
+      urgencyLevel: 'MEDIUM'
+    });
+
+    const pendingTicket = new Subject<any>();
+    const file = new File(['fake-img'], 'pendiente.jpg', { type: 'image/jpeg' });
+    vi.spyOn(mediaService, 'validateFile').mockReturnValue({ valid: true });
+    vi.spyOn(mediaService, 'requestUploadTicket').mockReturnValue(pendingTicket);
+
+    component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
+
+    expect(component.hasUploadingMedia()).toBe(true);
+
+    component.submit();
+    httpTesting.expectNone(`${environment.apiOrigin}/remodelings`);
+
+    component.removeRequirement(1);
+    expect(component.requirementsArray.length).toBe(2);
+
+    pendingTicket.complete();
   });
 
   it('muestra mensaje de error si el backend responde con fallo y conserva datos', () => {
