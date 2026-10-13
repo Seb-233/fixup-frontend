@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { ContractsStore } from '../contracts/services/contracts.store';
 import { DashboardComponent } from './dashboard.component';
 
 describe('DashboardComponent', () => {
@@ -13,7 +16,12 @@ describe('DashboardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
-      providers: [CurrentUserStore, provideRouter([])]
+      providers: [
+        CurrentUserStore,
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
     }).compileComponents();
     userStore = TestBed.inject(CurrentUserStore);
     verificationStore = TestBed.inject(FixerVerificationStore);
@@ -148,5 +156,42 @@ describe('DashboardComponent', () => {
     expect(emptyState).toBeTruthy();
     expect(emptyState?.textContent).toContain('Sin contratos próximos a vencer');
     expect(el.querySelector('.placeholder-card')).toBeNull();
+  });
+
+  it('FIXER entrando al dashboard NO ejecuta GET /contracts/me ni invoca carga de contratos', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('FIXER');
+
+    expect(loadSpy).not.toHaveBeenCalled();
+    const requests = httpTesting.match((req) => req.url.includes('/contracts/me'));
+    expect(requests.length).toBe(0);
+  });
+
+  it('TENANT entrando al dashboard NO ejecuta GET /contracts/me para el widget', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('TENANT');
+
+    expect(loadSpy).not.toHaveBeenCalled();
+    const requests = httpTesting.match((req) => req.url.includes('/contracts/me'));
+    expect(requests.length).toBe(0);
+  });
+
+  it('OWNER entrando al dashboard puede cargar contratos para el widget y ejecuta GET /contracts/me', () => {
+    const contractsStore = TestBed.inject(ContractsStore);
+    const loadSpy = vi.spyOn(contractsStore, 'load');
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    render('OWNER');
+
+    expect(loadSpy).toHaveBeenCalled();
+    const req = httpTesting.expectOne((r) => r.url.includes('/contracts/me'));
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
   });
 });

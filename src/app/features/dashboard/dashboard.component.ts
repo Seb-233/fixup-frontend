@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole, RoleNavigationItem } from '../../core/navigation/role-navigation';
@@ -132,6 +132,14 @@ export class DashboardComponent {
   readonly showContractWidget = computed(() =>
     WIDGET_ROLES.includes(this.userStore.activeRole() as typeof WIDGET_ROLES[number])
   );
+
+  constructor() {
+    effect(() => {
+      if (this.showContractWidget()) {
+        this.contractsStore.load();
+      }
+    });
+  }
 
   readonly roleLabel = computed(() => {
     switch (this.userStore.activeRole()) {

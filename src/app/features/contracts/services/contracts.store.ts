@@ -14,6 +14,7 @@ export class ContractsStore {
 
   readonly contracts = signal<ContractResponse[]>([]);
   readonly loading = signal(false);
+  readonly loaded = signal(false);
   readonly activeFilters = signal<ActiveFilters>({
     status: 'ALL',
     expiringDays: null,
@@ -61,15 +62,14 @@ export class ContractsStore {
     return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   });
 
-  constructor() {
-    this.load();
-  }
-
-  load(): void {
+  load(force = false): void {
+    if (this.loading()) return;
+    if (!force && this.loaded()) return;
     this.loading.set(true);
     this.service.list().subscribe({
       next: (data) => {
         this.contracts.set(data);
+        this.loaded.set(true);
         this.loading.set(false);
       },
       error: () => {
@@ -83,6 +83,7 @@ export class ContractsStore {
     this.service.list(params).subscribe({
       next: (data) => {
         this.contracts.set(data);
+        this.loaded.set(true);
         this.loading.set(false);
       },
       error: () => {

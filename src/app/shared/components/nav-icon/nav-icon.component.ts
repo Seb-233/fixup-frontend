@@ -122,6 +122,8 @@ import { NavigationIcon } from '../../../core/navigation/role-navigation';
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      width: 1.25rem;
+      height: 1.25rem;
       line-height: 0;
     }
     svg {
