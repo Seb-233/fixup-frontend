@@ -11,6 +11,7 @@ import {
 } from '../../../../api/generated';
 import { RemodelingStore } from '../../services/remodeling.store';
 import { RequestMediaService } from '../../../requests/services/request-media.service';
+import { MAX_REQUEST_PHOTOS } from '../../../requests/utils/request-ui.helpers';
 
 interface RequirementMediaState {
   uploading: boolean;
@@ -73,6 +74,7 @@ interface RequirementMediaState {
                 formControlName="title"
                 placeholder="Ej. Remodelación integral de cocina y baño principal"
                 class="form-control"
+                maxlength="150"
               />
               @if (form.controls.title.touched && form.controls.title.invalid) {
                 <small class="field-error">El título del proyecto es obligatorio.</small>
@@ -87,6 +89,7 @@ interface RequirementMediaState {
                 formControlName="description"
                 placeholder="Describe el alcance global de la obra o consideraciones generales..."
                 class="form-control"
+                maxlength="2000"
               ></textarea>
             </div>
           </fieldset>
@@ -122,6 +125,7 @@ interface RequirementMediaState {
                         class="btn-remove"
                         [attr.aria-label]="'Eliminar necesidad ' + (idx + 1)"
                         title="Eliminar esta necesidad"
+                        [disabled]="hasUploadingMedia()"
                       >
                         ✕ Eliminar
                       </button>
@@ -136,6 +140,7 @@ interface RequirementMediaState {
                       formControlName="title"
                       placeholder="Ej. Cambio de tubería y grifería"
                       class="form-control"
+                      maxlength="150"
                     />
                     @if (reqGroup.get('title')?.touched && reqGroup.get('title')?.invalid) {
                       <small class="field-error">El título de la necesidad es obligatorio.</small>
@@ -150,6 +155,7 @@ interface RequirementMediaState {
                       formControlName="description"
                       placeholder="Describe qué se requiere reparar o remodelar específicamente..."
                       class="form-control"
+                      maxlength="2000"
                     ></textarea>
                     @if (reqGroup.get('description')?.touched && reqGroup.get('description')?.invalid) {
                       <small class="field-error">La descripción es obligatoria.</small>
@@ -168,11 +174,10 @@ interface RequirementMediaState {
 
                   <!-- SUBIDA DE FOTOS / MEDIOS ASOCIADOS A ESTA NECESIDAD -->
                   <div class="media-section">
-                    <span class="media-label">Fotos de soporte (máximo 5)</span>
+                    <span class="media-label">Fotos de soporte (máximo {{ maxPhotos }})</span>
 
                     <div class="upload-controls">
-                      <label [for]="'file-upload-' + idx" class="file-picker-btn" [class.disabled]="mediaState(idx).uploading || mediaState(idx).mediaIds.length >= 5">
-                        <span aria-hidden="true">📷</span>
+                      <label [for]="'file-upload-' + idx" class="file-picker-btn" [class.disabled]="mediaState(idx).uploading || mediaState(idx).mediaIds.length >= maxPhotos">
                         {{ mediaState(idx).uploading ? 'Subiendo imagen...' : 'Seleccionar foto' }}
                       </label>
                       <input
@@ -180,7 +185,7 @@ interface RequirementMediaState {
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         (change)="onFileSelected($event, idx)"
-                        [disabled]="mediaState(idx).uploading || mediaState(idx).mediaIds.length >= 5"
+                        [disabled]="mediaState(idx).uploading || mediaState(idx).mediaIds.length >= maxPhotos"
                         class="file-input-hidden"
                       />
                     </div>
@@ -220,7 +225,7 @@ interface RequirementMediaState {
             <a routerLink="/remodelings" class="btn btn-secondary">Cancelar</a>
             <button
               type="submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || form.invalid || hasUploadingMedia()"
               class="btn btn-primary btn-lg"
               id="btn-submit-remodeling"
             >
@@ -553,6 +558,7 @@ export class RemodelingCreateComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly urgencyLevels = UrgencyLevel;
+  readonly maxPhotos = MAX_REQUEST_PHOTOS;
 
   readonly properties = signal<PropertySummary[]>([]);
   readonly loadingProperties = signal<boolean>(true);
@@ -568,8 +574,8 @@ export class RemodelingCreateComponent implements OnInit {
 
   readonly form = this.fb.group({
     propertyId: ['', Validators.required],
-    title: ['', Validators.required],
-    description: [''],
+    title: ['', [Validators.required, Validators.maxLength(150)]],
+    description: ['', Validators.maxLength(2000)],
     requirements: this.fb.array([this.createRequirementGroup()])
   });
 
@@ -603,8 +609,8 @@ export class RemodelingCreateComponent implements OnInit {
 
   private createRequirementGroup(): FormGroup {
     return this.fb.group({
-      title: ['', Validators.required],
-      description: ['', Validators.required],
+      title: ['', [Validators.required, Validators.maxLength(150)]],
+      description: ['', [Validators.required, Validators.maxLength(2000)]],
       urgencyLevel: [UrgencyLevel.Medium, Validators.required]
     });
   }
@@ -618,7 +624,7 @@ export class RemodelingCreateComponent implements OnInit {
   }
 
   removeRequirement(index: number): void {
-    if (this.requirementsArray.length <= 1) return;
+    if (this.requirementsArray.length <= 1 || this.hasUploadingMedia()) return;
     this.requirementsArray.removeAt(index);
     this.mediaStates.update((states) => states.filter((_, i) => i !== index));
   }
@@ -636,8 +642,8 @@ export class RemodelingCreateComponent implements OnInit {
       return;
     }
 
-    if (this.mediaState(reqIndex).mediaIds.length >= 5) {
-      this.updateMediaState(reqIndex, { error: 'Máximo 5 fotos por necesidad.' });
+    if (this.mediaState(reqIndex).mediaIds.length >= this.maxPhotos) {
+      this.updateMediaState(reqIndex, { error: `Máximo ${this.maxPhotos} fotos por necesidad.` });
       return;
     }
 
@@ -648,11 +654,11 @@ export class RemodelingCreateComponent implements OnInit {
         this.mediaService.uploadBinary(ticket, file).subscribe({
           next: () => {
             this.mediaService.confirmUpload(ticket.mediaId).subscribe({
-              next: () => {
+              next: (confirmed) => {
                 this.updateMediaState(reqIndex, {
                   uploading: false,
                   error: null,
-                  mediaIds: [...this.mediaState(reqIndex).mediaIds, ticket.mediaId]
+                  mediaIds: [...this.mediaState(reqIndex).mediaIds, confirmed.mediaId]
                 });
               },
               error: () => {
@@ -696,8 +702,12 @@ export class RemodelingCreateComponent implements OnInit {
     });
   }
 
+  hasUploadingMedia(): boolean {
+    return this.mediaStates().some((state) => state.uploading);
+  }
+
   submit(): void {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.hasUploadingMedia()) {
       this.form.markAllAsTouched();
       return;
     }
