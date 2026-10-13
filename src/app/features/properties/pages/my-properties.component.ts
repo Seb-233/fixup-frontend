@@ -220,6 +220,7 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.geocodingStore.reset();
     this.load();
 
     this.addressSub = this.form.controls.address.valueChanges.subscribe(() => {
@@ -258,10 +259,8 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private invalidateLocation(): void {
-    if (this.selectedLocation()) {
-      this.selectedLocation.set(null);
-      this.geocodingStore.reset();
-    }
+    this.selectedLocation.set(null);
+    this.geocodingStore.reset();
   }
 
   create(): void {
