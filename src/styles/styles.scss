@@ -15,6 +15,9 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
+// Leaflet Map Styles
+@import "leaflet/dist/leaflet.css";
+
 html, body {
   height: 100%;
   margin: 0;

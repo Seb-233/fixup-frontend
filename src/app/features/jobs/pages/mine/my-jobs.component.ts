@@ -228,7 +228,7 @@ export class MyJobsComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
 
-    this.jobsApi.mine2().subscribe({
+    this.jobsApi.mine3().subscribe({
       next: (jobs) => {
         this.jobs.set(jobs);
         this.loading.set(false);

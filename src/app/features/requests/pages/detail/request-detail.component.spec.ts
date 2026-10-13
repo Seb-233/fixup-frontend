@@ -9,6 +9,7 @@ import {
   RepairRequestStatus,
   RequestDetailResponse,
   Specialty,
+  UrgencyLevel,
   provideApi
 } from '../../../../api/generated';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
@@ -34,7 +35,8 @@ describe('RequestDetailComponent (Detalle de solicitud y envío de cotizaciones)
     ],
     status: RepairRequestStatus.Open,
     assignedFixerUserId: null,
-    createdAt: '2026-09-19T10:00:00Z'
+    createdAt: '2026-09-19T10:00:00Z',
+    urgencyLevel: UrgencyLevel.Medium
   };
 
   beforeEach(() => {

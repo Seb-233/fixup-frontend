@@ -1,0 +1,100 @@
+:host { display: block; }
+
+.search-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1, h2 { color: var(--fixup-color-primary); font-family: var(--fixup-font-heading); }
+h1 { margin: 0; font-size: 1.5rem; }
+h2 { margin: 0 0 0.85rem; font-size: 1.05rem; }
+header p { color: #666; margin: 0.25rem 0 0; }
+
+.block {
+  background: #fff;
+  border: 1px solid rgba(154, 148, 141, 0.2);
+  border-radius: var(--fixup-radius-lg);
+  padding: 1.25rem;
+}
+
+.status { margin: 1rem 0 0; color: #444; font-size: 0.9rem; overflow-wrap: anywhere; }
+.status-error { color: #92400e; background: #fffbeb; border-left: 3px solid #d97706; padding: 0.6rem 0.75rem; }
+.parameters { margin: 0.75rem 0 0; color: #047857; font-size: 0.9rem; font-weight: 600; }
+
+.api-error-block {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--fixup-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.api-error-message {
+  color: #991b1b;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.retry-button {
+  align-self: flex-start;
+  min-height: 38px;
+  padding: 0.4rem 1rem;
+  background: #fff;
+  color: #991b1b;
+  border: 1px solid #f87171;
+  border-radius: var(--fixup-radius-md);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #fee2e2;
+  }
+}
+
+.loading-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fixup-color-primary);
+  font-weight: 600;
+  margin-top: 1rem;
+}
+
+.search-results-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+
+  @media (min-width: 992px) {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.map-column {
+  width: 100%;
+  min-width: 0;
+
+  @media (min-width: 992px) {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.list-column {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .block { padding: 1rem; }
+}

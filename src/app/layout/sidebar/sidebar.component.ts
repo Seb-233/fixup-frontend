@@ -53,7 +53,7 @@ import { FixerVerificationStore } from '../../features/fixers/pages/verification
               <a
                 [routerLink]="item.path"
                 routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+                [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/properties' }"
                 [attr.title]="item.label"
                 class="nav-link"
                 (click)="onSelectNav(item.path)"

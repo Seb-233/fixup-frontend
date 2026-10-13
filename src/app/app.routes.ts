@@ -90,6 +90,16 @@ export const routes: Routes = [
           roles: ['OWNER']
         }
       },
+      // FR-UC-06: exploración geográfica de inmuebles, para OWNER y TENANT únicamente.
+      {
+        path: 'properties/search',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/properties/pages/property-search/property-search.component').then(
+            (m) => m.PropertySearchComponent
+          ),
+        data: { title: 'Explorar Inmuebles', roles: ['OWNER', 'TENANT'] }
+      },
       {
         path: 'fixers',
         canActivate: [roleGuard],

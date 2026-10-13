@@ -12,6 +12,7 @@ export type NavigationIcon =
   | 'review'
   | 'notifications'
   | 'contracts'
+  | 'explore'
   | 'sla-board'
   | 'bulk-properties'
   | 'profile';
@@ -28,6 +29,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
   OWNER: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
     { path: '/properties', label: 'Mis propiedades', icon: 'properties', mobilePrimary: true },
+    { path: '/properties/search', label: 'Explorar inmuebles', icon: 'explore', mobilePrimary: false },
     { path: '/contracts', label: 'Contratos', icon: 'contracts', mobilePrimary: true },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
     { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },
@@ -55,6 +57,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationItem[]> = {
   ],
   TENANT: [
     { path: '/dashboard', label: 'Panel principal', icon: 'dashboard', mobilePrimary: true },
+    { path: '/properties/search', label: 'Explorar inmuebles', icon: 'explore', mobilePrimary: false },
     { path: '/requests', label: 'Mis solicitudes', icon: 'requests', mobilePrimary: true },
     { path: '/contracts', label: 'Mis contratos', icon: 'contracts', mobilePrimary: true },
     { path: '/notifications', label: 'Notificaciones', icon: 'notifications', mobilePrimary: false },

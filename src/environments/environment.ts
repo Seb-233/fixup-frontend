@@ -13,5 +13,10 @@ export const environment = {
     // FR-UC-21: debe coincidir con appId en capacitor.config.ts y con el esquema declarado
     // en el intent-filter de AndroidManifest.xml.
     appId: 'com.fixup.app'
+  },
+  map: {
+    tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
   }
 };

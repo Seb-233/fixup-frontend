@@ -12,5 +12,10 @@ export const environmentExample = {
   native: {
     // Debe coincidir con appId en capacitor.config.ts y con el intent-filter de Android
     appId: 'com.example.app'
+  },
+  map: {
+    tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
   }
 };

@@ -28,9 +28,9 @@ export const STATUS_LABELS_EXT: Record<RepairRequestStatusExt, string> = {
   CANCELLED: 'Cancelada'
 };
 
-export interface RequestDetailExtended extends Omit<Partial<RequestDetailResponse>, 'status'> {
+export interface RequestDetailExtended extends Omit<Partial<RequestDetailResponse>, 'status' | 'slaDeadline'> {
   urgencyLevel?: UrgencyLevel;
-  slaDeadline?: string;
+  slaDeadline?: string | null;
   status?: RepairRequestStatusExt;
 }
 
