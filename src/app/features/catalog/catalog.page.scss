@@ -1,0 +1,79 @@
+@use '../../../styles/tokens' as *;
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+
+  .field {
+    flex: 1 1 150px;
+  }
+
+  .grow {
+    flex: 2 1 220px;
+  }
+
+  .narrow {
+    flex: 0 1 140px;
+  }
+}
+
+.seal-filter {
+  flex: 0 0 auto;
+}
+
+.filter-actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.tabs {
+  margin-bottom: 0;
+}
+
+.sort {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+
+  .select {
+    width: auto;
+  }
+}
+
+.near {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  justify-content: space-between;
+}
+
+.radius {
+  flex: 1 1 200px;
+  max-width: 280px;
+
+  input {
+    accent-color: var(--primary);
+    min-height: var(--tap);
+  }
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+}

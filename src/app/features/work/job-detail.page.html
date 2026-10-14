@@ -1,0 +1,117 @@
+<div class="page page-narrow">
+  <a routerLink="/jobs/me" class="back-link"><app-icon name="chevron-left" [size]="16" />Mis trabajos</a>
+
+  @if (detail.isLoading() && !detail.hasValue()) {
+    <app-loading text="Cargando el trabajo…" />
+  } @else if (detail.error()) {
+    <app-error title="No pudimos abrir el trabajo" message="Puede que no tengas acceso a este trabajo." (retry)="detail.reload()" />
+  } @else if (detail.hasValue()) {
+    @let d = detail.value();
+    <header class="page-header">
+      <div>
+        <p class="text-sm text-muted">{{ d.job.specialty | label: specialty }}</p>
+        <h1>{{ d.job.requestTitle || 'Trabajo' }}</h1>
+        <p class="lede">{{ d.job.ownerName }} · {{ d.job.propertyName }}{{ d.job.propertyAddress ? ', ' + d.job.propertyAddress : '' }}{{ d.job.propertyCity ? ', ' + d.job.propertyCity : '' }}</p>
+      </div>
+      <div class="actions">
+        <a [routerLink]="['/requests', d.job.requestId]" class="btn btn-ghost">Ver solicitud</a>
+        <a [routerLink]="['/requests', d.job.requestId, 'messages']" class="btn btn-secondary"><app-icon name="chat" />Conversación</a>
+      </div>
+    </header>
+
+    @if (notice()) { <div class="alert alert-success" role="status">{{ notice() }}</div> }
+
+    @if (isFixer() && status() !== 'COMPLETED' && panel() === 'none') {
+      <div class="cluster">
+        @if (canSchedule()) {
+          <button type="button" class="btn btn-secondary" (click)="open('schedule')"><app-icon name="calendar" />{{ d.job.scheduledFor ? 'Mover la fecha' : 'Agendar fecha' }}</button>
+          <button type="button" class="btn btn-primary" (click)="open('start')">Iniciar trabajo</button>
+        }
+        @if (canAddEvidence()) {
+          <button type="button" class="btn btn-secondary" (click)="open('evidence')"><app-icon name="camera" />Agregar fotos</button>
+        }
+        @if (running()) {
+          <button type="button" class="btn btn-primary" (click)="open('complete')"><app-icon name="check" />Terminar trabajo</button>
+        }
+      </div>
+    }
+
+    @switch (panel()) {
+      @case ('schedule') {
+        <form class="panel stack" (ngSubmit)="schedule()">
+          <h2 class="text-lg">Fecha acordada con el cliente</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="when">Fecha y hora</label>
+              <input id="when" type="datetime-local" class="input" name="when" required [(ngModel)]="scheduledFor" />
+            </div>
+            <div class="field">
+              <label for="schedule-note">Nota</label>
+              <input id="schedule-note" class="input" name="note" maxlength="1000" [(ngModel)]="note" placeholder="Llevo materiales; necesito acceso al tablero." />
+            </div>
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()">Guardar fecha</button>
+            <button type="button" class="btn btn-ghost" (click)="panel.set('none')">Volver</button>
+          </div>
+        </form>
+      }
+      @case ('start') {
+        <form class="panel stack" (ngSubmit)="start()">
+          <h2 class="text-lg">Iniciar el trabajo</h2>
+          <div class="field">
+            <label for="start-note">Nota para el cliente</label>
+            <input id="start-note" class="input" name="note" maxlength="1000" [(ngModel)]="note" placeholder="Llegué y empecé por la revisión del tubo." />
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()">Marcar en curso</button>
+            <button type="button" class="btn btn-ghost" (click)="panel.set('none')">Volver</button>
+          </div>
+        </form>
+      }
+      @case ('evidence') {
+        <form class="panel stack" (ngSubmit)="uploadEvidence()">
+          <h2 class="text-lg">Fotos del trabajo</h2>
+          <fieldset class="stack-sm">
+            <legend class="text-base">Momento</legend>
+            <div class="segmented">
+              <label><input type="radio" name="stage" value="BEFORE" [(ngModel)]="stage" />Antes</label>
+              <label><input type="radio" name="stage" value="DURING" [(ngModel)]="stage" />Durante</label>
+              <label><input type="radio" name="stage" value="AFTER" [(ngModel)]="stage" />Después</label>
+            </div>
+          </fieldset>
+          <app-photo-picker [max]="8" (changed)="files.set($event)" />
+          <div class="field">
+            <label for="caption">Descripción</label>
+            <input id="caption" class="input" name="caption" maxlength="200" [(ngModel)]="caption" placeholder="Tubo cambiado y sellado" />
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()">{{ busy() ? step() : 'Subir fotos' }}</button>
+            <button type="button" class="btn btn-ghost" (click)="panel.set('none')">Volver</button>
+          </div>
+        </form>
+      }
+      @case ('complete') {
+        <form class="panel stack" (ngSubmit)="complete()">
+          <h2 class="text-lg">Terminar el trabajo</h2>
+          <p class="text-sm text-muted">Antes de cerrar, sube fotos del resultado: quedan en el historial del inmueble y respaldan tu calificación.</p>
+          <div class="field">
+            <label for="complete-note">Resumen de lo que hiciste</label>
+            <textarea id="complete-note" class="textarea" rows="3" name="note" maxlength="1000" [(ngModel)]="note"></textarea>
+          </div>
+          <div class="cluster">
+            <button type="submit" class="btn btn-primary" [disabled]="busy()">Confirmar que terminé</button>
+            <button type="button" class="btn btn-ghost" (click)="panel.set('none')">Volver</button>
+          </div>
+        </form>
+      }
+    }
+
+    @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
+
+    <section class="panel stack" aria-labelledby="progress-title">
+      <h2 id="progress-title" class="text-lg">Avance</h2>
+      <app-job-progress [detail]="d" />
+    </section>
+  }
+</div>

@@ -1,0 +1,161 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Catálogo de inmuebles</h1>
+      <p class="lede">Inmuebles publicados para arriendo o venta. El sello marca los que tuvieron mantenimiento reciente con técnicos de la plataforma.</p>
+    </div>
+  </header>
+
+  <form class="filters" (ngSubmit)="apply()" role="search" aria-label="Filtrar inmuebles">
+    <div class="field grow">
+      <label for="q">Buscar</label>
+      <input id="q" class="input" name="q" [(ngModel)]="form.q" placeholder="Barrio, nombre o ciudad" />
+    </div>
+    <div class="field">
+      <label for="city">Ciudad</label>
+      <input id="city" class="input" name="city" [(ngModel)]="form.city" list="cities" placeholder="Todas" />
+      <datalist id="cities">
+        @for (city of cities; track city) {
+          <option [value]="city"></option>
+        }
+      </datalist>
+    </div>
+    <div class="field">
+      <label for="listingType">Operación</label>
+      <select id="listingType" class="select" name="listingType" [(ngModel)]="form.listingType">
+        <option value="">Todas</option>
+        <option value="RENT">Arriendo</option>
+        <option value="SALE">Venta</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="propertyType">Tipo</label>
+      <select id="propertyType" class="select" name="propertyType" [(ngModel)]="form.propertyType">
+        <option value="">Todos</option>
+        @for (type of propertyTypes; track type[0]) {
+          <option [value]="type[0]">{{ type[1] }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="maxPrice">Precio máximo</label>
+      <input id="maxPrice" class="input" name="maxPrice" type="number" min="0" step="100000" inputmode="numeric" [(ngModel)]="form.maxPrice" placeholder="Sin límite" />
+    </div>
+    <div class="field narrow">
+      <label for="minBedrooms">Habitaciones</label>
+      <select id="minBedrooms" class="select" name="minBedrooms" [(ngModel)]="form.minBedrooms">
+        <option value="">Cualquiera</option>
+        <option value="1">1 o más</option>
+        <option value="2">2 o más</option>
+        <option value="3">3 o más</option>
+        <option value="4">4 o más</option>
+      </select>
+    </div>
+    <label class="check seal-filter">
+      <input type="checkbox" name="sealOnly" [(ngModel)]="form.sealOnly" />
+      <span>Solo con sello</span>
+    </label>
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary"><app-icon name="search" />Buscar</button>
+      <button type="button" class="btn btn-ghost" (click)="reset()">Limpiar</button>
+    </div>
+  </form>
+
+  <div class="spread">
+    <div class="tabs" role="tablist" aria-label="Forma de ver los resultados">
+      <button type="button" role="tab" [attr.aria-selected]="view() === 'list'" (click)="setView('list')"><app-icon name="menu" />Lista</button>
+      <button type="button" role="tab" [attr.aria-selected]="view() === 'map'" (click)="setView('map')"><app-icon name="map" />Mapa</button>
+    </div>
+    @if (view() === 'list') {
+      <label class="sort">
+        <span class="text-sm text-muted">Ordenar</span>
+        <select class="select" [(ngModel)]="form.sort" (ngModelChange)="apply()" name="sort">
+          <option value="NEWEST">Más recientes</option>
+          <option value="PRICE_ASC">Menor precio</option>
+          <option value="PRICE_DESC">Mayor precio</option>
+          <option value="AREA_DESC">Más área</option>
+        </select>
+      </label>
+    }
+  </div>
+
+  @if (results.isLoading() && !results.hasValue()) {
+    <app-loading text="Buscando inmuebles…" />
+  } @else if (results.error()) {
+    <app-error (retry)="results.reload()" />
+  } @else if (results.hasValue()) {
+    @if (view() === 'map') {
+      <section class="stack" aria-label="Mapa de resultados">
+        <div class="near panel panel-quiet">
+          <div class="stack-sm">
+            <strong>Buscar cerca de un punto</strong>
+            <span class="text-sm text-muted">Usa tu ubicación o haz clic en el mapa para ver lo publicado dentro del radio.</span>
+          </div>
+          <label class="field radius">
+            <span class="field-label">Radio: {{ radiusKm() }} km</span>
+            <input type="range" min="1" max="20" step="1" [ngModel]="radiusKm()" (ngModelChange)="radiusKm.set($event)" name="radius" />
+          </label>
+          <div class="cluster">
+            <button type="button" class="btn btn-secondary" (click)="searchNearMe()" [disabled]="locating()">
+              <app-icon name="pin" />{{ locating() ? 'Buscando…' : 'Cerca de mí' }}
+            </button>
+            @if (nearby()) {
+              <button type="button" class="btn btn-ghost" (click)="clearNearby()">Volver a los filtros</button>
+            }
+          </div>
+        </div>
+        @if (nearbyError()) {
+          <div class="alert alert-warning" role="alert">{{ nearbyError() }}</div>
+        }
+        <p class="text-sm text-muted" aria-live="polite">
+          @if (nearby(); as near) {
+            {{ near.length }} {{ near.length === 1 ? 'inmueble' : 'inmuebles' }} a menos de {{ radiusKm() }} km del punto elegido.
+          } @else {
+            {{ points().length }} de {{ results.value().totalItems }} resultados con ubicación en el mapa.
+          }
+        </p>
+        <app-map [points]="points()" [center]="nearbyCenter()" [pickable]="true" (selected)="openListing($event)"
+                 (picked)="searchAround($event[0], $event[1])" height="520px" />
+        @if (nearby(); as near) {
+          <ul class="list">
+            @for (item of near; track item.id) {
+              <li>
+                <a [routerLink]="['/catalog', item.id]" class="row-link">
+                  <span class="stack-sm grow">
+                    <span class="row-title">{{ item.name }}</span>
+                    <span class="row-meta">{{ item.neighborhood ? item.neighborhood + ', ' : '' }}{{ item.city }} · a {{ item.distanceKm.toFixed(1) }} km</span>
+                  </span>
+                  <span class="price">{{ item.price | money }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    } @else {
+      @if (results.value().items.length) {
+        <p class="text-sm text-muted" aria-live="polite">{{ results.value().totalItems }} inmuebles</p>
+        <div class="card-grid">
+          @for (item of results.value().items; track item.id) {
+            <app-property-card [item]="item" />
+          }
+        </div>
+        @if (results.value().totalPages > 1) {
+          <nav class="pager" aria-label="Páginas de resultados">
+            <button type="button" class="btn btn-secondary" [disabled]="page() === 0" (click)="goToPage(page() - 1)">
+              <app-icon name="chevron-left" />Anterior
+            </button>
+            <span class="text-sm">Página {{ page() + 1 }} de {{ results.value().totalPages }}</span>
+            <button type="button" class="btn btn-secondary" [disabled]="page() + 1 >= results.value().totalPages" (click)="goToPage(page() + 1)">
+              Siguiente<app-icon name="chevron-right" />
+            </button>
+          </nav>
+        }
+      } @else {
+        <app-empty title="Ningún inmueble coincide" text="Prueba con otra ciudad, un precio mayor o sin el filtro de sello.">
+          <button type="button" class="btn btn-secondary" (click)="reset()">Quitar filtros</button>
+        </app-empty>
+      }
+    }
+  }
+</div>

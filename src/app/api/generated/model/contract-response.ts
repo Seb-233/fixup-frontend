@@ -25,6 +25,11 @@ export interface ContractResponse {
     notes?: string;
     createdAt?: string;
     updatedAt?: string;
+    propertyName?: string;
+    propertyAddress?: string;
+    propertyCity?: string;
+    ownerName?: string;
+    tenantName?: string;
 }
 export namespace ContractResponse {
 }

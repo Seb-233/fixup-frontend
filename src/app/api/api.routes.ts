@@ -23,7 +23,10 @@ export const API_ROUTES = {
     '/contracts/',
     '/notifications/',
     '/remodelings/',
-    '/administration/'
+    '/administration/',
+    '/management/',
+    '/visits/',
+    '/ratings/'
   ],
 } as const;
 
@@ -38,7 +41,7 @@ export function isFixUpApiUrl(url: string): boolean {
   if (!url.startsWith(environment.apiOrigin)) {
     return false;
   }
-  const path = url.slice(environment.apiOrigin.length);
+  const path = url.slice(environment.apiOrigin.length).split(/[?#]/)[0];
   return API_ROUTES.authenticatedPrefixes.some(
     (prefix) => path.startsWith(prefix) || path === prefix.slice(0, -1)
   );

@@ -44,7 +44,7 @@ describe('errorInterceptor', () => {
     expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login']);
   });
 
-  it('debe redirigir a /auth/access-denied ante un error 403 sin cerrar la sesión del usuario', async () => {
+  it('un 403 de una acción no cambia de pantalla ni cierra la sesión', async () => {
     userStore.setProfile({
       id: 'uuid-1',
       email: 'active@fixup.com',
@@ -66,7 +66,19 @@ describe('errorInterceptor', () => {
     ).rejects.toMatchObject({ status: 403 });
 
     expect(userStore.user()).not.toBeNull();
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/access-denied']);
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('un 409 no modifica el estado global de la sesión', async () => {
+    const error409 = new HttpErrorResponse({ status: 409, error: { code: 'FIXER_BUSY' } });
+    const nextFn = () => throwError(() => error409);
+
+    await expect(
+      firstValueFrom(TestBed.runInInjectionContext(() => errorInterceptor(new HttpRequest('POST', '/visits', {}), nextFn)))
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(userStore.error()).toBeNull();
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
   });
 
   it('debe redirigir a /auth/account-restricted ante 403 si la cuenta está SUSPENDED o DISABLED', async () => {

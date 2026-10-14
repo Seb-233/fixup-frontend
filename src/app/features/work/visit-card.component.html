@@ -1,0 +1,127 @@
+<article class="panel stack-sm">
+  <div class="head">
+    <div class="stack-sm">
+      <span class="when">{{ visit().scheduledAt | when }}</span>
+      <span class="text-sm">{{ visit().kind | label: kind }} · {{ visit().durationMinutes }} min</span>
+    </div>
+    <app-status [map]="status" [value]="visit().status" />
+  </div>
+
+  <p class="text-sm text-muted">
+    {{ isFixer() ? 'Cliente' : 'Técnico' }}: {{ counterpart() || 'sin registrar' }}
+    @if (visit().address) { · {{ visit().address }} }
+  </p>
+  @if (visit().notes) { <p class="text-sm">{{ visit().notes }}</p> }
+  @if (waitingOther()) { <p class="text-sm text-muted">Esperando que la otra parte confirme.</p> }
+  @if (open() && visit().status === 'PROPOSED' && !waitingOther()) {
+    <p class="text-sm"><strong>{{ visit().proposedByName || 'La otra parte' }}</strong> propuso esta fecha.</p>
+  }
+  @if (visit().cancelReason) { <p class="text-sm text-muted">Motivo de cancelación: {{ visit().cancelReason }}</p> }
+  @if (visit().outcome) {
+    <div class="stack-sm">
+      <p class="text-sm"><strong>Resultado:</strong> {{ visit().outcome }}</p>
+      @if (visit().checklist.length && visit().status === 'COMPLETED') {
+        <ul class="list text-sm">
+          @for (item of visit().checklist; track item.position) {
+            <li class="spread">
+              <span>{{ item.label }}</span>
+              <span [class.text-muted]="item.result !== 'NEEDS_WORK'"><strong>{{ item.result | label: checklistResult }}</strong>{{ item.note ? ' · ' + item.note : '' }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+  @if (showRequestLink()) {
+    <a [routerLink]="['/requests', visit().requestId]" class="link text-sm">Ver la solicitud</a>
+  }
+
+  @if (open() && mode() === 'idle') {
+    <div class="cluster">
+      @if (canConfirm()) {
+        <button type="button" class="btn btn-primary" (click)="confirm()" [disabled]="busy()"><app-icon name="check" />Confirmar</button>
+      }
+      @if (canComplete()) {
+        <button type="button" class="btn btn-primary" (click)="start('complete')">Registrar resultado</button>
+      }
+      <button type="button" class="btn btn-secondary" (click)="start('reschedule')">Proponer otra hora</button>
+      @if (canMarkNoShow()) {
+        <button type="button" class="btn btn-ghost" (click)="noShow()" [disabled]="busy()">No asistió</button>
+      }
+      <button type="button" class="btn btn-ghost" (click)="start('cancel')">Cancelar visita</button>
+    </div>
+  }
+
+  @if (mode() === 'reschedule') {
+    <form class="stack-sm" (ngSubmit)="submitReschedule()">
+      <div class="form-grid">
+        <div class="field">
+          <label [for]="'date-' + visit().id">Nueva fecha y hora</label>
+          <input [id]="'date-' + visit().id" type="datetime-local" class="input" name="newDate" required [(ngModel)]="newDate" />
+          <span class="hint">Entre 7:00 a. m. y 7:00 p. m., con dos horas de anticipación.</span>
+        </div>
+        <div class="field">
+          <label [for]="'dur-' + visit().id">Duración</label>
+          <select [id]="'dur-' + visit().id" class="select" name="newDuration" [(ngModel)]="newDuration">
+            <option [ngValue]="30">30 min</option>
+            <option [ngValue]="60">1 hora</option>
+            <option [ngValue]="90">1 h 30 min</option>
+            <option [ngValue]="120">2 horas</option>
+            <option [ngValue]="180">3 horas</option>
+          </select>
+        </div>
+      </div>
+      <div class="cluster">
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">Enviar propuesta</button>
+        <button type="button" class="btn btn-ghost" (click)="mode.set('idle')">Volver</button>
+      </div>
+    </form>
+  }
+
+  @if (mode() === 'cancel') {
+    <form class="stack-sm" (ngSubmit)="submitCancel()">
+      <div class="field">
+        <label [for]="'reason-' + visit().id">Motivo</label>
+        <input [id]="'reason-' + visit().id" class="input" name="reason" maxlength="300" [(ngModel)]="reason" placeholder="Me surgió un viaje, el daño ya se resolvió…" />
+      </div>
+      <div class="cluster">
+        <button type="submit" class="btn btn-danger" [disabled]="busy()">Cancelar visita</button>
+        <button type="button" class="btn btn-ghost" (click)="mode.set('idle')">Volver</button>
+      </div>
+    </form>
+  }
+
+  @if (mode() === 'complete') {
+    <form class="stack" (ngSubmit)="submitComplete()">
+      @if (visit().checklist.length) {
+        <fieldset class="stack-sm">
+          <legend class="text-base">Lista de chequeo</legend>
+          <ul class="checklist">
+            @for (item of visit().checklist; track item.position) {
+              <li>
+                <span class="text-sm"><strong>{{ item.label }}</strong></span>
+                <div class="answers" role="radiogroup" [attr.aria-label]="item.label">
+                  @for (r of results; track r) {
+                    <label class="check"><input type="radio" [name]="'item-' + item.position" [attr.name]="'item-' + item.position" [value]="r" [attr.value]="r" [(ngModel)]="answers[item.position].result" />{{ r | label: checklistResult }}</label>
+                  }
+                </div>
+                <input class="input" [name]="'note-' + item.position" [(ngModel)]="answers[item.position].note" placeholder="Observación (opcional)" maxlength="500" />
+              </li>
+            }
+          </ul>
+        </fieldset>
+      }
+      <div class="field">
+        <label [for]="'outcome-' + visit().id">Resultado de la visita</label>
+        <textarea [id]="'outcome-' + visit().id" class="textarea" rows="3" name="outcome" maxlength="2000" [(ngModel)]="outcome"
+                  placeholder="Qué encontraste y qué recomiendas hacer."></textarea>
+      </div>
+      <div class="cluster">
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">Guardar resultado</button>
+        <button type="button" class="btn btn-ghost" (click)="mode.set('idle')">Volver</button>
+      </div>
+    </form>
+  }
+
+  @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
+</article>

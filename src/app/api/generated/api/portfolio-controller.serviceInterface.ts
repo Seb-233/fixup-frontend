@@ -63,7 +63,7 @@ export interface PortfolioControllerServiceInterface {
      * @endpoint post /media/me/portfolio/pieces
      * @param pieceRequest 
      */
-    publish(pieceRequest: PieceRequest, extraHttpRequestParams?: any): Observable<PieceResponse>;
+    publish1(pieceRequest: PieceRequest, extraHttpRequestParams?: any): Observable<PieceResponse>;
 
     /**
      * Publish the fixer\&#39;s portfolio

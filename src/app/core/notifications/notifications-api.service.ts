@@ -2,21 +2,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { apiUrl } from '../../api/api.routes';
+import type { NotificationType as GeneratedNotificationType } from '../../api/generated';
 
-export type NotificationType =
-  | 'REQUEST_CREATED_URGENT'
-  | 'REQUEST_SLA_WARNING'
-  | 'REQUEST_SLA_BREACHED'
-  | 'QUOTATION_RECEIVED'
-  | 'QUOTATION_ACCEPTED'
-  | 'JOB_ASSIGNED'
-  | 'PROPERTY_PUBLISHED'
-  | 'PROPERTY_BULK_FINISHED'
-  | 'CONTRACT_CREATED'
-  | 'CONTRACT_EXPIRING_30D'
-  | 'CONTRACT_EXPIRING_7D'
-  | 'CONTRACT_EXPIRED'
-  | 'CHAT_MESSAGE_RECEIVED';
+// Los tipos vienen del contrato del backend (docs/openapi.json).
+export type NotificationType = GeneratedNotificationType;
 
 export interface NotificationItem {
   id: string;

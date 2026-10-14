@@ -1,33 +1,137 @@
-// Layout Mixins and Utilities for FixUp
+@use 'tokens' as *;
 
-@use 'tokens' as tokens;
-
-@mixin mobile {
-  @media (max-width: #{tokens.$breakpoint-mobile-max}) {
-    @content;
-  }
-}
-
-@mixin tablet {
-  @media (min-width: #{tokens.$breakpoint-tablet-min}) and (max-width: #{tokens.$breakpoint-tablet-max}) {
-    @content;
-  }
-}
-
-@mixin desktop {
-  @media (min-width: #{tokens.$breakpoint-desktop-min}) {
-    @content;
-  }
-}
-
-.fixup-container {
+// Página interna: ancho legible y ritmo vertical con dos registros (escritorio y móvil).
+.page {
   width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding-right: 1rem;
-  padding-left: 1rem;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-6) var(--s-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  min-width: 0;
 
-  @include desktop {
-    max-width: 1200px;
+  @media (max-width: $breakpoint-desktop) {
+    padding: var(--s-5) var(--s-5) var(--s-7);
+    gap: var(--s-5);
+  }
+
+  @media (max-width: $breakpoint-tablet) {
+    padding: var(--s-4) var(--s-4) calc(var(--bottom-nav-height) + var(--s-6));
+    gap: var(--s-4);
+  }
+}
+
+.page-narrow {
+  max-width: 760px;
+}
+
+// Encabezado de página: un titular, una línea de contexto y, a la derecha, la acción principal.
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-5);
+
+  .lede {
+    margin-top: var(--s-2);
+    color: var(--text-muted);
+    max-width: 62ch;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+  }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 32px;
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.spread {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+
+// Columnas de detalle: contenido principal y columna lateral de decisiones. Tres estados: una
+// columna en móvil, una columna más ancha en tableta y dos columnas solo cuando caben.
+.split {
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: minmax(0, 1fr);
+
+  @media (min-width: $breakpoint-desktop) {
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+    align-items: start;
+  }
+}
+
+.sticky-aside {
+  @media (min-width: $breakpoint-desktop) {
+    position: sticky;
+    top: var(--s-5);
+  }
+}
+
+// Rejilla de tarjetas de inmueble: 1, 2 o 3 columnas según quepan.
+.card-grid {
+  display: grid;
+  gap: var(--s-5) var(--s-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+
+.grid-2 {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: flex-end;
+
+  .field {
+    flex: 1 1 160px;
   }
 }

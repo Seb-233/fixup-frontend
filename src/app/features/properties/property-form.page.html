@@ -1,0 +1,191 @@
+<div class="page page-narrow">
+  <a routerLink="/properties" class="back-link"><app-icon name="chevron-left" [size]="16" />Inmuebles</a>
+  <header class="page-header">
+    <div>
+      <h1>{{ editing() ? 'Editar inmueble' : 'Nuevo inmueble' }}</h1>
+      <p class="lede">Los datos con asterisco son obligatorios. Precio, fotos y ubicación hacen que el aviso se encuentre en el catálogo.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <app-loading text="Cargando el inmueble…" />
+  } @else if (loadError()) {
+    <app-error title="No pudimos abrir el inmueble" message="Puede que no exista o que no tengas permiso para editarlo." [retryable]="false" />
+  } @else {
+    <form #f="ngForm" class="stack" (ngSubmit)="save(f.valid ?? false)" novalidate>
+      <fieldset class="panel">
+        <legend>Datos del inmueble</legend>
+        <div class="form-grid">
+          <div class="field span-all">
+            <label for="name">Nombre del aviso *</label>
+            <input id="name" name="name" class="input" required maxlength="150" [(ngModel)]="model.name" #name="ngModel"
+                   [attr.aria-invalid]="submitted() && name.invalid" placeholder="Apartamento con balcón en Chapinero Alto" />
+            @if (submitted() && name.invalid) { <span class="error">Escribe un nombre para el aviso.</span> }
+          </div>
+          <div class="field">
+            <label for="propertyType">Tipo</label>
+            <select id="propertyType" name="propertyType" class="select" [(ngModel)]="model.propertyType">
+              @for (type of propertyTypes; track type[0]) {
+                <option [value]="type[0]">{{ type[1] }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <span class="field-label" id="op-label">Operación</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="op-label">
+              <label><input type="radio" name="listingType" value="RENT" [(ngModel)]="model.listingType" />Arriendo</label>
+              <label><input type="radio" name="listingType" value="SALE" [(ngModel)]="model.listingType" />Venta</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="price">{{ model.listingType === 'RENT' ? 'Canon mensual (COP)' : 'Precio de venta (COP)' }}</label>
+            <input id="price" name="price" class="input" type="number" min="1" step="1000" inputmode="numeric" [(ngModel)]="model.price" />
+          </div>
+          <div class="field">
+            <label for="adminFee">Administración (COP)</label>
+            <input id="adminFee" name="adminFee" class="input" type="number" min="0" step="1000" inputmode="numeric" [(ngModel)]="model.adminFee" />
+          </div>
+          <div class="field">
+            <label for="area">Área (m²) *</label>
+            <input id="area" name="area" class="input" type="number" min="1" step="0.5" required [(ngModel)]="model.areaM2" #area="ngModel"
+                   [attr.aria-invalid]="submitted() && area.invalid" />
+            @if (submitted() && area.invalid) { <span class="error">Indica el área en metros cuadrados.</span> }
+          </div>
+          <div class="field">
+            <label for="bedrooms">Habitaciones</label>
+            <input id="bedrooms" name="bedrooms" class="input" type="number" min="0" max="20" [(ngModel)]="model.bedrooms" />
+          </div>
+          <div class="field">
+            <label for="bathrooms">Baños</label>
+            <input id="bathrooms" name="bathrooms" class="input" type="number" min="0" max="20" [(ngModel)]="model.bathrooms" />
+          </div>
+          <div class="field">
+            <label for="parking">Parqueaderos</label>
+            <input id="parking" name="parking" class="input" type="number" min="0" max="20" [(ngModel)]="model.parkingSpots" />
+          </div>
+          <div class="field">
+            <label for="stratum">Estrato</label>
+            <select id="stratum" name="stratum" class="select" [(ngModel)]="model.stratum">
+              <option [ngValue]="null">Sin indicar</option>
+              @for (s of [1, 2, 3, 4, 5, 6]; track s) {
+                <option [ngValue]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
+          <div class="field span-all">
+            <label for="description">Descripción</label>
+            <textarea id="description" name="description" class="textarea" rows="5" maxlength="2000" [(ngModel)]="model.description"
+                      placeholder="Iluminación, vista, cercanía a transporte, qué incluye el arriendo…"></textarea>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="panel stack">
+        <legend>Ubicación</legend>
+        <div class="form-grid">
+          <div class="field span-all">
+            <label for="address">Dirección *</label>
+            <input id="address" name="address" class="input" required maxlength="200" [(ngModel)]="model.address" #address="ngModel"
+                   [attr.aria-invalid]="submitted() && address.invalid" placeholder="Calle 63 # 4-25" />
+            @if (submitted() && address.invalid) { <span class="error">Escribe la dirección.</span> }
+          </div>
+          <div class="field">
+            <label for="city">Ciudad *</label>
+            <input id="city" name="city" class="input" required list="form-cities" [(ngModel)]="model.city" #city="ngModel"
+                   [attr.aria-invalid]="submitted() && city.invalid" />
+            <datalist id="form-cities">
+              @for (c of cities; track c) { <option [value]="c"></option> }
+            </datalist>
+            @if (submitted() && city.invalid) { <span class="error">Escribe la ciudad.</span> }
+          </div>
+          <div class="field">
+            <label for="neighborhood">Barrio</label>
+            <input id="neighborhood" name="neighborhood" class="input" maxlength="100" [(ngModel)]="model.neighborhood" />
+          </div>
+        </div>
+        <div class="location-row">
+          <button type="button" class="btn btn-secondary" (click)="geocode()" [disabled]="geocoding()">
+            <app-icon name="pin" />{{ geocoding() ? 'Buscando…' : 'Ubicar la dirección' }}
+          </button>
+          <span class="text-sm text-muted">
+            @if (location(); as loc) {
+              Punto: {{ loc[0].toFixed(5) }}, {{ loc[1].toFixed(5) }}
+            } @else {
+              También puedes hacer clic en el mapa.
+            }
+          </span>
+        </div>
+        @if (geocodeError()) { <div class="alert alert-warning" role="alert">{{ geocodeError() }}</div> }
+        @if (candidates().length > 1) {
+          <div class="stack-sm">
+            <span class="text-sm">Elige la dirección correcta:</span>
+            <ul class="candidates">
+              @for (c of candidates(); track c.displayName) {
+                <li><button type="button" (click)="choose(c)">{{ c.displayName }}</button></li>
+              }
+            </ul>
+          </div>
+        }
+        <app-map [points]="pin()" [center]="location()" [zoom]="location() ? 16 : 12" [pickable]="true" (picked)="setLocation($event)"
+                 label="Mapa para ubicar el inmueble" height="320px" />
+      </fieldset>
+
+      <fieldset class="panel stack">
+        <legend>Fotos</legend>
+        @if (existingPhotos().length) {
+          <ul class="gallery existing">
+            @for (photo of existingPhotos(); track photo.mediaId; let i = $index) {
+              <li>
+                <app-photo [src]="photo.url" [alt]="'Foto ' + (i + 1)" />
+                <button type="button" class="btn btn-secondary btn-icon" (click)="removeExisting(photo.mediaId)" [attr.aria-label]="'Quitar foto ' + (i + 1)">
+                  <app-icon name="close" [size]="16" />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        <app-photo-picker [max]="photoSlots()" (changed)="newFiles.set($event)" label="Agregar fotos" />
+      </fieldset>
+
+      @if (!editing()) {
+        <label class="check">
+          <input type="checkbox" name="publish" [(ngModel)]="publishNow" />
+          <span>Publicar en el catálogo al guardar</span>
+        </label>
+      }
+
+      @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
+
+      <div class="form-actions">
+        <a routerLink="/properties" class="btn btn-ghost">Cancelar</a>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ saving() ? saveStep() : 'Guardar inmueble' }}</button>
+      </div>
+    </form>
+
+    @if (canDelegate()) {
+      <section class="panel stack" aria-labelledby="delegate-title">
+        <div class="stack-sm">
+          <h2 id="delegate-title" class="text-lg">Delegar en una inmobiliaria</h2>
+          <p class="text-sm text-muted">La inmobiliaria podrá editar el aviso, atender las solicitudes de mantenimiento y pagar los trabajos de este inmueble.</p>
+        </div>
+        @if (managers.hasValue()) {
+          <div class="location-row">
+            <div class="field grow-field">
+              <label for="manager">Inmobiliaria</label>
+              <select id="manager" class="select" name="manager" [(ngModel)]="managerId">
+                <option value="">Ninguna, la administro yo</option>
+                @for (m of managers.value(); track m.id) {
+                  <option [value]="m.id">{{ m.displayName }}</option>
+                }
+              </select>
+            </div>
+            <button type="button" class="btn btn-secondary" (click)="delegate()" [disabled]="delegating()">Guardar delegación</button>
+          </div>
+        } @else if (managers.isLoading()) {
+          <app-loading text="Cargando inmobiliarias…" />
+        }
+        @if (delegateMessage()) { <p class="text-sm" role="status">{{ delegateMessage() }}</p> }
+      </section>
+    }
+  }
+</div>

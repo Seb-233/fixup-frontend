@@ -175,10 +175,10 @@ export class NotificationsControllerService extends BaseService implements Notif
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public mine3(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<NotificationPageResponse>;
-    public mine3(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<NotificationPageResponse>>;
-    public mine3(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<NotificationPageResponse>>;
-    public mine3(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+    public mine4(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<NotificationPageResponse>;
+    public mine4(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<NotificationPageResponse>>;
+    public mine4(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<NotificationPageResponse>>;
+    public mine4(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarQueryParameters = new OpenApiHttpParams(this.encoder);
 
