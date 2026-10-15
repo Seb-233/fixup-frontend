@@ -20,7 +20,7 @@ describe('rutas privadas de FR-UC-20', () => {
   }
 
   it('cuelgan del layout privado y se cargan de forma perezosa', () => {
-    for (const path of ['jobs/me', 'payments/earnings']) {
+    for (const path of ['jobs/me', 'payments/earnings', 'payments/:paymentId']) {
       const route = find(path);
       expect(route.loadComponent).toBeDefined();
       expect(route.component).toBeUndefined();
@@ -33,5 +33,11 @@ describe('rutas privadas de FR-UC-20', () => {
       expect(route.canActivate).toContain(roleGuard);
       expect(route.data?.['roles']).toEqual(['FIXER']);
     }
+  });
+
+  it('el checkout simulado solo lo ve el propietario (OWNER)', () => {
+    const route = find('payments/:paymentId');
+    expect(route.canActivate).toContain(roleGuard);
+    expect(route.data?.['roles']).toEqual(['OWNER']);
   });
 });

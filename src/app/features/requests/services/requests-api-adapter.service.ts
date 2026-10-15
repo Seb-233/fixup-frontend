@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   RepairRequestControllerService,
-  RequestDetailResponse,
-  OpenRequest
+  RequestDetailResponse
 } from '../../../api/generated';
 import {
   OpenRequestExtended,
@@ -20,7 +19,7 @@ export class RequestsApiAdapterService {
 
   open(request: OpenRequestExtended): Observable<RequestDetailResponse> {
     const payload = toOpenRequestPayload(request);
-    return this.generatedApi.open(payload as unknown as OpenRequest);
+    return this.generatedApi.open(payload);
   }
 
   mine(): Observable<RequestDetailResponse[]> {

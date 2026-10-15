@@ -8,12 +8,14 @@
  * Do not edit the class manually.
  */
 import { Specialty } from './specialty';
+import { PaymentMethod } from './payment-method';
 
 
 export interface OpenRequestSummaryResponse { 
     requestId: string;
     specialty: Specialty;
     title: string;
+    paymentMethod: PaymentMethod;
     createdAt: string;
 }
 export namespace OpenRequestSummaryResponse {

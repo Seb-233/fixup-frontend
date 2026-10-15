@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,7 +7,11 @@ import {
   CreateProjectRequest,
   PropertyControllerService,
   PropertySummary,
-  UrgencyLevel
+  UrgencyLevel,
+  PaymentMethod,
+  PaymentControllerService,
+  OwnerDebtDetail,
+  RequirementRequest
 } from '../../../../api/generated';
 import { RemodelingStore } from '../../services/remodeling.store';
 import { RequestMediaService } from '../../../requests/services/request-media.service';
@@ -30,6 +34,23 @@ interface RequirementMediaState {
         <h1>Nueva Remodelación</h1>
         <p class="subtitle">Coordina intervenciones multiprofesionales en un solo proyecto.</p>
       </header>
+
+      @if (hasDebt()) {
+        <div class="debt-warning-banner" role="alert">
+          <div class="debt-banner-content">
+            <h2 class="debt-warning-title">Tienes un saldo pendiente</h2>
+            <p class="debt-warning-text">
+              Debes pagarlo antes de crear un nuevo proyecto de remodelación.
+              @if (outstandingDebt(); as debt) {
+                <span class="debt-amount">Monto: {{ debt.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+              }
+            </p>
+          </div>
+          <div class="debt-banner-actions">
+            <a routerLink="/requests" class="btn btn-primary btn-sm">Ir a mis solicitudes para pagar</a>
+          </div>
+        </div>
+      }
 
       @if (loadingProperties()) {
         <div class="state-card loading-state">
@@ -172,6 +193,31 @@ interface RequirementMediaState {
                     </select>
                   </div>
 
+                  <div class="field-group">
+                    <span class="group-label">Forma de pago *</span>
+                    <div class="payment-methods-row">
+                      <label class="radio-label">
+                        <input
+                          type="radio"
+                          formControlName="paymentMethod"
+                          [value]="paymentMethods.Transfer"
+                        />
+                        <span>Transferencia</span>
+                      </label>
+                      <label class="radio-label">
+                        <input
+                          type="radio"
+                          formControlName="paymentMethod"
+                          [value]="paymentMethods.Cash"
+                        />
+                        <span>Efectivo</span>
+                      </label>
+                    </div>
+                    @if (reqGroup.get('paymentMethod')?.touched && reqGroup.get('paymentMethod')?.invalid) {
+                      <small class="field-error">Debes seleccionar una forma de pago para esta necesidad.</small>
+                    }
+                  </div>
+
                   <!-- SUBIDA DE FOTOS / MEDIOS ASOCIADOS A ESTA NECESIDAD -->
                   <div class="media-section">
                     <span class="media-label">Fotos de soporte (máximo {{ maxPhotos }})</span>
@@ -225,7 +271,7 @@ interface RequirementMediaState {
             <a routerLink="/remodelings" class="btn btn-secondary">Cancelar</a>
             <button
               type="submit"
-              [disabled]="submitting() || form.invalid || hasUploadingMedia()"
+              [disabled]="submitting() || form.invalid || hasUploadingMedia() || hasDebt()"
               class="btn btn-primary btn-lg"
               id="btn-submit-remodeling"
             >
@@ -343,7 +389,8 @@ interface RequirementMediaState {
       gap: 0.35rem;
     }
 
-    .field-group label {
+    .field-group label,
+    .field-group .group-label {
       font-size: 0.85rem;
       font-weight: 600;
       color: #4A463F;
@@ -521,6 +568,46 @@ interface RequirementMediaState {
       border: 0;
     }
 
+    .payment-methods-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.2rem;
+    }
+    .radio-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.88rem;
+      color: #2D2E31;
+      cursor: pointer;
+    }
+    .debt-warning-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: var(--fixup-radius-lg, 12px);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .debt-warning-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #991b1b;
+      margin: 0 0 0.25rem 0;
+    }
+    .debt-warning-text {
+      color: #7f1d1d;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+    .debt-amount {
+      display: block;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
     .btn-sm {
       padding: 0.4rem 0.85rem;
       font-size: 0.82rem;
@@ -553,16 +640,24 @@ interface RequirementMediaState {
 export class RemodelingCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly propertyApi = inject(PropertyControllerService);
+  private readonly paymentsApi = inject(PaymentControllerService);
   private readonly remodelingStore = inject(RemodelingStore);
   private readonly mediaService = inject(RequestMediaService);
   private readonly router = inject(Router);
 
   readonly urgencyLevels = UrgencyLevel;
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
+  readonly paymentMethods = PaymentMethod;
 
   readonly properties = signal<PropertySummary[]>([]);
   readonly loadingProperties = signal<boolean>(true);
   readonly propertiesLoadError = signal<string | null>(null);
+
+  readonly debts = signal<OwnerDebtDetail[]>([]);
+  readonly outstandingDebt = computed(() =>
+    this.debts().find((d) => d.status === 'OUTSTANDING')
+  );
+  readonly hasDebt = computed(() => !!this.outstandingDebt());
 
   readonly submitting = signal<boolean>(false);
   readonly submitError = signal<string | null>(null);
@@ -589,6 +684,7 @@ export class RemodelingCreateComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProperties();
+    this.loadDebts();
   }
 
   loadProperties(): void {
@@ -607,11 +703,19 @@ export class RemodelingCreateComponent implements OnInit {
     });
   }
 
+  loadDebts(): void {
+    this.paymentsApi.debts().subscribe({
+      next: (debts) => this.debts.set(debts),
+      error: () => this.debts.set([])
+    });
+  }
+
   private createRequirementGroup(): FormGroup {
     return this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(150)]],
       description: ['', [Validators.required, Validators.maxLength(2000)]],
-      urgencyLevel: [UrgencyLevel.Medium, Validators.required]
+      urgencyLevel: [UrgencyLevel.Medium, Validators.required],
+      paymentMethod: [null as PaymentMethod | null, Validators.required]
     });
   }
 
@@ -707,16 +811,22 @@ export class RemodelingCreateComponent implements OnInit {
   }
 
   submit(): void {
+    if (this.hasDebt()) {
+      this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear un nuevo proyecto de remodelación.');
+      return;
+    }
+
     if (this.form.invalid || this.hasUploadingMedia()) {
       this.form.markAllAsTouched();
       return;
     }
 
     const raw = this.form.getRawValue();
-    const requirements = (raw.requirements || []).map((req, idx) => ({
+    const requirements: RequirementRequest[] = (raw.requirements || []).map((req, idx) => ({
       title: (req['title'] as string | undefined)?.trim() ?? '',
       description: (req['description'] as string | undefined)?.trim() ?? '',
       urgencyLevel: (req['urgencyLevel'] as UrgencyLevel | undefined) ?? UrgencyLevel.Medium,
+      paymentMethod: req['paymentMethod'] as PaymentMethod,
       mediaIds: this.mediaState(idx).mediaIds
     }));
 
@@ -737,15 +847,16 @@ export class RemodelingCreateComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.submitting.set(false);
-        this.submitError.set(
-          err.status === 400
-            ? 'Los datos de la remodelación son inválidos. Revisa todos los campos.'
-            : err.status === 403
-              ? 'No tienes permiso para registrar proyectos de remodelación.'
-              : err.status === 409
-                ? 'Conflicto al crear el proyecto.'
-                : 'No pudimos registrar la remodelación. Intenta nuevamente.'
-        );
+        if (err.status === 409 || err.error?.code === 'OWNER_HAS_OUTSTANDING_DEBT') {
+          this.loadDebts();
+          this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear un nuevo proyecto de remodelación.');
+        } else if (err.status === 400) {
+          this.submitError.set('Los datos de la remodelación son inválidos. Revisa todos los campos.');
+        } else if (err.status === 403) {
+          this.submitError.set('No tienes permiso para registrar proyectos de remodelación.');
+        } else {
+          this.submitError.set('No pudimos registrar la remodelación. Intenta nuevamente.');
+        }
       }
     });
   }

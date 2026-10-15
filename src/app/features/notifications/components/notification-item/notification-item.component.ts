@@ -34,7 +34,7 @@ function avatarColorForType(type: NotificationType): string {
     <ion-item
       button
       detail="false"
-      [routerLink]="notification.navigateTo || null"
+      [routerLink]="targetRoute()"
       [class.unread]="!notification.readAt"
       (click)="onClick()"
     >
@@ -120,6 +120,19 @@ export class NotificationItemComponent {
 
   readonly iconName = computed(() => iconForType(this.notification?.type));
   readonly avatarColor = computed(() => avatarColorForType(this.notification?.type));
+
+  readonly targetRoute = computed(() => {
+    if (this.notification?.navigateTo) {
+      return this.notification.navigateTo;
+    }
+    if (this.notification?.type === 'CHAT_MESSAGE_RECEIVED' || this.notification?.type?.startsWith('CHAT_')) {
+      const reqId = this.notification.entityId || this.notification.data?.['requestId'];
+      if (reqId) {
+        return `/requests/${reqId}/messages`;
+      }
+    }
+    return null;
+  });
 
   readonly relativeDate = computed(() => {
     const createdAt = this.notification?.createdAt;

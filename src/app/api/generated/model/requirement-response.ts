@@ -9,6 +9,7 @@
  */
 import { JobStatus } from './job-status';
 import { Specialty } from './specialty';
+import { PaymentMethod } from './payment-method';
 import { RepairRequestStatus } from './repair-request-status';
 
 
@@ -18,6 +19,7 @@ export interface RequirementResponse {
     position: number;
     specialty: Specialty;
     requestStatus: RepairRequestStatus;
+    paymentMethod: PaymentMethod;
     assignedFixerUserId?: string | null;
     jobId?: string | null;
     jobStatus?: JobStatus;

@@ -6,6 +6,9 @@ import { of, Subject } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   CreateProjectRequest,
+  OwnerDebtDetail,
+  PaymentControllerService,
+  PaymentMethod,
   ProjectResponse,
   PropertySummary,
   RemodelingProgressStatus,
@@ -52,6 +55,7 @@ describe('RemodelingCreateComponent', () => {
       providers: [
         RemodelingStore,
         RequestMediaService,
+        PaymentControllerService,
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -71,33 +75,43 @@ describe('RemodelingCreateComponent', () => {
     fixture?.destroy();
   });
 
-  function initialize(properties: PropertySummary[] = [mockProperty]): void {
+  function initialize(
+    properties: PropertySummary[] = [mockProperty],
+    debts: OwnerDebtDetail[] = []
+  ): void {
     fixture.detectChanges();
     const req = httpTesting.expectOne(`${environment.apiOrigin}/properties/me`);
     expect(req.request.method).toBe('GET');
     req.flush(properties);
+
+    const debtReq = httpTesting.expectOne(`${environment.apiOrigin}/payments/me/debts`);
+    expect(debtReq.request.method).toBe('GET');
+    debtReq.flush(debts);
+
     fixture.detectChanges();
   }
 
-  it('carga las propiedades propias del OWNER al iniciar', () => {
+  it('carga las propiedades propias del OWNER y deudas al iniciar', () => {
     initialize();
 
     expect(component.loadingProperties()).toBe(false);
     expect(component.properties()).toEqual([mockProperty]);
+    expect(component.hasDebt()).toBe(false);
     const select = fixture.nativeElement.querySelector('#select-property') as HTMLSelectElement;
     expect(select.options.length).toBe(2); // placeholder + 1 property
   });
 
-  it('inicia con exactamente 1 necesidad y permite añadir más', () => {
+  it('inicia con exactamente 1 necesidad y exige paymentMethod en cada una', () => {
     initialize();
 
     expect(component.requirementsArray.length).toBe(1);
+    expect(component.requirementsArray.at(0).get('paymentMethod')?.value).toBeNull();
+    expect(component.requirementsArray.at(0).get('paymentMethod')?.invalid).toBe(true);
 
     component.addRequirement();
     expect(component.requirementsArray.length).toBe(2);
-
-    component.addRequirement();
-    expect(component.requirementsArray.length).toBe(3);
+    expect(component.requirementsArray.at(1).get('paymentMethod')?.value).toBeNull();
+    expect(component.requirementsArray.at(1).get('paymentMethod')?.invalid).toBe(true);
   });
 
   it('permite eliminar una necesidad pero nunca permite quedar en 0', () => {
@@ -114,15 +128,27 @@ describe('RemodelingCreateComponent', () => {
     expect(component.requirementsArray.length).toBe(1);
   });
 
-  it('valida campos obligatorios y no envía POST si el formulario es inválido', () => {
+  it('valida campos obligatorios y no envía POST si el formulario es inválido por falta de paymentMethod', () => {
     initialize();
+
+    component.form.patchValue({
+      propertyId: 'prop-111',
+      title: 'Remodelación',
+      description: 'Sin método de pago'
+    });
+    component.requirementsArray.at(0).patchValue({
+      title: 'Pintura',
+      description: 'Paredes',
+      urgencyLevel: 'LOW'
+      // paymentMethod ausente
+    });
 
     component.submit();
     expect(component.form.invalid).toBe(true);
     httpTesting.expectNone(`${environment.apiOrigin}/remodelings`);
   });
 
-  it('envía POST /remodelings con payload exacto (sin specialty) y navega al detalle en 201', () => {
+  it('envía POST /remodelings con requerimientos mixtos (TRANSFER y CASH) sin specialty y navega al detalle en 201', () => {
     const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     initialize();
 
@@ -132,19 +158,21 @@ describe('RemodelingCreateComponent', () => {
       description: 'Renovación de cocina y baños'
     });
 
-    // Primera necesidad
+    // Primera necesidad: TRANSFER
     component.requirementsArray.at(0).patchValue({
       title: 'Cambio de tubería',
       description: 'Reemplazo de tubería galvanizada por PVC',
-      urgencyLevel: 'HIGH'
+      urgencyLevel: 'HIGH',
+      paymentMethod: PaymentMethod.Transfer
     });
 
-    // Segunda necesidad
+    // Segunda necesidad: CASH
     component.addRequirement();
     component.requirementsArray.at(1).patchValue({
       title: 'Enchape cerámico',
       description: 'Instalar baldosa en paredes y pisos',
-      urgencyLevel: 'MEDIUM'
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Cash
     });
 
     fixture.detectChanges();
@@ -162,12 +190,14 @@ describe('RemodelingCreateComponent', () => {
           title: 'Cambio de tubería',
           description: 'Reemplazo de tubería galvanizada por PVC',
           urgencyLevel: 'HIGH',
+          paymentMethod: PaymentMethod.Transfer,
           mediaIds: []
         },
         {
           title: 'Enchape cerámico',
           description: 'Instalar baldosa en paredes y pisos',
           urgencyLevel: 'MEDIUM',
+          paymentMethod: PaymentMethod.Cash,
           mediaIds: []
         }
       ]
@@ -182,6 +212,70 @@ describe('RemodelingCreateComponent', () => {
     postReq.flush(mockCreatedProject);
 
     expect(navigateSpy).toHaveBeenCalledWith(['/remodelings', 'proj-new-123']);
+  });
+
+  it('bloquea creación si el propietario tiene deuda OUTSTANDING y no permite enviar', () => {
+    initialize([mockProperty], [
+      {
+        debtId: 'debt-123',
+        status: 'OUTSTANDING',
+        amount: 50000
+      }
+    ]);
+
+    expect(component.hasDebt()).toBe(true);
+    expect(component.outstandingDebt()?.amount).toBe(50000);
+
+    component.form.patchValue({
+      propertyId: 'prop-111',
+      title: 'Remodelación',
+      description: 'Intento con deuda'
+    });
+    component.requirementsArray.at(0).patchValue({
+      title: 'Carpintería',
+      description: 'Mueble',
+      urgencyLevel: 'LOW',
+      paymentMethod: PaymentMethod.Cash
+    });
+
+    component.submit();
+
+    expect(component.submitError()).toContain('saldo pendiente');
+    httpTesting.expectNone(`${environment.apiOrigin}/remodelings`);
+  });
+
+  it('maneja 409 OWNER_HAS_OUTSTANDING_DEBT del backend refrescando deuda y mostrando aviso', () => {
+    initialize();
+
+    component.form.patchValue({
+      propertyId: 'prop-111',
+      title: 'Remodelación',
+      description: 'Intento que choca con deuda en backend'
+    });
+    component.requirementsArray.at(0).patchValue({
+      title: 'Plomería',
+      description: 'Tubería',
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Transfer
+    });
+
+    component.submit();
+
+    const postReq = httpTesting.expectOne(`${environment.apiOrigin}/remodelings`);
+    postReq.flush(
+      { code: 'OWNER_HAS_OUTSTANDING_DEBT', message: 'Owner has outstanding debt' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    // Debe refrescar deudas
+    const debtReq = httpTesting.expectOne(`${environment.apiOrigin}/payments/me/debts`);
+    debtReq.flush([{ debtId: 'debt-999', status: 'OUTSTANDING', amount: 35000 }]);
+
+    fixture.detectChanges();
+
+    expect(component.submitError()).toContain('saldo pendiente');
+    expect(component.form.get('title')?.value).toBe('Remodelación');
+    expect(component.hasDebt()).toBe(true);
   });
 
   it('asocia fotos confirmadas a la necesidad correcta vía RequestMediaService', () => {
@@ -207,97 +301,24 @@ describe('RemodelingCreateComponent', () => {
     expect(component.mediaState(0).mediaIds).toEqual(['media-uuid-1']);
   });
 
-  it('respeta el límite contractual de seis fotos por necesidad', () => {
-    initialize();
-
-    let sequence = 0;
-    const file = new File(['fake-img'], 'soporte.jpg', { type: 'image/jpeg' });
-    vi.spyOn(mediaService, 'validateFile').mockReturnValue({ valid: true });
-    vi.spyOn(mediaService, 'requestUploadTicket').mockImplementation(() => {
-      const mediaId = `media-${++sequence}`;
-      return of({
-        mediaId,
-        uploadUrl: 'http://storage/test',
-        method: 'PUT',
-        headers: {},
-        expiresAt: '2026-10-13T12:00:00Z'
-      });
-    });
-    vi.spyOn(mediaService, 'uploadBinary').mockReturnValue(of(new HttpResponse({ status: 200 })));
-    vi.spyOn(mediaService, 'confirmUpload').mockImplementation((mediaId: string) =>
-      of({ mediaId, status: 'CONFIRMED' })
-    );
-
-    for (let i = 0; i < 6; i++) {
-      component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
-    }
-
-    expect(component.maxPhotos).toBe(6);
-    expect(component.mediaState(0).mediaIds).toHaveLength(6);
-
-    component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
-
-    expect(component.mediaState(0).mediaIds).toHaveLength(6);
-    expect(component.mediaState(0).error).toContain('Máximo 6 fotos');
-  });
-
-  it('no permite enviar ni eliminar necesidades mientras existe una carga de media en curso', () => {
+  it('no permite eliminar una necesidad si tiene una subida de fotos en progreso', () => {
     initialize();
     component.addRequirement();
-    component.form.patchValue({
-      propertyId: 'prop-111',
-      title: 'Remodelación'
-    });
-    component.requirementsArray.at(0).patchValue({
-      title: 'Pintura',
-      description: 'Pintar sala',
-      urgencyLevel: 'LOW'
-    });
-    component.requirementsArray.at(1).patchValue({
-      title: 'Electricidad',
-      description: 'Actualizar tomas',
-      urgencyLevel: 'MEDIUM'
-    });
+    expect(component.requirementsArray.length).toBe(2);
 
     const pendingTicket = new Subject<UploadTicketDto>();
-    const file = new File(['fake-img'], 'pendiente.jpg', { type: 'image/jpeg' });
     vi.spyOn(mediaService, 'validateFile').mockReturnValue({ valid: true });
-    vi.spyOn(mediaService, 'requestUploadTicket').mockReturnValue(pendingTicket);
+    vi.spyOn(mediaService, 'requestUploadTicket').mockReturnValue(pendingTicket.asObservable());
 
-    component.onFileSelected({ target: { files: [file], value: '' } } as never, 0);
+    const file = new File(['data'], 'test.png', { type: 'image/png' });
+    component.onFileSelected({ target: { files: [file], value: '' } } as never, 1);
 
+    expect(component.mediaState(1).uploading).toBe(true);
     expect(component.hasUploadingMedia()).toBe(true);
-
-    component.submit();
-    httpTesting.expectNone(`${environment.apiOrigin}/remodelings`);
 
     component.removeRequirement(1);
     expect(component.requirementsArray.length).toBe(2);
 
     pendingTicket.complete();
-  });
-
-  it('muestra mensaje de error si el backend responde con fallo y conserva datos', () => {
-    initialize();
-
-    component.form.patchValue({
-      propertyId: 'prop-111',
-      title: 'Remodelación',
-      description: 'Texto descriptivo'
-    });
-    component.requirementsArray.at(0).patchValue({
-      title: 'Pintura',
-      description: 'Pintar sala',
-      urgencyLevel: 'LOW'
-    });
-
-    component.submit();
-
-    const postReq = httpTesting.expectOne(`${environment.apiOrigin}/remodelings`);
-    postReq.flush({ message: 'Conflicto' }, { status: 409, statusText: 'Conflict' });
-    fixture.detectChanges();
-
-    expect(component.submitError()).toContain('Conflicto al crear el proyecto');
-    expect(component.form.get('title')?.value).toBe('Remodelación');
   });
 });

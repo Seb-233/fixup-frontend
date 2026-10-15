@@ -12,6 +12,7 @@ import {
   Specialty
 } from '../../../../api/generated';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
+import { NavigationOrigin } from '../../../../core/navigation/navigation-context';
 import {
   MAX_ESTIMATED_DAYS,
   MAX_MESSAGE_LENGTH,
@@ -48,6 +49,7 @@ import {
           </div>
         }
         <header class="head">
+          <a class="back-link" id="btn-back-request-detail" [routerLink]="backNavigation().commands">{{ backNavigation().label }}</a>
           <div class="head-meta">
             <span class="chip">{{ specialtyName(item.specialty) }}</span>
             @switch (statusExt(item.status)) {
@@ -117,14 +119,22 @@ import {
         </article>
 
         @if (canViewQuotations()) {
-          <a class="board-link" [routerLink]="['/quotations/request', item.requestId]">
+          <a
+            class="board-link"
+            [routerLink]="['/quotations/request', item.requestId]"
+            [queryParams]="quotationsQueryParams()"
+          >
             Ver las cotizaciones recibidas →
           </a>
         }
 
         <!-- FR-UC-24: chat solo con Fixer asignado -->
         @if (item.status === 'ASSIGNED') {
-          <a class="board-link" [routerLink]="['/requests', item.requestId, 'messages']">
+          <a
+            class="board-link"
+            [routerLink]="['/requests', item.requestId, 'messages']"
+            [queryParams]="chatQueryParams()"
+          >
             Ver conversación →
           </a>
         }
@@ -199,6 +209,8 @@ import {
   `,
   styles: [`
     .detail { display: flex; flex-direction: column; gap: 1.25rem; max-width: 800px; margin: 0 auto; }
+    .back-link { font-size: 0.85rem; font-weight: 600; color: #888; text-decoration: none; margin-bottom: 0.4rem; display: inline-block; }
+    .back-link:hover { color: var(--fixup-color-primary); }
     .state { color: #666; font-size: 0.92rem; padding: 1.5rem 0; }
     .state.error { color: #b91c1c; }
     .head-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
@@ -279,11 +291,12 @@ import {
     }
     .board-link { color: var(--fixup-color-accent); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
     .board-link:hover { text-decoration: underline; }
-    .quote-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    .quote-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
     @media (max-width: 640px) { .quote-form { grid-template-columns: 1fr; } }
-    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; min-width: 0; }
     .field.wide { grid-column: 1 / -1; }
     .field input, .field textarea {
+      width: 100%; max-width: 100%; box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4); border-radius: var(--fixup-radius-md);
       padding: 0.55rem 0.7rem; font: inherit; color: var(--fixup-color-primary); background: #fff;
       resize: vertical;
@@ -315,6 +328,73 @@ export class RequestDetailComponent implements OnInit {
 
   readonly maxDays = MAX_ESTIMATED_DAYS;
   readonly maxMessageLength = MAX_MESSAGE_LENGTH;
+
+  readonly fromContext = computed<NavigationOrigin | null>(
+    () => (this.route.snapshot.queryParamMap?.get('from') as NavigationOrigin) ?? null
+  );
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backNavigation = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    if (from === 'jobs') {
+      return {
+        commands: ['/jobs/me'],
+        label: '← Volver a mis trabajos'
+      };
+    }
+    if (from === 'inbox') {
+      return {
+        commands: ['/requests/inbox'],
+        label: '← Volver a solicitudes disponibles'
+      };
+    }
+    if (from === 'requests') {
+      return {
+        commands: ['/requests'],
+        label: '← Volver a mis solicitudes'
+      };
+    }
+
+    // Fallback sin "from" según el rol activo
+    const role = this.users.activeRole();
+    if (role === 'FIXER') {
+      return {
+        commands: ['/requests/inbox'],
+        label: '← Volver a solicitudes disponibles'
+      };
+    }
+    if (role === 'PLATFORM_ADMIN') {
+      return {
+        commands: ['/dashboard'],
+        label: '← Volver al panel principal'
+      };
+    }
+    return {
+      commands: ['/requests'],
+      label: '← Volver a mis solicitudes'
+    };
+  });
+
+  readonly chatQueryParams = computed(() => {
+    const from = this.fromContext();
+    if (!from) return undefined;
+    const projectId = this.projectIdContext();
+    return projectId ? { from, projectId } : { from };
+  });
+
+  readonly quotationsQueryParams = computed(() => {
+    const from = this.fromContext();
+    if (!from) return undefined;
+    const projectId = this.projectIdContext();
+    return projectId ? { from, projectId } : { from };
+  });
 
   readonly request = signal<RequestDetailResponse | null>(null);
   readonly loading = signal(true);

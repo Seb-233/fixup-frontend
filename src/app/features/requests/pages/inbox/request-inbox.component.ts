@@ -7,7 +7,7 @@ import {
   RepairRequestControllerService,
   Specialty
 } from '../../../../api/generated';
-import { SPECIALTY_OPTIONS, specialtyLabel } from '../../utils/request-ui.helpers';
+import { specialtyLabel } from '../../utils/request-ui.helpers';
 
 // FR-UC-18: bandeja del Fixer. Muestra las solicitudes abiertas filtradas en el backend
 // según las especialidades del técnico autenticado. Incluye filtro visual en memoria.
@@ -23,15 +23,17 @@ import { SPECIALTY_OPTIONS, specialtyLabel } from '../../utils/request-ui.helper
           <p class="subtitle">Evalúa el daño y envía tu cotización antes que otro técnico.</p>
         </div>
 
-        <label class="filter">
-          <span>Especialidad</span>
-          <select [ngModel]="selectedSpecialty()" (ngModelChange)="filterBy($event)" name="specialty">
-            <option [ngValue]="null">Todas</option>
-            @for (option of specialtyOptions; track option.value) {
-              <option [ngValue]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </label>
+        @if (availableSpecialties().length > 1) {
+          <label class="filter" id="fixer-specialty-filter">
+            <span>Especialidad</span>
+            <select [ngModel]="selectedSpecialty()" (ngModelChange)="filterBy($event)" name="specialty">
+              <option [ngValue]="null">Todas</option>
+              @for (option of availableSpecialties(); track option.value) {
+                <option [ngValue]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+        }
       </header>
 
       @if (loading()) {
@@ -54,7 +56,7 @@ import { SPECIALTY_OPTIONS, specialtyLabel } from '../../utils/request-ui.helper
               <h2 class="card-title">{{ request.title }}</h2>
               <div class="card-footer">
                 <span class="status-indicator">Disponible para cotizar</span>
-                <a class="cta" [routerLink]="['/requests', request.requestId]">Ver y cotizar →</a>
+                <a class="cta" [routerLink]="['/requests', request.requestId]" [queryParams]="{ from: 'inbox' }">Ver y cotizar →</a>
               </div>
             </li>
           }
@@ -106,11 +108,23 @@ import { SPECIALTY_OPTIONS, specialtyLabel } from '../../utils/request-ui.helper
 export class RequestInboxComponent implements OnInit {
   private readonly repairRequestApi = inject(RepairRequestControllerService);
 
-  readonly specialtyOptions = SPECIALTY_OPTIONS;
   readonly allRequests = signal<OpenRequestSummaryResponse[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly selectedSpecialty = signal<Specialty | null>(null);
+
+  readonly availableSpecialties = computed(() => {
+    const set = new Set<Specialty>();
+    for (const r of this.allRequests()) {
+      if (r.specialty) {
+        set.add(r.specialty);
+      }
+    }
+    return Array.from(set).map((val) => ({
+      value: val,
+      label: specialtyLabel(val)
+    }));
+  });
 
   readonly filteredRequests = computed(() => {
     const specialty = this.selectedSpecialty();

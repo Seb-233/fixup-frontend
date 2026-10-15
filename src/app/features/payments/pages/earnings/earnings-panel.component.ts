@@ -1,14 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   EarningStatus,
   EarningsResponse,
   PaymentControllerService,
-  PayoutResponse
+  PayoutResponse,
+  PayoutStatus
 } from '../../../../api/generated';
-import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.helpers';
+import { commissionPercent, earningStatusLabel, payoutStatusLabel } from '../../utils/earnings-ui.helpers';
 
 /**
  * FR-UC-20: panel de ingresos del técnico.
@@ -52,7 +53,7 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
             <span class="hint">sobre {{ data.grossTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }} facturados</span>
           </article>
           <article class="tile paid">
-            <span class="label">Solicitado para transferencia</span>
+            <span class="label">{{ paidOutTileLabel() }}</span>
             <strong class="value">{{ data.paidOutTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
           </article>
         </div>
@@ -61,10 +62,15 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
           @if (payoutError()) {
             <p class="state error">{{ payoutError() }}</p>
           }
-          @if (lastPayout(); as payout) {
+          @if (displayPayout(); as payout) {
             <p class="state ok">
-              Solicitaste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
-              sobre {{ payout.earningCount }} servicio(s).
+              @if (payout.status === 'TRANSFERRED') {
+                Transferiste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+                sobre {{ payout.earningCount }} servicio(s).
+              } @else {
+                Solicitaste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+                sobre {{ payout.earningCount }} servicio(s).
+              }
             </p>
           }
           <button
@@ -106,7 +112,7 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
                     · liberado el {{ line.releasedAt | date: 'dd/MM/yyyy' }}
                   }
                   @if (line.paidOutAt) {
-                    · solicitado para transferencia el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
+                    · {{ hasPendingPayout() ? 'solicitado para transferencia' : 'transferido' }} el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
                   }
                 </p>
               </li>
@@ -122,11 +128,16 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
             @for (payout of payouts(); track payout.id) {
               <li class="row">
                 <div class="row-head">
-                  <span class="status requested">Solicitada</span>
+                  <span class="status" [class]="payout.status.toLowerCase()">
+                    {{ payoutLabel(payout.status) }}
+                  </span>
                   <strong class="net">{{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
                 </div>
                 <p class="timeline">
                   {{ payout.requestedAt | date: 'dd/MM/yyyy' }} · {{ payout.earningCount }} servicio(s)
+                  @if (payout.transferredAt) {
+                    · transferido el {{ payout.transferredAt | date: 'dd/MM/yyyy' }}
+                  }
                 </p>
               </li>
             }
@@ -235,6 +246,10 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
         background: #e8ecf5;
         color: #33415c;
       }
+      .status.transferred {
+        background: #e2f5e7;
+        color: #1c6b34;
+      }
       .breakdown,
       .timeline {
         margin: 0;
@@ -284,12 +299,37 @@ export class EarningsPanelComponent implements OnInit {
   readonly payoutError = signal<string | null>(null);
   readonly lastPayout = signal<PayoutResponse | null>(null);
 
+  readonly hasPendingPayout = computed(() =>
+    this.payouts().some((p) => p.status === PayoutStatus.Requested) ||
+    this.lastPayout()?.status === PayoutStatus.Requested
+  );
+
+  readonly paidOutTileLabel = computed(() => {
+    if (this.hasPendingPayout()) {
+      return 'Solicitado para transferencia';
+    }
+    return 'Total transferido';
+  });
+
+  readonly displayPayout = computed(() => {
+    const lp = this.lastPayout();
+    if (!lp) {
+      return null;
+    }
+    const found = this.payouts().find((p) => p.id === lp.id);
+    return found ?? lp;
+  });
+
   ngOnInit(): void {
     this.load();
   }
 
   statusLabel(status: EarningStatus): string {
     return earningStatusLabel(status);
+  }
+
+  payoutLabel(status: PayoutStatus): string {
+    return payoutStatusLabel(status);
   }
 
   percent(basisPoints: number): number {

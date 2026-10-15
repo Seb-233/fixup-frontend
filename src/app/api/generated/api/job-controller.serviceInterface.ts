@@ -11,6 +11,7 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { CompletionRequest } from '../model/models';
 import { ErrorResponse } from '../model/models';
 import { JobResponse } from '../model/models';
 
@@ -28,8 +29,9 @@ export interface JobControllerServiceInterface {
      * Releases from escrow the amount the owner committed when accepting the quotation. Only the assigned fixer can close his own job.
      * @endpoint post /jobs/{jobId}/complete
      * @param jobId 
+     * @param completionRequest 
      */
-    complete(jobId: string, extraHttpRequestParams?: any): Observable<JobResponse>;
+    complete(jobId: string, completionRequest?: CompletionRequest, extraHttpRequestParams?: any): Observable<JobResponse>;
 
     /**
      * List the jobs assigned to the current fixer

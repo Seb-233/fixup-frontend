@@ -17,6 +17,8 @@ import { Observable }                                        from 'rxjs';
 import { OpenApiHttpParams, QueryParamStyle } from '../query.params';
 
 // @ts-ignore
+import { AcceptedQuotationResponse } from '../model/accepted-quotation-response';
+// @ts-ignore
 import { ErrorResponse } from '../model/error-response';
 // @ts-ignore
 import { QuotationRequest } from '../model/quotation-request';
@@ -51,9 +53,9 @@ export class QuotationControllerService extends BaseService implements Quotation
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public accept(quotationId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<QuotationResponse>;
-    public accept(quotationId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<QuotationResponse>>;
-    public accept(quotationId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<QuotationResponse>>;
+    public accept(quotationId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<AcceptedQuotationResponse>;
+    public accept(quotationId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<AcceptedQuotationResponse>>;
+    public accept(quotationId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<AcceptedQuotationResponse>>;
     public accept(quotationId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (quotationId === null || quotationId === undefined) {
             throw new Error('Required parameter quotationId was null or undefined when calling accept.');
@@ -89,7 +91,7 @@ export class QuotationControllerService extends BaseService implements Quotation
 
         let localVarPath = `/quotations/${this.configuration.encodeParam({name: "quotationId", value: quotationId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/accept`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<QuotationResponse>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<AcceptedQuotationResponse>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,

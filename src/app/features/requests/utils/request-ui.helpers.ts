@@ -1,4 +1,4 @@
-import { RepairRequestStatus, Specialty } from '../../../api/generated';
+import { PaymentMethod, RepairRequestStatus, Specialty } from '../../../api/generated';
 
 export const MAX_REQUEST_PHOTOS = 6;
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -24,6 +24,27 @@ export function specialtyLabel(specialty: Specialty): string {
   return option ? option.label : specialty;
 }
 
-export function requestStatusLabel(status: RepairRequestStatus): string {
-  return status === RepairRequestStatus.Open ? 'Abierta' : 'Asignada';
+export function requestStatusLabel(status: RepairRequestStatus | string): string {
+  switch (status) {
+    case RepairRequestStatus.Open:
+      return 'Abierta';
+    case RepairRequestStatus.Assigned:
+      return 'Asignada';
+    case RepairRequestStatus.SlaWarning:
+      return 'SLA Warning';
+    case RepairRequestStatus.SlaBreached:
+      return 'SLA Vencido';
+    case RepairRequestStatus.Completed:
+      return 'Completada';
+    case RepairRequestStatus.Cancelled:
+      return 'Cancelada';
+    default:
+      return status;
+  }
+}
+
+export function paymentMethodLabel(method: PaymentMethod | string | undefined | null): string {
+  if (method === PaymentMethod.Transfer) return 'Transferencia';
+  if (method === PaymentMethod.Cash) return 'Efectivo';
+  return method ?? '';
 }

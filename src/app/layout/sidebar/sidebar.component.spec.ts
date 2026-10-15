@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi, afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { NavigationIcon } from '../../core/navigation/role-navigation';
@@ -20,7 +22,9 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
       imports: [SidebarComponent],
       providers: [
         CurrentUserStore,
-        provideRouter([])
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting()
       ]
     }).compileComponents();
 
@@ -197,5 +201,69 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
       expect(el.textContent?.trim()).toBe('');
       expect(el.textContent).not.toContain('?');
     });
+  });
+
+  it('resalta la sección Remodelaciones cuando el contexto proviene de una remodelación', () => {
+    userStore.setRoles(['OWNER']);
+    userStore.setActiveRole('OWNER');
+    fixture.detectChanges();
+
+    component.onSelectNav('/quotations/request/req-123?from=remodelings&projectId=proj-456');
+    fixture.detectChanges();
+
+    const remodelingIndex = component.visibleItems().findIndex((i) => i.path === '/remodelings');
+    expect(remodelingIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(remodelingIndex);
+  });
+
+  it('resalta la sección Mis solicitudes cuando se consultan cotizaciones sin contexto de remodelación', () => {
+    userStore.setRoles(['OWNER']);
+    userStore.setActiveRole('OWNER');
+    fixture.detectChanges();
+
+    component.onSelectNav('/quotations/request/req-123');
+    fixture.detectChanges();
+
+    const requestsIndex = component.visibleItems().findIndex((i) => i.path === '/requests');
+    expect(requestsIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(requestsIndex);
+  });
+
+  it('renderiza el badge y punto de notificaciones cuando existen mensajes sin leer', () => {
+    userStore.setRoles(['OWNER']);
+    userStore.setActiveRole('OWNER');
+    component.notificationsStore.unreadCount.set(3);
+    fixture.detectChanges();
+
+    const badge = fixture.nativeElement.querySelector('.item-badge');
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent).toContain('3');
+
+    const dot = fixture.nativeElement.querySelector('.unread-icon-dot');
+    expect(dot).toBeTruthy();
+  });
+
+  it('resalta la sección Mis trabajos cuando el contexto del FIXER tiene from=jobs', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    setRole('FIXER');
+
+    component.onSelectNav('/requests/req-123?from=jobs');
+    fixture.detectChanges();
+
+    const jobsIndex = component.visibleItems().findIndex((i) => i.path === '/jobs/me');
+    expect(jobsIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(jobsIndex);
+  });
+
+  it('resalta la sección Solicitudes disponibles cuando el contexto del FIXER tiene from=inbox', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    setRole('FIXER');
+
+    component.onSelectNav('/requests/req-123?from=inbox');
+    fixture.detectChanges();
+
+    const inboxIndex = component.visibleItems().findIndex((i) => i.path === '/requests/inbox');
+    expect(inboxIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(inboxIndex);
   });
 });

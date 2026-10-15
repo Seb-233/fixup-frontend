@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  AcceptedQuotationResponse,
+  PaymentMethod,
   QuotationControllerService,
   QuotationResponse,
   QuotationStatus,
@@ -18,7 +20,7 @@ import { quotationStatusLabel } from '../../utils/quotation-ui.helpers';
   template: `
     <section class="board">
       <header>
-        <a class="back" [routerLink]="['/requests', requestId]">← Volver a la solicitud</a>
+        <a class="back" id="btn-back-quotation-board" [routerLink]="backNavigation().commands">{{ backNavigation().label }}</a>
         <h1 class="title">Cotizaciones recibidas</h1>
         @if (request(); as item) {
           <p class="subtitle">{{ item.title }}</p>
@@ -148,6 +150,7 @@ export class QuotationBoardComponent implements OnInit {
   private readonly quotationsApi = inject(QuotationControllerService);
   private readonly requestsApi = inject(RepairRequestControllerService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly requestId = this.route.snapshot.paramMap.get('requestId') ?? '';
   readonly quotations = signal<QuotationResponse[]>([]);
@@ -162,6 +165,30 @@ export class QuotationBoardComponent implements OnInit {
   readonly assigned = computed(() =>
     this.quotations().some((quotation) => quotation.status === QuotationStatus.Accepted)
   );
+
+  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backNavigation = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    if (from === 'requests') {
+      return {
+        commands: ['/requests'],
+        label: '← Volver a mis solicitudes'
+      };
+    }
+    return {
+      commands: ['/requests', this.requestId],
+      label: '← Volver a la solicitud'
+    };
+  });
 
   ngOnInit(): void {
     if (!this.requestId) {
@@ -188,11 +215,22 @@ export class QuotationBoardComponent implements OnInit {
     this.actionError.set(null);
 
     this.quotationsApi.accept(quotation.id).subscribe({
-      next: () => {
+      next: (res: AcceptedQuotationResponse) => {
         this.operatingId.set(null);
         this.operatingAction.set(null);
-        // Reload board: backend accepted this and rejected others in same transaction
-        this.load();
+        if (res.paymentMethod === PaymentMethod.Transfer && res.paymentId) {
+          const from = this.fromContext();
+          const projectId = this.projectIdContext();
+          const qParams = from === 'remodelings' && projectId ? { from, projectId } : (from === 'requests' ? { from: 'requests' } : undefined);
+          if (qParams) {
+            this.router.navigate(['/payments', res.paymentId], { queryParams: qParams });
+          } else {
+            this.router.navigate(['/payments', res.paymentId]);
+          }
+        } else {
+          // CASH: el backend creó el Job directamente. Reconsultar el estado correspondiente.
+          this.load();
+        }
       },
       error: (error: HttpErrorResponse) => {
         this.operatingId.set(null);

@@ -70,7 +70,7 @@ const MAX_MESSAGE_LENGTH = 2000;
   template: `
     <section class="chat">
       <header class="chat-header">
-        <a class="back" [routerLink]="['/requests', requestId]">← Volver a la solicitud</a>
+        <a class="back" id="btn-back-chat" [routerLink]="backNavigation().commands" [queryParams]="backNavigation().queryParams">{{ backNavigation().label }}</a>
         <h1 class="title">Conversación</h1>
         @if (request(); as item) {
           <p class="subtitle">{{ item.title }}</p>
@@ -211,10 +211,48 @@ export class RequestChatComponent implements OnInit {
   readonly sending = signal(false);
   readonly sendError = signal<string | null>(null);
 
-  // El backend permite a un PLATFORM_ADMIN leer cualquier chat (GET), pero enviar (POST) exige
-  // ser el propietario de la solicitud o su Fixer asignado -- un admin nunca es "participante".
-  // Ocultar el compositor evita que el admin escriba un mensaje que el backend rechazará seguro.
   readonly canSend = computed(() => this.userStore.activeRole() !== 'PLATFORM_ADMIN');
+
+  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backNavigation = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        queryParams: undefined,
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    if (from === 'jobs') {
+      return {
+        commands: ['/requests', this.requestId],
+        queryParams: { from: 'jobs' },
+        label: '← Volver a la solicitud'
+      };
+    }
+    if (from === 'inbox') {
+      return {
+        commands: ['/requests', this.requestId],
+        queryParams: { from: 'inbox' },
+        label: '← Volver a la solicitud'
+      };
+    }
+    if (from === 'requests') {
+      return {
+        commands: ['/requests'],
+        queryParams: undefined,
+        label: '← Volver a mis solicitudes'
+      };
+    }
+    return {
+      commands: ['/requests', this.requestId],
+      queryParams: undefined,
+      label: '← Volver a la solicitud'
+    };
+  });
 
   ngOnInit(): void {
     if (!this.requestId) {

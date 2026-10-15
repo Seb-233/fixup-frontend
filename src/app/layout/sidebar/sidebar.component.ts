@@ -4,6 +4,7 @@ import { Router, NavigationEnd, RouterLink, RouterLinkActive } from '@angular/ro
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
+import { NotificationsStore } from '../../core/notifications/notifications.store';
 import { getNavigationForRole } from '../../core/navigation/role-navigation';
 import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component';
@@ -62,9 +63,15 @@ import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.comp
                 <!-- Íconos Vectoriales Propios según Ruta -->
                 <span class="nav-icon-wrapper" aria-hidden="true">
                   <app-nav-icon [name]="item.icon" />
+                  @if (item.path === '/notifications' && notificationsStore.unreadCount() > 0) {
+                    <span class="unread-icon-dot" title="Mensajes o notificaciones nuevas"></span>
+                  }
                 </span>
 
                 <span class="nav-label">{{ item.label }}</span>
+                @if (item.path === '/notifications' && notificationsStore.unreadCount() > 0) {
+                  <span class="item-badge">{{ notificationsStore.unreadCount() > 99 ? '99+' : notificationsStore.unreadCount() }}</span>
+                }
                 @if (item.requiresVerification) { <span class="nav-lock" role="img" aria-label="Requiere verificación" title="Completa tu verificación para acceder a esta funcionalidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span> }
 
               </a>
@@ -89,6 +96,7 @@ import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.comp
 })
 export class SidebarComponent implements OnDestroy {
   readonly userStore = inject(CurrentUserStore);
+  readonly notificationsStore = inject(NotificationsStore);
   private readonly verificationStore = inject(FixerVerificationStore);
   private readonly router = inject(Router);
 
@@ -105,6 +113,7 @@ export class SidebarComponent implements OnDestroy {
   });
 
   constructor() {
+    this.notificationsStore.init();
     this.routerSubscription = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe((event) => {
@@ -122,8 +131,37 @@ export class SidebarComponent implements OnDestroy {
 
   readonly activeIndex = computed<number>(() => {
     const items = this.visibleItems();
+    if (items.length === 0) return 0;
+
     const rawUrl = this.currentUrl();
     const url = rawUrl.split('?')[0].split('#')[0];
+    const isFromRemodeling = rawUrl.includes('from=remodelings');
+    const isFromJobs = rawUrl.includes('from=jobs');
+    const isFromInbox = rawUrl.includes('from=inbox');
+
+    // Contexto de remodelaciones explícito (Req 28)
+    if (isFromRemodeling) {
+      const remodelingIdx = items.findIndex((i) => i.path === '/remodelings');
+      if (remodelingIdx >= 0) return remodelingIdx;
+    }
+
+    // Contexto de mis trabajos (Fixer)
+    if (isFromJobs) {
+      const jobsIdx = items.findIndex((i) => i.path === '/jobs/me');
+      if (jobsIdx >= 0) return jobsIdx;
+    }
+
+    // Contexto de solicitudes disponibles (Fixer)
+    if (isFromInbox) {
+      const inboxIdx = items.findIndex((i) => i.path === '/requests/inbox');
+      if (inboxIdx >= 0) return inboxIdx;
+    }
+
+    // Contexto de cotizaciones de solicitud (Req 28)
+    if (url.startsWith('/quotations/request')) {
+      const requestsIdx = items.findIndex((i) => i.path === '/requests');
+      if (requestsIdx >= 0) return requestsIdx;
+    }
 
     let bestIndex = -1;
     let bestMatchLength = -1;
@@ -146,7 +184,15 @@ export class SidebarComponent implements OnDestroy {
       }
     });
 
-    return bestIndex >= 0 ? bestIndex : 0;
+    if (bestIndex >= 0) return bestIndex;
+
+    // Fallbacks inteligentes sin marcar Dashboard por omisión
+    if (url.startsWith('/requests') || url.startsWith('/quotations')) {
+      const reqIdx = items.findIndex((i) => i.path === '/requests' || i.path === '/requests/inbox');
+      if (reqIdx >= 0) return reqIdx;
+    }
+
+    return 0;
   });
 
   @HostListener('mouseenter')

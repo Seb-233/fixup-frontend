@@ -16,6 +16,7 @@ export interface PayoutResponse {
     earningCount: number;
     status: PayoutStatus;
     requestedAt: string;
+    transferredAt?: string | null;
 }
 export namespace PayoutResponse {
 }

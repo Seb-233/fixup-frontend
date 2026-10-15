@@ -11,6 +11,7 @@
 
 export const PayoutStatus = {
     Requested: 'REQUESTED',
+    Transferred: 'TRANSFERRED',
 } as const;
 export type PayoutStatus = typeof PayoutStatus[keyof typeof PayoutStatus];
 

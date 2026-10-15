@@ -11,9 +11,13 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { CashSettlementDetail } from '../model/models';
 import { EarningsResponse } from '../model/models';
 import { ErrorResponse } from '../model/models';
+import { OwnerDebtDetail } from '../model/models';
+import { PaymentDetail } from '../model/models';
 import { PayoutResponse } from '../model/models';
+import { SimulationRequest } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -25,6 +29,21 @@ export interface PaymentControllerServiceInterface {
     configuration: Configuration;
 
     /**
+     * Read the authoritative cash settlement for a completed job
+     * 
+     * @endpoint get /payments/cash-settlements/jobs/{jobId}
+     * @param jobId 
+     */
+    cashSettlement(jobId: string, extraHttpRequestParams?: any): Observable<CashSettlementDetail>;
+
+    /**
+     * List the current owner\&#39;s outstanding debts
+     * 
+     * @endpoint get /payments/me/debts
+     */
+    debts(extraHttpRequestParams?: any): Observable<Array<OwnerDebtDetail>>;
+
+    /**
      * Read the current fixer\&#39;s balance, commissions and history
      * Amounts are whole Colombian pesos. The available balance is what can be transferred today; the held balance belongs to jobs that are not closed yet.
      * @endpoint get /payments/me/earnings
@@ -32,8 +51,24 @@ export interface PaymentControllerServiceInterface {
     earnings(extraHttpRequestParams?: any): Observable<EarningsResponse>;
 
     /**
-     * Request the transfer of the available balance
-     * Academic scope: the request is recorded, no banking API is called. Reading the balance and consuming it happen in the same transaction.
+     * Initiate or reuse a simulated transfer for an outstanding debt
+     * 
+     * @endpoint post /payments/debts/{debtId}/pay
+     * @param debtId 
+     */
+    initiateDebt(debtId: string, extraHttpRequestParams?: any): Observable<PaymentDetail>;
+
+    /**
+     * Read a simulated service or outstanding-balance payment
+     * Owners, the assigned fixer and platform administrators can audit a payment they may see.
+     * @endpoint get /payments/{paymentId}
+     * @param paymentId 
+     */
+    payment(paymentId: string, extraHttpRequestParams?: any): Observable<PaymentDetail>;
+
+    /**
+     * Simulate the transfer of the available balance
+     * No banking API is called. The payout reaches TRANSFERRED and its earnings become PAID_OUT in one transaction.
      * @endpoint post /payments/me/payouts
      */
     payout(extraHttpRequestParams?: any): Observable<PayoutResponse>;
@@ -44,5 +79,14 @@ export interface PaymentControllerServiceInterface {
      * @endpoint get /payments/me/payouts
      */
     payouts(extraHttpRequestParams?: any): Observable<Array<PayoutResponse>>;
+
+    /**
+     * Simulate the provider outcome of an owner\&#39;s transfer payment
+     * Service approval creates a held earning and job; outstanding-balance approval pays the debt and creates an available earning. DECLINED, PENDING and ERROR remain retryable.
+     * @endpoint post /payments/{paymentId}/simulate
+     * @param paymentId 
+     * @param simulationRequest 
+     */
+    simulate(paymentId: string, simulationRequest: SimulationRequest, extraHttpRequestParams?: any): Observable<PaymentDetail>;
 
 }

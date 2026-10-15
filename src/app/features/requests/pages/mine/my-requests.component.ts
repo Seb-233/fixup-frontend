@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonicModule } from '@ionic/angular/lazy';
 import {
   RepairRequestControllerService,
@@ -11,7 +11,11 @@ import {
   PropertyControllerService,
   PropertySummary,
   Specialty,
-  UploadTicketDto
+  UploadTicketDto,
+  PaymentControllerService,
+  PaymentMethod,
+  OwnerDebtDetail,
+  PaymentDetail
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
 import { RequestsApiAdapterService } from '../../services/requests-api-adapter.service';
@@ -20,13 +24,19 @@ import { NotificationsStore } from '../../../../core/notifications/notifications
 import {
   MAX_REQUEST_PHOTOS,
   requestStatusLabel,
-  specialtyLabel
+  specialtyLabel,
+  paymentMethodLabel
 } from '../../utils/request-ui.helpers';
 import {
   UrgencyLevel,
   URGENCY_LABELS,
   OpenRequestExtended
 } from '../../models/request-extensions';
+import {
+  RequestDrawerComponent,
+  RemodelingContextBadge
+} from '../../components/request-drawer/request-drawer.component';
+import { RemodelingStore } from '../../../remodelings/services/remodeling.store';
 
 export interface RequestPhotoUploadItem {
   id: string;
@@ -42,7 +52,7 @@ export interface RequestPhotoUploadItem {
 @Component({
   selector: 'app-my-requests',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule, RequestDrawerComponent],
   template: `
     <section class="mine">
       <header>
@@ -50,9 +60,40 @@ export interface RequestPhotoUploadItem {
         <p class="subtitle">Describe el daño y recibe cotizaciones de técnicos verificados.</p>
       </header>
 
+      @if (hasDebt()) {
+        <article class="debt-warning-banner" role="alert">
+          <div class="debt-banner-content">
+            <h2 class="debt-warning-title">Tienes un saldo pendiente</h2>
+            <p class="debt-warning-text">
+              Debes pagarlo antes de crear una nueva solicitud.
+              @if (outstandingDebt(); as debt) {
+                <span class="debt-amount">Monto: {{ debt.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+              }
+            </p>
+          </div>
+          <div class="debt-banner-actions">
+            <button
+              type="button"
+              class="primary pay-debt-btn"
+              [disabled]="payingDebt()"
+              (click)="payOutstandingDebt()"
+            >
+              {{ payingDebt() ? 'Iniciando pago…' : 'Pagar saldo' }}
+            </button>
+          </div>
+          @if (payDebtError()) {
+            <small class="field-error wide">{{ payDebtError() }}</small>
+          }
+        </article>
+      }
+
       @if (canCreateRequest()) {
       <article class="block">
         <h2 class="block-title">Nueva solicitud</h2>
+
+        @if (hasDebt()) {
+          <p class="state error">Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.</p>
+        }
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
           @if (propertiesLoading()) {
@@ -119,6 +160,31 @@ export interface RequestPhotoUploadItem {
             }
           </div>
 
+          <div class="field">
+            <span>Forma de pago *</span>
+            <div class="payment-methods-group">
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  formControlName="paymentMethod"
+                  [value]="paymentMethods.Transfer"
+                />
+                <span>Transferencia</span>
+              </label>
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  formControlName="paymentMethod"
+                  [value]="paymentMethods.Cash"
+                />
+                <span>Efectivo</span>
+              </label>
+            </div>
+            @if (form.controls.paymentMethod.touched && form.controls.paymentMethod.invalid) {
+              <small class="field-error">Selecciona una forma de pago.</small>
+            }
+          </div>
+
           <!-- Sección de carga de fotos segura -->
           <div class="field wide photos-section">
             <div class="photos-header">
@@ -136,7 +202,7 @@ export interface RequestPhotoUploadItem {
                   accept="image/jpeg,image/png,image/webp"
                   (change)="onFilesSelected($event)"
                   class="hidden-file-input"
-                  [disabled]="sending()"
+                  [disabled]="sending() || hasDebt()"
                 />
                 <label for="request-photos-input" class="file-picker-btn">
                   <span>+ Agregar fotos (JPEG, PNG, WebP ≤ 10MB)</span>
@@ -168,7 +234,7 @@ export interface RequestPhotoUploadItem {
                             type="button"
                             class="retry-btn"
                             (click)="retryPhotoUpload(item)"
-                            [disabled]="sending()"
+                            [disabled]="sending() || hasDebt()"
                           >
                             Reintentar
                           </button>
@@ -178,7 +244,7 @@ export interface RequestPhotoUploadItem {
                         type="button"
                         class="remove-photo-btn"
                         (click)="removePhoto(item)"
-                        [disabled]="sending()"
+                        [disabled]="sending() || hasDebt()"
                         title="Quitar foto"
                       >
                         ✕
@@ -201,7 +267,7 @@ export interface RequestPhotoUploadItem {
           <button
             type="submit"
             class="primary"
-            [disabled]="form.invalid || !allPhotosReady() || sending()"
+            [disabled]="form.invalid || !allPhotosReady() || sending() || hasDebt()"
           >
             {{ sending() ? 'Publicando…' : 'Publicar solicitud' }}
           </button>
@@ -209,43 +275,141 @@ export interface RequestPhotoUploadItem {
       </article>
       }
 
-      <article class="block">
-        <h2 class="block-title">Publicadas</h2>
+      <!-- Tabs segmentados -->
+      <div class="tabs-segmented-control" role="tablist" aria-label="Filtro de solicitudes">
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          id="tab-active-requests"
+          [class.active]="activeTab() === 'ACTIVE'"
+          [attr.aria-selected]="activeTab() === 'ACTIVE'"
+          (click)="activeTab.set('ACTIVE')"
+        >
+          Activas ({{ activeRequests().length }})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          id="tab-history-requests"
+          [class.active]="activeTab() === 'HISTORY'"
+          [attr.aria-selected]="activeTab() === 'HISTORY'"
+          (click)="activeTab.set('HISTORY')"
+        >
+          Historial ({{ historyRequests().length }})
+        </button>
+      </div>
 
-        @if (loading()) {
-          <p class="state">Cargando…</p>
-        } @else if (loadError()) {
-          <p class="state error">{{ loadError() }}</p>
-        } @else if (requests().length === 0) {
-          <p class="state">No tienes solicitudes registradas.</p>
-        } @else {
-          <ul class="list">
-            @for (request of requests(); track request.requestId) {
-              <li class="row">
-                <div class="row-main">
-                  <span class="chip">{{ label(request.specialty) }}</span>
-                  <span
-                    class="urgency-badge"
-                    [class]="'urgency-' + urgencyOf(request).toLowerCase()"
-                  >
-                    {{ urgencyBadgeLabel(urgencyOf(request)) }}
-                  </span>
-                  <span class="row-title">{{ request.title }}</span>
-                </div>
-                <div class="row-side">
-                  <span class="status" [class.assigned]="request.status === 'ASSIGNED'">
-                    {{ statusLabel(request.status) }}
-                  </span>
-                  <div class="cta-group">
-                    <a class="cta" [routerLink]="['/requests', request.requestId]">Ver detalle →</a>
-                    <a class="cta" [routerLink]="['/quotations/request', request.requestId]">Ver ofertas →</a>
+      @if (activeTab() === 'ACTIVE') {
+        <article class="block">
+          <h2 class="block-title">Solicitudes activas</h2>
+
+          @if (loading()) {
+            <p class="state">Cargando…</p>
+          } @else if (loadError()) {
+            <p class="state error">{{ loadError() }}</p>
+          } @else if (activeRequests().length === 0) {
+            <p class="state">No tienes solicitudes activas.</p>
+          } @else {
+            <ul class="list">
+              @for (request of activeRequests(); track request.requestId) {
+                <li class="row">
+                  <div class="row-main">
+                    <span class="chip">{{ label(request.specialty) }}</span>
+                    @if (remodelingInfoFor(request.requestId); as rem) {
+                      <span class="remodeling-origin-badge" [title]="'Proyecto: ' + rem.projectTitle">
+                        🏗️ {{ rem.projectTitle }} · Req #{{ rem.position }}
+                      </span>
+                    }
+                    <span
+                      class="urgency-badge"
+                      [class]="'urgency-' + urgencyOf(request).toLowerCase()"
+                    >
+                      {{ urgencyBadgeLabel(urgencyOf(request)) }}
+                    </span>
+                    <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
+                    <span class="row-title">{{ request.title }}</span>
                   </div>
-                </div>
-              </li>
-            }
-          </ul>
-        }
-      </article>
+                  <div class="row-side">
+                    <span class="status" [class.assigned]="request.status === 'ASSIGNED'">
+                      {{ statusLabel(request.status) }}
+                    </span>
+                    <div class="cta-group">
+                      <button
+                        type="button"
+                        class="btn-detail"
+                        [id]="'btn-detail-' + request.requestId"
+                        (click)="openDrawer(request)"
+                      >
+                        Ver detalle
+                      </button>
+                      <a
+                        class="cta cta-offers"
+                        [id]="'link-offers-' + request.requestId"
+                        [routerLink]="['/quotations/request', request.requestId]"
+                        [queryParams]="{ from: 'requests' }"
+                      >
+                        Ver ofertas →
+                      </a>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </article>
+      } @else {
+        <article class="block">
+          <h2 class="block-title">Historial de solicitudes</h2>
+
+          @if (loading()) {
+            <p class="state">Cargando…</p>
+          } @else if (loadError()) {
+            <p class="state error">{{ loadError() }}</p>
+          } @else if (historyRequests().length === 0) {
+            <p class="state">No tienes solicitudes en el historial.</p>
+          } @else {
+            <ul class="list">
+              @for (request of historyRequests(); track request.requestId) {
+                <li class="row history-row">
+                  <div class="row-main">
+                    <span class="chip">{{ label(request.specialty) }}</span>
+                    @if (remodelingInfoFor(request.requestId); as rem) {
+                      <span class="remodeling-origin-badge" [title]="'Proyecto: ' + rem.projectTitle">
+                        🏗️ {{ rem.projectTitle }} · Req #{{ rem.position }}
+                      </span>
+                    }
+                    <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
+                    <span class="row-title">{{ request.title }}</span>
+                  </div>
+                  <div class="row-side">
+                    <span class="status completed">
+                      {{ statusLabel(request.status) }}
+                    </span>
+                    <div class="cta-group">
+                      <button
+                        type="button"
+                        class="btn-detail"
+                        (click)="openDrawer(request)"
+                      >
+                        Ver detalle
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </article>
+      }
+
+      <!-- Drawer de detalle contextual -->
+      <app-request-drawer
+        [request]="selectedRequestForDrawer()"
+        [remodelingInfo]="selectedRemodelingInfo()"
+        (closeDrawer)="closeDrawer()"
+      />
     </section>
   `,
   styles: [`
@@ -263,14 +427,21 @@ export interface RequestPhotoUploadItem {
       font-family: var(--fixup-font-heading); color: var(--fixup-color-primary);
       font-size: 1.05rem; margin: 0 0 0.85rem 0;
     }
-    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
     @media (max-width: 640px) { .form { grid-template-columns: 1fr; } }
-    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; min-width: 0; }
     .field.wide { grid-column: 1 / -1; }
     .field input, .field select, .field textarea {
+      width: 100%; max-width: 100%; box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4); border-radius: var(--fixup-radius-md);
       padding: 0.55rem 0.7rem; font: inherit; color: var(--fixup-color-primary);
-      background: #fff; resize: vertical;
+      background: #fff; resize: vertical; min-height: 42px;
+    }
+    .field textarea { min-height: 96px; }
+    .field select {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .field-error { color: #b91c1c; font-size: 0.74rem; }
     .submit-error {
@@ -309,13 +480,98 @@ export interface RequestPhotoUploadItem {
       background: rgba(16, 185, 129, 0.15); color: #047857;
     }
     .status.assigned { background: rgba(154, 148, 141, 0.2); color: #57534e; }
+    .status.completed { background: rgba(59, 130, 246, 0.15); color: #1e40af; }
     .cta { color: var(--fixup-color-accent); font-weight: 700; font-size: 0.84rem; text-decoration: none; }
     .cta:hover { text-decoration: underline; }
 
+    .tabs-segmented-control {
+      display: inline-flex;
+      background: #f0ede6;
+      padding: 0.25rem;
+      border-radius: var(--fixup-radius-md);
+      gap: 0.25rem;
+      align-self: flex-start;
+      margin-bottom: 0.25rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--fixup-color-primary); }
+    .tab-btn.active {
+      background: #fff;
+      color: var(--fixup-color-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .remodeling-origin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      border-radius: 20px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cta-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .btn-detail {
+      background: #fff;
+      border: 1px solid rgba(154, 148, 141, 0.4);
+      color: var(--fixup-color-primary);
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.35rem 0.75rem;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-detail:hover {
+      background: #f5f4f0;
+      border-color: var(--fixup-color-primary);
+    }
+    .cta-offers {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(206, 172, 120, 0.15);
+      color: var(--fixup-color-earth-brown, #8a6a33);
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+    .cta-offers:hover {
+      background: rgba(206, 172, 120, 0.3);
+      text-decoration: none;
+    }
+
     .urgency-select {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4);
       border-radius: var(--fixup-radius-md);
-      padding: 0;
+      background: #fff;
+      min-height: 42px;
+      --padding-start: 0.7rem;
+      --padding-end: 0.7rem;
     }
 
     .urgency-badge {
@@ -339,6 +595,65 @@ export interface RequestPhotoUploadItem {
     .urgency-badge.urgency-urgent {
       background: rgba(239, 68, 68, 0.15);
       color: #b91c1c;
+    }
+
+    .debt-warning-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: var(--fixup-radius-lg);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .debt-warning-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #991b1b;
+      margin: 0 0 0.25rem 0;
+    }
+    .debt-warning-text {
+      color: #7f1d1d;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+    .debt-amount {
+      display: block;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .pay-debt-btn {
+      background: #b91c1c;
+      color: #fff;
+    }
+    .pay-debt-btn:hover:not(:disabled) {
+      background: #991b1b;
+    }
+
+    .payment-methods-group {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      min-height: 42px;
+      margin-top: 0;
+    }
+    .radio-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.88rem;
+      color: var(--fixup-color-primary);
+      cursor: pointer;
+    }
+    .method-chip {
+      background: #f0ede6;
+      color: var(--fixup-color-primary);
+      border-radius: 20px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 600;
     }
 
     /* Photo uploader styles */
@@ -396,13 +711,17 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly repairRequestApi = inject(RepairRequestControllerService);
   private readonly requestsApi = inject(RequestsApiAdapterService);
   private readonly propertyApi = inject(PropertyControllerService);
+  private readonly paymentsApi = inject(PaymentControllerService);
+  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
   private readonly userStore = inject(CurrentUserStore);
   private readonly notificationsStore = inject(NotificationsStore);
   private readonly fb = inject(FormBuilder);
+  readonly remodelingStore = inject(RemodelingStore);
 
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
+  readonly paymentMethods = PaymentMethod;
 
   readonly requests = signal<RequestDetailResponse[]>([]);
   readonly loading = signal(true);
@@ -410,6 +729,14 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly properties = signal<PropertySummary[]>([]);
   readonly propertiesLoading = signal(true);
   readonly propertiesError = signal<string | null>(null);
+
+  readonly debts = signal<OwnerDebtDetail[]>([]);
+  readonly outstandingDebt = computed(() =>
+    this.debts().find((d) => d.status === 'OUTSTANDING')
+  );
+  readonly hasDebt = computed(() => !!this.outstandingDebt());
+  readonly payingDebt = signal(false);
+  readonly payDebtError = signal<string | null>(null);
 
   readonly photos = signal<RequestPhotoUploadItem[]>([]);
   readonly photoValidationError = signal<string | null>(null);
@@ -419,11 +746,31 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly submitSuccess = signal<string | null>(null);
   private requestedPropertyId: string | null = null;
 
-  readonly form = this.fb.nonNullable.group({
+  readonly activeTab = signal<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  readonly selectedRequestForDrawer = signal<RequestDetailResponse | null>(null);
+  readonly selectedRemodelingInfo = computed(() => {
+    const selected = this.selectedRequestForDrawer();
+    return selected ? this.remodelingInfoFor(selected.requestId) : null;
+  });
+
+  openDrawer(request: RequestDetailResponse): void {
+    this.selectedRequestForDrawer.set(request);
+  }
+
+  closeDrawer(): void {
+    this.selectedRequestForDrawer.set(null);
+  }
+
+  remodelingInfoFor(requestId: string): RemodelingContextBadge | null {
+    return this.remodelingStore.getRequirementInfo(requestId);
+  }
+
+  readonly form = this.fb.group({
     propertyId: ['', Validators.required],
     title: ['', [Validators.required, Validators.maxLength(150)]],
     description: ['', [Validators.required, Validators.maxLength(2000)]],
-    urgencyLevel: ['MEDIUM' as UrgencyLevel, Validators.required]
+    urgencyLevel: ['MEDIUM' as UrgencyLevel, Validators.required],
+    paymentMethod: [null as PaymentMethod | null, Validators.required]
   });
 
   readonly allPhotosReady = computed(() => {
@@ -433,11 +780,26 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
   readonly canCreateRequest = computed(() => this.userStore.activeRole() === 'OWNER');
 
+  readonly activeRequests = computed(() =>
+    this.requests().filter(
+      (r) =>
+        r.status === 'OPEN' ||
+        r.status === 'ASSIGNED' ||
+        r.status === 'SLA_WARNING' ||
+        r.status === 'SLA_BREACHED'
+    )
+  );
+
+  readonly historyRequests = computed(() =>
+    this.requests().filter((r) => r.status === 'COMPLETED' || r.status === 'CANCELLED')
+  );
+
   ngOnInit(): void {
     this.load();
     if (this.canCreateRequest()) {
       this.requestedPropertyId = this.route.snapshot.queryParamMap.get('propertyId');
       this.loadProperties();
+      this.loadDebts();
     }
   }
 
@@ -456,8 +818,12 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
     return specialtyLabel(specialty);
   }
 
-  statusLabel(status: RepairRequestStatus): string {
+  statusLabel(status: RepairRequestStatus | string): string {
     return requestStatusLabel(status);
+  }
+
+  methodLabel(method?: PaymentMethod | string | null): string {
+    return paymentMethodLabel(method);
   }
 
   private castExt(item: RequestDetailResponse): OpenRequestExtended {
@@ -471,6 +837,33 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
   urgencyBadgeLabel(level: UrgencyLevel | string): string {
     return URGENCY_LABELS[level as UrgencyLevel] ?? level;
+  }
+
+  loadDebts(): void {
+    if (!this.canCreateRequest()) return;
+    this.paymentsApi.debts().subscribe({
+      next: (debts) => this.debts.set(debts),
+      error: () => this.debts.set([])
+    });
+  }
+
+  payOutstandingDebt(): void {
+    const debt = this.outstandingDebt();
+    if (!debt?.debtId) return;
+
+    this.payingDebt.set(true);
+    this.payDebtError.set(null);
+
+    this.paymentsApi.initiateDebt(debt.debtId).subscribe({
+      next: (payment: PaymentDetail) => {
+        this.payingDebt.set(false);
+        this.router.navigate(['/payments', payment.paymentId]);
+      },
+      error: () => {
+        this.payingDebt.set(false);
+        this.payDebtError.set('No pudimos iniciar el pago de la deuda. Intenta de nuevo.');
+      }
+    });
   }
 
   onFilesSelected(event: Event): void {
@@ -588,12 +981,22 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
+    if (this.hasDebt()) {
+      this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.');
+      return;
+    }
+
     if (!this.canCreateRequest() || this.form.invalid || !this.allPhotosReady()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { propertyId, title, description, urgencyLevel } = this.form.getRawValue();
+    const { propertyId, title, description, urgencyLevel, paymentMethod } = this.form.getRawValue();
+    if (!paymentMethod) {
+      this.form.controls.paymentMethod.markAsTouched();
+      return;
+    }
+
     this.sending.set(true);
     this.submitError.set(null);
     this.submitSuccess.set(null);
@@ -603,10 +1006,11 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
       .filter((id): id is string => Boolean(id));
 
     const body: OpenRequestExtended = {
-      propertyId,
-      title: title.trim(),
-      description: description.trim(),
-      urgencyLevel,
+      propertyId: propertyId!,
+      title: title!.trim(),
+      description: description!.trim(),
+      urgencyLevel: urgencyLevel!,
+      paymentMethod,
       mediaIds: mediaIds.length > 0 ? mediaIds : undefined
     };
 
@@ -624,7 +1028,13 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
             }
           });
           this.photos.set([]);
-          this.form.reset({ propertyId, title: '', description: '', urgencyLevel: 'MEDIUM' as UrgencyLevel });
+          this.form.reset({
+            propertyId: propertyId!,
+            title: '',
+            description: '',
+            urgencyLevel: 'MEDIUM' as UrgencyLevel,
+            paymentMethod: null
+          });
           this.submitSuccess.set(`Solicitud creada. Especialidad detectada: ${specialtyLabel(created.specialty)}`);
           this.sending.set(false);
 
@@ -640,13 +1050,16 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
         error: (error: HttpErrorResponse) => {
           this.sending.set(false);
           // Crucial: keep this.photos() intact with confirmed mediaIds, do not re-upload
-          this.submitError.set(
-            error.status === 403
-              ? 'Tu cuenta no puede abrir solicitudes con el rol actual.'
-              : error.status === 400
-              ? 'Datos de la solicitud inválidos. Revisa el formulario.'
-              : 'No pudimos publicar la solicitud. Revisa los datos e intenta de nuevo.'
-          );
+          if (error.status === 409 || error.error?.code === 'OWNER_HAS_OUTSTANDING_DEBT') {
+            this.loadDebts();
+            this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.');
+          } else if (error.status === 403) {
+            this.submitError.set('Tu cuenta no puede abrir solicitudes con el rol actual.');
+          } else if (error.status === 400) {
+            this.submitError.set('Datos de la solicitud inválidos. Revisa el formulario.');
+          } else {
+            this.submitError.set('No pudimos publicar la solicitud. Revisa los datos e intenta de nuevo.');
+          }
         }
       });
   }

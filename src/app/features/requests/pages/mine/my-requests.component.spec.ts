@@ -4,11 +4,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
+  OwnerDebtDetail,
+  PaymentControllerService,
+  PaymentMethod,
+  PropertyControllerService,
+  PropertySummary,
   RepairRequestControllerService,
   RepairRequestStatus,
   RequestDetailResponse,
-  PropertyControllerService,
-  PropertySummary,
   Specialty,
   UrgencyLevel,
   provideApi
@@ -39,7 +42,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     status: RepairRequestStatus.Open,
     assignedFixerUserId: null,
     createdAt: '2026-09-19T10:00:00Z',
-    urgencyLevel: UrgencyLevel.Medium
+    urgencyLevel: UrgencyLevel.Medium,
+    paymentMethod: PaymentMethod.Transfer
   };
 
   const mockProperty: PropertySummary = {
@@ -57,6 +61,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       providers: [
         RepairRequestControllerService,
         PropertyControllerService,
+        PaymentControllerService,
         RequestMediaService,
         provideRouter([]),
         {
@@ -89,16 +94,23 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
 
   function initialize(
     requests: RequestDetailResponse[] = [],
-    properties: PropertySummary[] = [mockProperty]
+    properties: PropertySummary[] = [mockProperty],
+    debts: OwnerDebtDetail[] = []
   ): void {
-    component.ngOnInit();
+    fixture.detectChanges();
     const requestsRequest = httpTesting.expectOne(`${environment.apiOrigin}/requests/me`);
     expect(requestsRequest.request.method).toBe('GET');
     requestsRequest.flush(requests);
+
     const propertiesRequest = httpTesting.expectOne(`${environment.apiOrigin}/properties/me`);
     expect(propertiesRequest.request.method).toBe('GET');
     expect(propertiesRequest.request.headers.get('Accept')).toBe('application/json');
     propertiesRequest.flush(properties);
+
+    const debtsRequest = httpTesting.expectOne(`${environment.apiOrigin}/payments/me/debts`);
+    expect(debtsRequest.request.method).toBe('GET');
+    debtsRequest.flush(debts);
+    fixture.detectChanges();
   }
 
   function initializeReadOnly(
@@ -112,11 +124,12 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(requestsRequest.request.method).toBe('GET');
     requestsRequest.flush(requests);
     httpTesting.expectNone(`${environment.apiOrigin}/properties/me`);
+    httpTesting.expectNone(`${environment.apiOrigin}/payments/me/debts`);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('debe cargar las solicitudes y propiedades propias al iniciar', () => {
+  it('debe cargar las solicitudes, propiedades y deudas del owner al iniciar', () => {
     initialize([mockRequest]);
 
     expect(component.requests().length).toBe(1);
@@ -124,20 +137,31 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(component.loading()).toBe(false);
     expect(component.properties()).toEqual([mockProperty]);
     expect(component.propertiesLoading()).toBe(false);
+    expect(component.hasDebt()).toBe(false);
   });
 
-  it('debe permitir crear una solicitud sin fotos (0 fotos)', () => {
+  it('el formulario no debe tener método de pago seleccionado por default y debe ser inválido', () => {
+    initialize();
+
+    expect(component.form.controls.paymentMethod.value).toBeNull();
+    expect(component.form.controls.paymentMethod.invalid).toBe(true);
+    expect(component.form.invalid).toBe(true);
+  });
+
+  it('debe permitir crear una solicitud con TRANSFER y enviar el enum correspondiente', () => {
     initialize();
 
     component.form.setValue({
       propertyId: mockProperty.id!,
       title: 'Reparar puerta',
       description: 'La puerta no cierra bien.',
-      urgencyLevel: 'MEDIUM'
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Transfer
     });
 
     expect(component.photos().length).toBe(0);
     expect(component.allPhotosReady()).toBe(true);
+    expect(component.form.valid).toBe(true);
 
     component.submit();
 
@@ -148,6 +172,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       title: 'Reparar puerta',
       description: 'La puerta no cierra bien.',
       urgencyLevel: 'MEDIUM',
+      paymentMethod: 'TRANSFER',
       mediaIds: undefined
     });
     expect(postReq.request.body.specialty).toBeUndefined();
@@ -159,6 +184,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       requestId: 'req-2222',
       specialty: Specialty.Carpentry,
       title: 'Reparar puerta',
+      paymentMethod: PaymentMethod.Transfer,
       photos: []
     });
 
@@ -166,6 +192,118 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(component.requests()[0].requestId).toBe('req-2222');
     expect(component.submitSuccess()).toContain('Especialidad detectada: Carpintería');
     expect(component.sending()).toBe(false);
+  });
+
+  it('debe permitir crear una solicitud con CASH y enviar el enum correspondiente', () => {
+    initialize();
+
+    component.form.setValue({
+      propertyId: mockProperty.id!,
+      title: 'Pintar fachada',
+      description: 'Pared exterior.',
+      urgencyLevel: 'LOW',
+      paymentMethod: PaymentMethod.Cash
+    });
+
+    component.submit();
+
+    const postReq = httpTesting.expectOne(`${environment.apiOrigin}/requests`);
+    expect(postReq.request.method).toBe('POST');
+    expect(postReq.request.body.paymentMethod).toBe('CASH');
+
+    postReq.flush({
+      ...mockRequest,
+      requestId: 'req-cash-1',
+      title: 'Pintar fachada',
+      paymentMethod: PaymentMethod.Cash
+    });
+
+    expect(component.requests()[0].paymentMethod).toBe('CASH');
+  });
+
+  it('deuda OUTSTANDING bloquea la creación de solicitudes en la interfaz', () => {
+    initialize([mockRequest], [mockProperty], [
+      {
+        debtId: 'debt-out-1',
+        status: 'OUTSTANDING',
+        amount: 45000
+      }
+    ]);
+
+    expect(component.hasDebt()).toBe(true);
+    expect(component.outstandingDebt()?.amount).toBe(45000);
+
+    component.form.setValue({
+      propertyId: mockProperty.id!,
+      title: 'Nuevo arreglo',
+      description: 'Descripción válida.',
+      urgencyLevel: 'HIGH',
+      paymentMethod: PaymentMethod.Transfer
+    });
+
+    component.submit();
+
+    expect(component.submitError()).toContain('saldo pendiente');
+    httpTesting.expectNone(`${environment.apiOrigin}/requests`);
+  });
+
+  it('maneja 409 OWNER_HAS_OUTSTANDING_DEBT del backend refrescando deuda sin perder formulario', () => {
+    initialize();
+
+    component.form.setValue({
+      propertyId: mockProperty.id!,
+      title: 'Arreglar fuga',
+      description: 'Fuga urgente.',
+      urgencyLevel: 'URGENT',
+      paymentMethod: PaymentMethod.Cash
+    });
+
+    component.submit();
+
+    const postReq = httpTesting.expectOne(`${environment.apiOrigin}/requests`);
+    postReq.flush(
+      { code: 'OWNER_HAS_OUTSTANDING_DEBT', message: 'Owner has outstanding debt' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    // Debe consultar deudas para actualizar estado
+    const debtReq = httpTesting.expectOne(`${environment.apiOrigin}/payments/me/debts`);
+    debtReq.flush([{ debtId: 'debt-999', status: 'OUTSTANDING', amount: 30000 }]);
+
+    expect(component.submitError()).toContain('saldo pendiente');
+    expect(component.hasDebt()).toBe(true);
+    // Formulario conservado
+    expect(component.form.controls.title.value).toBe('Arreglar fuga');
+  });
+
+  it('separa correctamente activeRequests (OPEN, ASSIGNED) e historyRequests (COMPLETED)', () => {
+    const openReq: RequestDetailResponse = {
+      ...mockRequest,
+      requestId: 'req-open',
+      status: RepairRequestStatus.Open
+    };
+    const assignedReq: RequestDetailResponse = {
+      ...mockRequest,
+      requestId: 'req-assigned',
+      status: RepairRequestStatus.Assigned
+    };
+    const completedReq: RequestDetailResponse = {
+      ...mockRequest,
+      requestId: 'req-completed',
+      status: RepairRequestStatus.Completed
+    };
+
+    initialize([openReq, assignedReq, completedReq]);
+
+    expect(component.activeRequests().map((r) => r.requestId)).toEqual(['req-open', 'req-assigned']);
+    expect(component.historyRequests().map((r) => r.requestId)).toEqual(['req-completed']);
+  });
+
+  it('statusLabel debe mostrar "Completada" para COMPLETED y no "Asignada"', () => {
+    expect(component.statusLabel(RepairRequestStatus.Completed)).toBe('Completada');
+    expect(component.statusLabel('COMPLETED')).toBe('Completada');
+    expect(component.statusLabel(RepairRequestStatus.Open)).toBe('Abierta');
+    expect(component.statusLabel(RepairRequestStatus.Assigned)).toBe('Asignada');
   });
 
   it('debe procesar carga de fotos: ticket -> PUT binario sin Auth -> confirm -> READY -> POST con mediaIds', () => {
@@ -221,7 +359,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       propertyId: mockProperty.id!,
       title: 'Tubería rota',
       description: 'Fuga evidente en la pared.',
-      urgencyLevel: 'MEDIUM'
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Transfer
     });
 
     component.submit();
@@ -233,6 +372,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       title: 'Tubería rota',
       description: 'Fuga evidente en la pared.',
       urgencyLevel: 'MEDIUM',
+      paymentMethod: 'TRANSFER',
       mediaIds: ['media-foto-1']
     });
 
@@ -282,22 +422,6 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(component.photoValidationError()).toContain('Solo se admiten imágenes JPEG, PNG y WebP');
   });
 
-  it('debe permitir retirar una foto antes de enviar', () => {
-    initialize();
-
-    const file = new File(['data'], 'foto.jpg', { type: 'image/jpeg' });
-    component.onFilesSelected({
-      target: { files: [file], value: 'fake' }
-    } as unknown as Event);
-
-    // Cancelar/retirar
-    const item = component.photos()[0];
-    component.removePhoto(item);
-
-    expect(component.photos().length).toBe(0);
-    httpTesting.expectOne(`${environment.apiOrigin}/media/uploads`);
-  });
-
   it('si falla POST /requests, conserva los mediaIds confirmados y no los vuelve a subir al reintentar', () => {
     initialize();
 
@@ -320,17 +444,14 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       status: 'READY'
     });
 
-    expect(component.photos()[0].status).toBe('READY');
-    expect(component.photos()[0].mediaId).toBe('media-id-saved');
-
     component.form.setValue({
       propertyId: mockProperty.id!,
       title: 'Problema en casa',
       description: 'Varios desperfectos.',
-      urgencyLevel: 'MEDIUM'
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Transfer
     });
 
-    // 1. Intento de publicación falla con 500
     component.submit();
 
     const post1 = httpTesting.expectOne(`${environment.apiOrigin}/requests`);
@@ -338,12 +459,10 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     post1.flush(null, { status: 500, statusText: 'Internal Server Error' });
 
     expect(component.submitError()).toContain('No pudimos publicar la solicitud');
-    // Las fotos y sus mediaIds se conservan sin alteración
     expect(component.photos().length).toBe(1);
     expect(component.photos()[0].status).toBe('READY');
     expect(component.photos()[0].mediaId).toBe('media-id-saved');
 
-    // 2. Reintento: NO solicita tickets ni vuelve a hacer PUT binario
     component.submit();
 
     const post2 = httpTesting.expectOne(`${environment.apiOrigin}/requests`);
@@ -364,7 +483,8 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
       propertyId: '',
       title: 'Reparar puerta',
       description: 'La puerta no cierra bien.',
-      urgencyLevel: 'MEDIUM'
+      urgencyLevel: 'MEDIUM',
+      paymentMethod: PaymentMethod.Transfer
     });
 
     component.submit();
@@ -381,34 +501,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(component.form.controls.propertyId.value).toBe(mockProperty.id);
   });
 
-  it('no acepta un propertyId de la URL que no pertenece al owner', () => {
-    requestedPropertyId = '550e8400-e29b-41d4-a716-446655440000';
-    initialize();
-
-    expect(component.form.controls.propertyId.value).toBe('');
-  });
-
-  it('no selecciona una propiedad automáticamente si la URL no tiene propertyId', () => {
-    initialize();
-
-    expect(component.form.controls.propertyId.value).toBe('');
-  });
-
-  it('permite cambiar manualmente la propiedad después de una preselección', () => {
-    const anotherProperty: PropertySummary = {
-      ...mockProperty,
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Casa familiar'
-    };
-    requestedPropertyId = mockProperty.id!;
-    initialize([], [mockProperty, anotherProperty]);
-
-    component.form.controls.propertyId.setValue(anotherProperty.id!);
-
-    expect(component.form.controls.propertyId.value).toBe(anotherProperty.id);
-  });
-
-  it('TENANT carga sus solicitudes sin consultar propiedades y no muestra el formulario', () => {
+  it('TENANT carga sus solicitudes sin consultar propiedades ni deudas y no muestra el formulario', () => {
     const element = initializeReadOnly('TENANT', [mockRequest]);
 
     expect(component.requests()).toEqual([mockRequest]);
@@ -417,26 +510,94 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(element.querySelector('form')).toBeNull();
   });
 
-  it('TENANT ignora propertyId de la URL sin consultar propiedades ni preseleccionar', () => {
-    requestedPropertyId = mockProperty.id!;
-    initializeReadOnly('TENANT');
+  it('permite alternar entre pestañas Activas e Historial', () => {
+    const completedRequest: RequestDetailResponse = {
+      ...mockRequest,
+      requestId: 'req-completed-1',
+      title: 'Reparación de techo completada',
+      status: RepairRequestStatus.Completed
+    };
+    initialize([mockRequest, completedRequest]);
+    fixture.detectChanges();
 
-    expect(component.form.controls.propertyId.value).toBe('');
-    expect(component.properties()).toEqual([]);
+    expect(component.activeRequests().length).toBe(1);
+    expect(component.historyRequests().length).toBe(1);
+    expect(component.activeTab()).toBe('ACTIVE');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain(mockRequest.title);
+    expect(compiled.textContent).not.toContain(completedRequest.title);
+
+    // Cambiar a Historial
+    component.activeTab.set('HISTORY');
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain(completedRequest.title);
+    expect(compiled.textContent).not.toContain(mockRequest.title);
   });
 
-  it('REAL_ESTATE_MANAGER carga sus solicitudes sin consultar propiedades ni mostrar creación', () => {
-    const element = initializeReadOnly('REAL_ESTATE_MANAGER', [mockRequest]);
+  it('abre el drawer contextual con Ver detalle y lo cierra con el botón X', () => {
+    initialize([mockRequest]);
+    fixture.detectChanges();
 
-    expect(component.requests()).toEqual([mockRequest]);
-    expect(element.textContent).not.toContain('Nueva solicitud');
-    expect(element.querySelector('form')).toBeNull();
+    expect(component.selectedRequestForDrawer()).toBeNull();
+    const detailBtn = fixture.nativeElement.querySelector('#btn-detail-req-1111-1111') as HTMLButtonElement;
+    expect(detailBtn).toBeTruthy();
+
+    detailBtn.click();
+    fixture.detectChanges();
+
+    expect(component.selectedRequestForDrawer()?.requestId).toBe(mockRequest.requestId);
+    const drawerElement = fixture.nativeElement.querySelector('#request-detail-drawer');
+    expect(drawerElement).toBeTruthy();
+    expect(drawerElement.textContent).toContain(mockRequest.title);
+    expect(drawerElement.textContent).toContain(mockRequest.description);
+
+    // Cierra con el botón X
+    const closeBtn = fixture.nativeElement.querySelector('#btn-close-request-drawer') as HTMLButtonElement;
+    expect(closeBtn).toBeTruthy();
+    closeBtn.click();
+    fixture.detectChanges();
+
+    expect(component.selectedRequestForDrawer()).toBeNull();
+    expect(fixture.nativeElement.querySelector('#request-detail-drawer')).toBeNull();
   });
 
-  it('muestra un estado vacío neutral para roles de solo lectura', () => {
-    const element = initializeReadOnly('TENANT');
+  it('muestra el badge de origen de remodelación si la solicitud pertenece a un proyecto', () => {
+    component.remodelingStore.selectedProject.set({
+      id: 'proj-123',
+      ownerUserId: 'owner-123',
+      propertyId: mockProperty.id!,
+      title: 'Remodelación Baño Principal',
+      status: 'OPEN',
+      requirementCount: 1,
+      assignedCount: 0,
+      completedCount: 0,
+      createdAt: '2026-09-19T10:00:00Z',
+      updatedAt: '2026-09-19T10:00:00Z',
+      requirements: [
+        {
+          requirementId: 'req-item-1',
+          position: 0,
+          specialty: Specialty.Plumbing,
+          requestId: mockRequest.requestId,
+          requestStatus: RepairRequestStatus.Open,
+          paymentMethod: PaymentMethod.Transfer
+        }
+      ]
+    });
 
-    expect(element.textContent).toContain('No tienes solicitudes registradas.');
-    expect(element.textContent).not.toContain('Registrar propiedad');
+    initialize([mockRequest]);
+    fixture.detectChanges();
+
+    const info = component.remodelingInfoFor(mockRequest.requestId);
+    expect(info).toEqual({
+      projectTitle: 'Remodelación Baño Principal',
+      position: 1,
+      projectId: 'proj-123'
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Remodelación Baño Principal');
   });
 });

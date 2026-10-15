@@ -30,4 +30,13 @@ export interface LocationControllerServiceInterface {
      */
     geocode(query: string, extraHttpRequestParams?: any): Observable<Array<GeocodingCandidate>>;
 
+    /**
+     * Resolve map coordinates to a readable address
+     * 
+     * @endpoint get /locations/reverse-geocode
+     * @param latitude 
+     * @param longitude 
+     */
+    reverseGeocode(latitude: number, longitude: number, extraHttpRequestParams?: any): Observable<Array<GeocodingCandidate>>;
+
 }

@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { UrgencyLevel } from './urgency-level';
+import { PaymentMethod } from './payment-method';
 
 
 export interface OpenRequest { 
@@ -16,6 +17,7 @@ export interface OpenRequest {
     description: string;
     mediaIds?: Array<string>;
     urgencyLevel?: UrgencyLevel;
+    paymentMethod: PaymentMethod;
 }
 export namespace OpenRequest {
 }

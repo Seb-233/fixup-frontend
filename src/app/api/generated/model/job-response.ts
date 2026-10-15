@@ -15,6 +15,8 @@ export interface JobResponse {
     requestId: string;
     quotationId: string;
     ownerUserId: string;
+    paymentMethod: string;
+    agreedAmount: number;
     status: JobStatus;
     createdAt: string;
     completedAt?: string | null;
