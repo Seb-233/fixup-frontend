@@ -136,32 +136,32 @@ describe('RemodelingDetailComponent', () => {
     expect(card2.textContent).toContain('Asignado');
   });
 
-  it('reutiliza los enlaces existentes a /requests y /quotations', () => {
+  it('reutiliza los enlaces existentes a /requests y /quotations con contexto de remodelación', () => {
     initialize();
 
     const linkReq1 = fixture.nativeElement.querySelector('#link-request-1') as HTMLAnchorElement;
-    expect(linkReq1.getAttribute('href')).toBe('/requests/rep-req-open');
+    expect(linkReq1.getAttribute('href')).toBe('/requests/rep-req-open?from=remodelings&projectId=proj-456');
 
     const linkQuot1 = fixture.nativeElement.querySelector('#link-quotations-1') as HTMLAnchorElement;
-    expect(linkQuot1.getAttribute('href')).toBe('/quotations/request/rep-req-open');
+    expect(linkQuot1.getAttribute('href')).toBe('/quotations/request/rep-req-open?from=remodelings&projectId=proj-456');
 
     const linkReq2 = fixture.nativeElement.querySelector('#link-request-2') as HTMLAnchorElement;
-    expect(linkReq2.getAttribute('href')).toBe('/requests/rep-req-assigned');
+    expect(linkReq2.getAttribute('href')).toBe('/requests/rep-req-assigned?from=remodelings&projectId=proj-456');
 
     const linkQuot2 = fixture.nativeElement.querySelector('#link-quotations-2') as HTMLAnchorElement;
-    expect(linkQuot2.getAttribute('href')).toBe('/quotations/request/rep-req-assigned');
+    expect(linkQuot2.getAttribute('href')).toBe('/quotations/request/rep-req-assigned?from=remodelings&projectId=proj-456');
   });
 
-  it('muestra el enlace a conversación solo cuando el estado permite chat', () => {
+  it('muestra el enlace a conversación solo cuando el estado permite chat con contexto de remodelación', () => {
     initialize();
 
     // Requisito 1 (OPEN): no debe tener enlace al chat
     const chatLink1 = fixture.nativeElement.querySelector('#link-chat-1');
     expect(chatLink1).toBeNull();
 
-    // Requisito 2 (ASSIGNED): debe tener enlace a /requests/rep-req-assigned/messages
+    // Requisito 2 (ASSIGNED): debe tener enlace a /requests/rep-req-assigned/messages con queryParams
     const chatLink2 = fixture.nativeElement.querySelector('#link-chat-2') as HTMLAnchorElement;
     expect(chatLink2).toBeTruthy();
-    expect(chatLink2.getAttribute('href')).toBe('/requests/rep-req-assigned/messages');
+    expect(chatLink2.getAttribute('href')).toBe('/requests/rep-req-assigned/messages?from=remodelings&projectId=proj-456');
   });
 });

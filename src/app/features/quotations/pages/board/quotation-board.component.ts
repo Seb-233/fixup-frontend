@@ -20,7 +20,7 @@ import { quotationStatusLabel } from '../../utils/quotation-ui.helpers';
   template: `
     <section class="board">
       <header>
-        <a class="back" [routerLink]="['/requests', requestId]">← Volver a la solicitud</a>
+        <a class="back" id="btn-back-quotation-board" [routerLink]="backNavigation().commands">{{ backNavigation().label }}</a>
         <h1 class="title">Cotizaciones recibidas</h1>
         @if (request(); as item) {
           <p class="subtitle">{{ item.title }}</p>
@@ -166,6 +166,30 @@ export class QuotationBoardComponent implements OnInit {
     this.quotations().some((quotation) => quotation.status === QuotationStatus.Accepted)
   );
 
+  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backNavigation = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    if (from === 'requests') {
+      return {
+        commands: ['/requests'],
+        label: '← Volver a mis solicitudes'
+      };
+    }
+    return {
+      commands: ['/requests', this.requestId],
+      label: '← Volver a la solicitud'
+    };
+  });
+
   ngOnInit(): void {
     if (!this.requestId) {
       this.loadError.set('La solicitud no existe.');
@@ -195,7 +219,14 @@ export class QuotationBoardComponent implements OnInit {
         this.operatingId.set(null);
         this.operatingAction.set(null);
         if (res.paymentMethod === PaymentMethod.Transfer && res.paymentId) {
-          this.router.navigate(['/payments', res.paymentId]);
+          const from = this.fromContext();
+          const projectId = this.projectIdContext();
+          const qParams = from === 'remodelings' && projectId ? { from, projectId } : (from === 'requests' ? { from: 'requests' } : undefined);
+          if (qParams) {
+            this.router.navigate(['/payments', res.paymentId], { queryParams: qParams });
+          } else {
+            this.router.navigate(['/payments', res.paymentId]);
+          }
         } else {
           // CASH: el backend creó el Job directamente. Reconsultar el estado correspondiente.
           this.load();

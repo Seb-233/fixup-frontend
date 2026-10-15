@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   PaymentControllerService,
@@ -17,7 +17,7 @@ import {
   template: `
     <section class="checkout-container">
       <header class="checkout-header">
-        <a routerLink="/requests" class="back-link">← Volver a mis solicitudes</a>
+        <a [routerLink]="backLinkInfo().commands" class="back-link">{{ backLinkInfo().label }}</a>
         <div class="gateway-badge">
           <span class="lock-icon">🔒</span> Pasarela de pagos FixUp
         </div>
@@ -82,7 +82,7 @@ import {
                 @if (p.requestId) {
                   <a [routerLink]="['/requests', p.requestId]" class="btn-primary">Ver la solicitud</a>
                 }
-                <a routerLink="/requests" class="btn-secondary">Ir a mis solicitudes</a>
+                <a [routerLink]="backLinkInfo().commands" class="btn-secondary">{{ backLinkInfo().label }}</a>
               </div>
             </div>
           }
@@ -531,6 +531,24 @@ export class PaymentCheckoutComponent implements OnInit {
 
   readonly outcomes = PaymentSimulationOutcome;
   readonly statuses = PaymentStatus;
+
+  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backLinkInfo = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    return {
+      commands: ['/requests'],
+      label: '← Volver a mis solicitudes'
+    };
+  });
 
   ngOnInit(): void {
     if (!this.paymentId) {

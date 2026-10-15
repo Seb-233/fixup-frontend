@@ -99,16 +99,31 @@ import {
 
                 <!-- ENLACES A FLUJOS EXISTENTES (REUTILIZACIÓN) -->
                 <footer class="req-actions">
-                  <a [routerLink]="['/requests', req.requestId]" class="action-link" [id]="'link-request-' + (req.position + 1)">
+                  <a
+                    [routerLink]="['/requests', req.requestId]"
+                    [queryParams]="{ from: 'remodelings', projectId: project.id }"
+                    class="action-link"
+                    [id]="'link-request-' + (req.position + 1)"
+                  >
                     Ver solicitud →
                   </a>
 
-                  <a [routerLink]="['/quotations/request', req.requestId]" class="action-link" [id]="'link-quotations-' + (req.position + 1)">
+                  <a
+                    [routerLink]="['/quotations/request', req.requestId]"
+                    [queryParams]="{ from: 'remodelings', projectId: project.id }"
+                    class="action-link"
+                    [id]="'link-quotations-' + (req.position + 1)"
+                  >
                     Ver cotizaciones →
                   </a>
 
                   @if (canChat(req)) {
-                    <a [routerLink]="['/requests', req.requestId, 'messages']" class="action-link chat-link" [id]="'link-chat-' + (req.position + 1)">
+                    <a
+                      [routerLink]="['/requests', req.requestId, 'messages']"
+                      [queryParams]="{ from: 'remodelings', projectId: project.id }"
+                      class="action-link chat-link"
+                      [id]="'link-chat-' + (req.position + 1)"
+                    >
                       Conversación →
                     </a>
                   }

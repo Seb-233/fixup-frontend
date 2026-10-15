@@ -76,8 +76,15 @@ export class RemodelingStore {
     this.selectedProject.set(null);
   }
 
-  resetError(): void {
-    this.error.set(null);
+  getRequirementInfo(requestId: string): { projectTitle: string; position: number; projectId: string } | null {
+    const selected = this.selectedProject();
+    if (selected?.requirements) {
+      const match = selected.requirements.find((r) => r.requestId === requestId);
+      if (match) {
+        return { projectTitle: selected.title, position: match.position + 1, projectId: selected.id };
+      }
+    }
+    return null;
   }
 
   private translateError(err: HttpErrorResponse, fallback: string): string {

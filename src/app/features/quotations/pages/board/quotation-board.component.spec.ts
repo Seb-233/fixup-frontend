@@ -196,4 +196,32 @@ describe('QuotationBoardComponent (Tablero comparativo con accept y reject)', ()
     expect(component.actionError()).toContain('Esta oferta ya no se puede modificar');
     expect(component.operatingId()).toBeNull();
   });
+
+  it('calcula la navegación hacia atrás hacia remodelación cuando provino de remodelaciones', () => {
+    const route = TestBed.inject(ActivatedRoute);
+    (route.snapshot as unknown as Record<string, unknown>)['queryParamMap'] = {
+      get: (key: string) => {
+        if (key === 'from') return 'remodelings';
+        if (key === 'projectId') return 'proj-bathroom-1';
+        return null;
+      }
+    };
+
+    expect(component.backNavigation()).toEqual({
+      commands: ['/remodelings', 'proj-bathroom-1'],
+      label: '← Volver al proyecto de remodelación'
+    });
+  });
+
+  it('calcula la navegación hacia atrás hacia mis solicitudes cuando provino de requests', () => {
+    const route = TestBed.inject(ActivatedRoute);
+    (route.snapshot as unknown as Record<string, unknown>)['queryParamMap'] = {
+      get: (key: string) => (key === 'from' ? 'requests' : null)
+    };
+
+    expect(component.backNavigation()).toEqual({
+      commands: ['/requests'],
+      label: '← Volver a mis solicitudes'
+    });
+  });
 });
