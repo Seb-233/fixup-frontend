@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { UrgencyLevel } from './urgency-level';
+import { PaymentMethod } from './payment-method';
 
 
 export interface RequirementRequest { 
@@ -15,6 +16,7 @@ export interface RequirementRequest {
     description: string;
     mediaIds?: Array<string>;
     urgencyLevel?: UrgencyLevel;
+    paymentMethod: PaymentMethod;
 }
 export namespace RequirementRequest {
 }

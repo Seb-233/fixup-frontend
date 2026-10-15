@@ -41,10 +41,13 @@ configuration.ts
 encoder.ts
 git_push.sh
 index.ts
+model/accepted-quotation-response.ts
 model/bootstrap-response.ts
 model/bulk-import-result.ts
 model/bulk-validation-error.ts
 model/bulk-validation-result.ts
+model/cash-settlement-detail.ts
+model/completion-request.ts
 model/confirm-response-dto.ts
 model/contract-response.ts
 model/contract-status.ts
@@ -74,9 +77,15 @@ model/notification-type.ts
 model/open-request-summary-response.ts
 model/open-request.ts
 model/own-portfolio-response.ts
+model/owner-debt-detail.ts
 model/page-sla-board-item-response.ts
 model/pageable-object.ts
 model/pageable.ts
+model/payment-detail.ts
+model/payment-method.ts
+model/payment-purpose.ts
+model/payment-simulation-outcome.ts
+model/payment-status.ts
 model/payout-response.ts
 model/payout-status.ts
 model/photo-response.ts
@@ -103,6 +112,7 @@ model/role-request.ts
 model/role.ts
 model/roles-response.ts
 model/send-message-request.ts
+model/simulation-request.ts
 model/sla-board-item-response.ts
 model/sla-state.ts
 model/sort-object.ts
