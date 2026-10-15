@@ -291,11 +291,12 @@ import {
     }
     .board-link { color: var(--fixup-color-accent); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
     .board-link:hover { text-decoration: underline; }
-    .quote-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    .quote-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
     @media (max-width: 640px) { .quote-form { grid-template-columns: 1fr; } }
-    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; min-width: 0; }
     .field.wide { grid-column: 1 / -1; }
     .field input, .field textarea {
+      width: 100%; max-width: 100%; box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4); border-radius: var(--fixup-radius-md);
       padding: 0.55rem 0.7rem; font: inherit; color: var(--fixup-color-primary); background: #fff;
       resize: vertical;

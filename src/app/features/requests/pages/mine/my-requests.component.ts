@@ -427,14 +427,21 @@ export interface RequestPhotoUploadItem {
       font-family: var(--fixup-font-heading); color: var(--fixup-color-primary);
       font-size: 1.05rem; margin: 0 0 0.85rem 0;
     }
-    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+    .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
     @media (max-width: 640px) { .form { grid-template-columns: 1fr; } }
-    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #666; min-width: 0; }
     .field.wide { grid-column: 1 / -1; }
     .field input, .field select, .field textarea {
+      width: 100%; max-width: 100%; box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4); border-radius: var(--fixup-radius-md);
       padding: 0.55rem 0.7rem; font: inherit; color: var(--fixup-color-primary);
-      background: #fff; resize: vertical;
+      background: #fff; resize: vertical; min-height: 42px;
+    }
+    .field textarea { min-height: 96px; }
+    .field select {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
     }
     .field-error { color: #b91c1c; font-size: 0.74rem; }
     .submit-error {
@@ -556,9 +563,15 @@ export interface RequestPhotoUploadItem {
     }
 
     .urgency-select {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       border: 1px solid rgba(154, 148, 141, 0.4);
       border-radius: var(--fixup-radius-md);
-      padding: 0;
+      background: #fff;
+      min-height: 42px;
+      --padding-start: 0.7rem;
+      --padding-end: 0.7rem;
     }
 
     .urgency-badge {
@@ -621,8 +634,10 @@ export interface RequestPhotoUploadItem {
 
     .payment-methods-group {
       display: flex;
+      align-items: center;
       gap: 1.5rem;
-      margin-top: 0.2rem;
+      min-height: 42px;
+      margin-top: 0;
     }
     .radio-label {
       display: inline-flex;
