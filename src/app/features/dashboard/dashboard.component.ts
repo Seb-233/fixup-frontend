@@ -4,19 +4,15 @@ import { RouterLink } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { getNavigationForRole, RoleNavigationItem } from '../../core/navigation/role-navigation';
 import { FixerVerificationStore } from '../fixers/pages/verification/fixer-verification.store';
-import { ContractExpirationCardComponent } from '../contracts/components/contract-expiration-card/contract-expiration-card.component';
-import { ContractsStore } from '../contracts/services/contracts.store';
 
 interface DashboardAction extends RoleNavigationItem {
   description: string;
 }
 
-const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const;
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, ContractExpirationCardComponent],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="dashboard-container">
       <header class="welcome-hero">
@@ -34,12 +30,6 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
           </span>
         </div>
       </header>
-
-      @if (showContractWidget()) {
-        <app-contract-expiration-card
-          [upcoming]="contractsStore.upcomingExpirations()"
-        />
-      }
 
       @if (userStore.activeRole() === 'FIXER' && !verificationStore.verified()) {
         <section class="panel-section verification-callout">
@@ -116,11 +106,6 @@ const WIDGET_ROLES = ['OWNER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const
 export class DashboardComponent {
   readonly userStore = inject(CurrentUserStore);
   readonly verificationStore = inject(FixerVerificationStore);
-  readonly contractsStore = inject(ContractsStore);
-
-  readonly showContractWidget = computed(() =>
-    WIDGET_ROLES.includes(this.userStore.activeRole() as typeof WIDGET_ROLES[number])
-  );
 
   readonly roleLabel = computed(() => {
     switch (this.userStore.activeRole()) {

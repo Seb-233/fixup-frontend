@@ -6,7 +6,6 @@ import { environment } from '../../../environments/environment';
 import { AuthApiService } from '../../api/auth-api.service';
 import { BackendUserProfile, Role, SelectableRole } from './auth.types';
 import { CurrentUserStore } from './current-user.store';
-import { NotificationsStore } from '../notifications/notifications.store';
 import { nativeLogoutUrl } from './native-callback';
 import { NativeAuthService } from './native-auth.service';
 
@@ -18,7 +17,6 @@ export class AuthService {
   private readonly auth0 = inject(Auth0Service);
   private readonly authApi = inject(AuthApiService);
   private readonly userStore = inject(CurrentUserStore);
-  private readonly notificationsStore = inject(NotificationsStore);
   private readonly router = inject(Router);
   private readonly native = inject(NativeAuthService);
 
@@ -93,14 +91,11 @@ export class AuthService {
   logout(): Observable<void> {
     this.userStore.clear();
     this.initTrigger$.next();
-
     const returnTo = this.native.enabled
       ? nativeLogoutUrl(environment.native.appId, environment.auth0.domain)
       : typeof window !== 'undefined'
         ? `${window.location.origin}/auth/login`
         : 'http://localhost:4200/auth/login';
-
-    this.notificationsStore.resetForNewSession();
 
     return this.auth0.logout({
       logoutParams: {
