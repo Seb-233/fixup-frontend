@@ -189,4 +189,53 @@ describe('MyJobsComponent (Gestión y liquidación de trabajos)', () => {
     expect(component.successMessage()).toContain('saldo pendiente');
     httpTesting.expectOne(`${environment.apiOrigin}/jobs/me`).flush([]);
   });
+
+  it('debe mapear 409 con INVALID_CASH_RECEIVED_AMOUNT al mensaje de monto inválido y NO a trabajo cerrado', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/jobs/me`).flush([mockCashJob]);
+
+    component.onCompleteClick(mockCashJob);
+    component.confirmCashComplete(mockCashJob);
+
+    const completeReq = httpTesting.expectOne(`${environment.apiOrigin}/jobs/job-cash-2/complete`);
+    completeReq.flush(
+      { code: 'INVALID_CASH_RECEIVED_AMOUNT', message: 'Amount not valid' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    expect(component.actionError()).toBe('El monto recibido en efectivo no es válido.');
+    expect(component.actionError()).not.toContain('ya estaba cerrado');
+    expect(component.closingId()).toBeNull();
+  });
+
+  it('debe mapear JOB_ALREADY_COMPLETED o JOB_ALREADY_CLOSED al mensaje de trabajo ya cerrado', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/jobs/me`).flush([mockTransferJob]);
+
+    component.onCompleteClick(mockTransferJob);
+    const completeReq = httpTesting.expectOne(`${environment.apiOrigin}/jobs/job-transfer-1/complete`);
+    completeReq.flush(
+      { code: 'JOB_ALREADY_COMPLETED', message: 'Job completed' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    expect(component.actionError()).toBe('Ese trabajo ya estaba cerrado.');
+    expect(component.closingId()).toBeNull();
+  });
+
+  it('debe mapear un error 409 desconocido a un fallback controlado y no a trabajo cerrado', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/jobs/me`).flush([mockTransferJob]);
+
+    component.onCompleteClick(mockTransferJob);
+    const completeReq = httpTesting.expectOne(`${environment.apiOrigin}/jobs/job-transfer-1/complete`);
+    completeReq.flush(
+      { code: 'UNKNOWN_CONFLICT', message: 'Conflict' },
+      { status: 409, statusText: 'Conflict' }
+    );
+
+    expect(component.actionError()).toContain('conflicto en su estado');
+    expect(component.actionError()).not.toContain('ya estaba cerrado');
+    expect(component.closingId()).toBeNull();
+  });
 });

@@ -584,14 +584,18 @@ export class MyJobsComponent implements OnInit {
   }
 
   private describeError(error: HttpErrorResponse): string {
-    if (error.status === 409) {
+    const code = error.error?.code;
+    if (code === 'INVALID_CASH_RECEIVED_AMOUNT') {
+      return 'El monto recibido en efectivo no es válido.';
+    }
+    if (code === 'JOB_ALREADY_COMPLETED' || code === 'JOB_ALREADY_CLOSED') {
       return 'Ese trabajo ya estaba cerrado.';
     }
     if (error.status === 403) {
       return 'Solo el técnico asignado puede cerrar este trabajo.';
     }
-    if (error.status === 400 || error.error?.code === 'INVALID_CASH_RECEIVED_AMOUNT') {
-      return 'El monto en efectivo ingresado es inválido para este trabajo.';
+    if (error.status === 409) {
+      return 'No fue posible cerrar el trabajo debido a un conflicto en su estado. Intenta de nuevo.';
     }
     return 'No pudimos cerrar el trabajo. Intenta de nuevo en un momento.';
   }

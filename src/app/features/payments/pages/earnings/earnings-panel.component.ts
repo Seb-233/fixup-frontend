@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   EarningStatus,
@@ -53,7 +53,7 @@ import { commissionPercent, earningStatusLabel, payoutStatusLabel } from '../../
             <span class="hint">sobre {{ data.grossTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }} facturados</span>
           </article>
           <article class="tile paid">
-            <span class="label">Solicitado para transferencia</span>
+            <span class="label">{{ paidOutTileLabel() }}</span>
             <strong class="value">{{ data.paidOutTotal | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
           </article>
         </div>
@@ -62,10 +62,15 @@ import { commissionPercent, earningStatusLabel, payoutStatusLabel } from '../../
           @if (payoutError()) {
             <p class="state error">{{ payoutError() }}</p>
           }
-          @if (lastPayout(); as payout) {
+          @if (displayPayout(); as payout) {
             <p class="state ok">
-              Solicitaste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
-              sobre {{ payout.earningCount }} servicio(s).
+              @if (payout.status === 'TRANSFERRED') {
+                Transferiste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+                sobre {{ payout.earningCount }} servicio(s).
+              } @else {
+                Solicitaste {{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}
+                sobre {{ payout.earningCount }} servicio(s).
+              }
             </p>
           }
           <button
@@ -107,7 +112,7 @@ import { commissionPercent, earningStatusLabel, payoutStatusLabel } from '../../
                     · liberado el {{ line.releasedAt | date: 'dd/MM/yyyy' }}
                   }
                   @if (line.paidOutAt) {
-                    · solicitado para transferencia el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
+                    · {{ hasPendingPayout() ? 'solicitado para transferencia' : 'transferido' }} el {{ line.paidOutAt | date: 'dd/MM/yyyy' }}
                   }
                 </p>
               </li>
@@ -293,6 +298,27 @@ export class EarningsPanelComponent implements OnInit {
   readonly requesting = signal(false);
   readonly payoutError = signal<string | null>(null);
   readonly lastPayout = signal<PayoutResponse | null>(null);
+
+  readonly hasPendingPayout = computed(() =>
+    this.payouts().some((p) => p.status === PayoutStatus.Requested) ||
+    this.lastPayout()?.status === PayoutStatus.Requested
+  );
+
+  readonly paidOutTileLabel = computed(() => {
+    if (this.hasPendingPayout()) {
+      return 'Solicitado para transferencia';
+    }
+    return 'Total transferido';
+  });
+
+  readonly displayPayout = computed(() => {
+    const lp = this.lastPayout();
+    if (!lp) {
+      return null;
+    }
+    const found = this.payouts().find((p) => p.id === lp.id);
+    return found ?? lp;
+  });
 
   ngOnInit(): void {
     this.load();

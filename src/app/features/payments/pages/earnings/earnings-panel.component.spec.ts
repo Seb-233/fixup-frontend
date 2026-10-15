@@ -154,7 +154,31 @@ describe('EarningsPanelComponent (Panel de ingresos y transferencias del Fixer)'
       paidOutTotal: 270000
     });
     httpTesting.expectOne(`${environment.apiOrigin}/payments/me/payouts`).flush([createdPayout]);
-
     expect(component.summary()?.availableBalance).toBe(0);
+    expect(component.paidOutTileLabel()).toBe('Total transferido');
+    expect(component.displayPayout()?.status).toBe(PayoutStatus.Transferred);
+  });
+
+  it('debe ajustar la tarjeta resumen a "Solicitado para transferencia" cuando hay un payout REQUESTED pendiente', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/payments/me/earnings`).flush(mockEarnings);
+    // mockPayouts contiene payout-2 con status REQUESTED
+    httpTesting.expectOne(`${environment.apiOrigin}/payments/me/payouts`).flush(mockPayouts);
+
+    expect(component.hasPendingPayout()).toBe(true);
+    expect(component.paidOutTileLabel()).toBe('Solicitado para transferencia');
+  });
+
+  it('debe mostrar "Total transferido" cuando todos los payouts están en TRANSFERRED', () => {
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/payments/me/earnings`).flush({
+      ...mockEarnings,
+      availableBalance: 0,
+      paidOutTotal: 200000
+    });
+    httpTesting.expectOne(`${environment.apiOrigin}/payments/me/payouts`).flush([mockPayouts[0]]); // payout-1 TRANSFERRED
+
+    expect(component.hasPendingPayout()).toBe(false);
+    expect(component.paidOutTileLabel()).toBe('Total transferido');
   });
 });
