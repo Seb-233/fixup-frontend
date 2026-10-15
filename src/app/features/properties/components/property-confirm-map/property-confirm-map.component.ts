@@ -28,11 +28,34 @@ function createDraggablePinIcon(): L.DivIcon {
   });
 }
 
+const DEFAULT_CENTER_LAT = 4.60971;
+const DEFAULT_CENTER_LNG = -74.08175;
+
 @Component({
   selector: 'app-property-confirm-map',
   standalone: true,
   template: `
     <div class="confirm-map-wrapper">
+      <div class="confirm-map-header-bar">
+        <button
+          type="button"
+          id="btn-confirm-use-my-location"
+          class="btn-use-location"
+          (click)="requestLocation.emit()"
+          [disabled]="isLocating() || isReverseGeocoding()"
+        >
+          <span class="loc-icon" aria-hidden="true">📍</span>
+          <span>{{ isLocating() ? 'Obteniendo ubicación…' : 'Usar mi ubicación' }}</span>
+        </button>
+
+        @if (isReverseGeocoding()) {
+          <div class="reverse-badge" role="status" aria-live="polite">
+            <span class="reverse-spinner" aria-hidden="true"></span>
+            <span>Actualizando dirección…</span>
+          </div>
+        }
+      </div>
+
       <div
         #mapContainer
         id="property-confirm-map-container"
@@ -42,15 +65,14 @@ function createDraggablePinIcon(): L.DivIcon {
         aria-label="Mapa de confirmación de ubicación"
       ></div>
 
-      @if (isReverseGeocoding()) {
-        <div class="reverse-badge" role="status" aria-live="polite">
-          <span class="reverse-spinner" aria-hidden="true"></span>
-          <span>Actualizando dirección…</span>
-        </div>
-      }
-
       <div class="confirm-map-footer">
-        <span class="drag-hint">💡 Puedes arrastrar el marcador para afinar la ubicación exacta del inmueble.</span>
+        <span class="drag-hint">
+          @if (latitude() !== null && longitude() !== null) {
+            💡 Puedes arrastrar el marcador o hacer clic en el mapa para afinar la ubicación exacta del inmueble.
+          } @else {
+            📍 Haz clic en el mapa o escribe una dirección para ubicar el inmueble.
+          }
+        </span>
         <span class="map-attribution-text">{{ tileConfig.attribution }}</span>
       </div>
     </div>
@@ -70,11 +92,51 @@ function createDraggablePinIcon(): L.DivIcon {
       background: #f8fafc;
     }
 
+    .confirm-map-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.45rem 0.65rem;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .btn-use-location {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #ffffff;
+      color: #2D2E31;
+      border: 1px solid #CEAC78;
+      border-radius: 6px;
+      padding: 0.32rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background: #fdfaf3;
+        border-color: #B9975B;
+      }
+
+      &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .loc-icon {
+        font-size: 0.9rem;
+      }
+    }
+
     .confirm-map-container {
       width: 100%;
       height: 320px;
       background: #e2e8f0;
       outline: none;
+      cursor: crosshair;
 
       &:focus-visible {
         outline: 2px solid var(--fixup-color-primary, #2D2E31);
@@ -83,20 +145,17 @@ function createDraggablePinIcon(): L.DivIcon {
     }
 
     .reverse-badge {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1000;
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
       background: rgba(45, 46, 49, 0.92);
       color: #fff;
-      padding: 0.35rem 0.75rem;
+      padding: 0.3rem 0.65rem;
       border-radius: 9999px;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      margin-left: auto;
     }
 
     .reverse-spinner {
@@ -188,8 +247,10 @@ export class PropertyConfirmMapComponent implements AfterViewInit {
   readonly longitude = input<number | null>(null);
   readonly addressLabel = input<string | null>(null);
   readonly isReverseGeocoding = input<boolean>(false);
+  readonly isLocating = input<boolean>(false);
 
   readonly positionChanged = output<{ latitude: number; longitude: number }>();
+  readonly requestLocation = output<void>();
 
   private mapInstance: L.Map | null = null;
   private markerInstance: L.Marker | null = null;
@@ -205,8 +266,15 @@ export class PropertyConfirmMapComponent implements AfterViewInit {
     effect(() => {
       const lat = this.latitude();
       const lng = this.longitude();
-      if (lat != null && lng != null && this.isInitialized) {
-        this.updateMarker(lat, lng);
+      if (this.isInitialized) {
+        if (lat != null && lng != null) {
+          this.updateMarker(lat, lng);
+        } else if (this.markerInstance) {
+          this.markerInstance.remove();
+          this.markerInstance = null;
+          this.lastRenderedLat = null;
+          this.lastRenderedLng = null;
+        }
       }
     });
   }
@@ -219,13 +287,14 @@ export class PropertyConfirmMapComponent implements AfterViewInit {
     const container = this.mapContainerRef()?.nativeElement;
     if (!container) return;
 
-    const lat = this.latitude() ?? 4.6097;
-    const lng = this.longitude() ?? -74.0817;
+    const lat = this.latitude() ?? DEFAULT_CENTER_LAT;
+    const lng = this.longitude() ?? DEFAULT_CENTER_LNG;
+    const zoom = this.latitude() != null && this.longitude() != null ? 16 : 13;
 
     try {
       this.mapInstance = L.map(container, {
         center: [lat, lng],
-        zoom: 16,
+        zoom,
         zoomControl: true,
         attributionControl: false
       });
@@ -239,10 +308,19 @@ export class PropertyConfirmMapComponent implements AfterViewInit {
         this.createMarker(this.latitude()!, this.longitude()!);
       }
 
+      this.mapInstance.on('click', (e: L.LeafletMouseEvent) => {
+        this.onMapClick(e.latlng);
+      });
+
       this.isInitialized = true;
     } catch {
       // Degraded fallback handled silently or container stays blank
     }
+  }
+
+  private onMapClick(latLng: L.LatLng): void {
+    this.updateMarker(latLng.lat, latLng.lng);
+    this.positionChanged.emit({ latitude: latLng.lat, longitude: latLng.lng });
   }
 
   private createMarker(lat: number, lng: number): void {
@@ -280,7 +358,6 @@ export class PropertyConfirmMapComponent implements AfterViewInit {
       return;
     }
 
-    // Only update if coordinates differ significantly (to avoid jumping on minor drag events)
     if (
       this.lastRenderedLat == null ||
       this.lastRenderedLng == null ||

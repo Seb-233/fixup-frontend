@@ -27,6 +27,16 @@ describe('PropertyConfirmMapComponent', () => {
     fixture?.destroy();
   });
 
+  it('inicializa el mapa centrado por defecto sin marcador cuando no se proveen coordenadas', () => {
+    fixture.detectChanges();
+
+    const container = fixture.nativeElement.querySelector('#property-confirm-map-container');
+    expect(container).not.toBeNull();
+
+    const marker = (component as unknown as { markerInstance: L.Marker | null }).markerInstance;
+    expect(marker).toBeNull();
+  });
+
   it('inicializa el mapa y renderiza el marcador arrastrable con las coordenadas provistas', () => {
     fixture.componentRef.setInput('latitude', 4.65);
     fixture.componentRef.setInput('longitude', -74.05);
@@ -61,6 +71,43 @@ describe('PropertyConfirmMapComponent', () => {
     expect(emitted[0].longitude).toBeCloseTo(-74.04);
   });
 
+  it('hacer click en el mapa posiciona el marcador y emite positionChanged', () => {
+    fixture.detectChanges();
+
+    const emitted: { latitude: number; longitude: number }[] = [];
+    component.positionChanged.subscribe((coords) => emitted.push(coords));
+
+    const mapInstance = (component as unknown as { mapInstance: L.Map | null }).mapInstance;
+    expect(mapInstance).not.toBeNull();
+
+    // Simular click en Leaflet
+    mapInstance?.fire('click', {
+      latlng: L.latLng(4.68, -74.06)
+    });
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0].latitude).toBeCloseTo(4.68);
+    expect(emitted[0].longitude).toBeCloseTo(-74.06);
+
+    const marker = (component as unknown as { markerInstance: L.Marker | null }).markerInstance;
+    expect(marker).not.toBeNull();
+  });
+
+  it('el botón "Usar mi ubicación" emite requestLocation', () => {
+    fixture.detectChanges();
+
+    let requested = false;
+    component.requestLocation.subscribe(() => {
+      requested = true;
+    });
+
+    const btn = fixture.nativeElement.querySelector('#btn-confirm-use-my-location') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+
+    expect(requested).toBe(true);
+  });
+
   it('muestra el indicador de carga cuando isReverseGeocoding es true', () => {
     fixture.componentRef.setInput('latitude', 4.65);
     fixture.componentRef.setInput('longitude', -74.05);
@@ -70,5 +117,21 @@ describe('PropertyConfirmMapComponent', () => {
     const badge = fixture.nativeElement.querySelector('.reverse-badge');
     expect(badge).not.toBeNull();
     expect(badge?.textContent).toContain('Actualizando dirección');
+  });
+
+  it('elimina el marcador cuando las coordenadas pasan a ser null', () => {
+    fixture.componentRef.setInput('latitude', 4.65);
+    fixture.componentRef.setInput('longitude', -74.05);
+    fixture.detectChanges();
+
+    let marker = (component as unknown as { markerInstance: L.Marker | null }).markerInstance;
+    expect(marker).not.toBeNull();
+
+    fixture.componentRef.setInput('latitude', null);
+    fixture.componentRef.setInput('longitude', null);
+    fixture.detectChanges();
+
+    marker = (component as unknown as { markerInstance: L.Marker | null }).markerInstance;
+    expect(marker).toBeNull();
   });
 });
