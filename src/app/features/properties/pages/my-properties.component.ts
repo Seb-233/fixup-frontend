@@ -1,17 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { PropertyControllerService, PropertySummary } from '../../../api/generated';
+import { LocationControllerService, PropertyControllerService, PropertySummary } from '../../../api/generated';
 import { GeocodingCandidate } from '../models/geocoding.models';
 import { GeocodingStore } from '../services/geocoding.store';
+import { PropertyConfirmMapComponent } from '../components/property-confirm-map/property-confirm-map.component';
+
+export type PropertyLocationState = 'UNRESOLVED' | 'RESOLVING' | 'CONFIRMED';
 
 @Component({
   selector: 'app-my-properties',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, PropertyConfirmMapComponent],
   template: `
     <section class="properties-page">
       <header>
@@ -59,49 +62,50 @@ import { GeocodingStore } from '../services/geocoding.store';
                 id="btn-lookup-location"
                 class="btn-lookup"
                 (click)="lookupLocation()"
-                [disabled]="!canLookupLocation() || geocodingStore.isGeocoding()"
+                [disabled]="!canLookupLocation() || locationState() === 'RESOLVING' || geocodingStore.isGeocoding()"
               >
-                {{ geocodingStore.isGeocoding() ? 'Buscando ubicación…' : 'Buscar ubicación' }}
+                {{ locationState() === 'RESOLVING' || geocodingStore.isGeocoding() ? 'Buscando en el mapa…' : 'Ubicar en el mapa' }}
               </button>
             </div>
 
-            @if (geocodingStore.state() === 'geocoding') {
-              <p class="lookup-status">Consultando candidatos geográficos…</p>
+            @if (locationState() === 'RESOLVING' || geocodingStore.isGeocoding()) {
+              <p class="lookup-status">Geocodificando dirección y localizando en el mapa…</p>
             }
 
-            @if (geocodingStore.state() === 'empty') {
-              <p class="lookup-warning">No se encontraron ubicaciones para la dirección indicada. Verifica los datos.</p>
+            @if (lookupError()) {
+              <p class="error location-error">{{ lookupError() }}</p>
             }
 
             @if (geocodingStore.errorMessage()) {
               <p class="error location-error">{{ geocodingStore.errorMessage() }}</p>
             }
 
-            @if (geocodingStore.state() === 'candidates' && geocodingStore.candidates().length > 0 && !selectedLocation()) {
-              <div class="candidates-card">
-                <span class="candidates-title">Selecciona la ubicación exacta:</span>
-                <ul class="candidates-list">
-                  @for (candidate of geocodingStore.candidates(); track candidate.displayName) {
-                    <li>
-                      <button type="button" class="candidate-option" (click)="selectCandidate(candidate)">
-                        <span class="candidate-name">{{ candidate.displayName }}</span>
-                      </button>
-                    </li>
-                  }
-                </ul>
-              </div>
-            }
+            @if (locationState() === 'CONFIRMED' && confirmedLocation(); as loc) {
+              <div class="confirmed-location-card">
+                <div class="confirmed-header">
+                  <div class="selected-icon-badge" aria-hidden="true">✓</div>
+                  <div class="confirmed-info">
+                    <strong>Punto confirmado en el mapa</strong>
+                    <p class="selected-display-name">{{ loc.displayName }}</p>
+                  </div>
+                </div>
 
-            @if (selectedLocation(); as loc) {
-              <div class="selected-location-card">
-                <div class="selected-icon-badge" aria-hidden="true">✓</div>
-                <div class="selected-info">
-                  <strong>Ubicación seleccionada</strong>
-                  <p class="selected-display-name">{{ loc.displayName }}</p>
+                @if (reverseGeocodeWarning()) {
+                  <p class="reverse-warning">{{ reverseGeocodeWarning() }}</p>
+                }
+
+                <div class="map-container-box">
+                  <app-property-confirm-map
+                    [latitude]="loc.latitude"
+                    [longitude]="loc.longitude"
+                    [addressLabel]="loc.displayName"
+                    [isReverseGeocoding]="isReverseGeocoding()"
+                    (positionChanged)="onMarkerPositionChanged($event)"
+                  />
                 </div>
               </div>
-            } @else {
-              <p class="location-hint">Debes buscar y seleccionar una ubicación antes de registrar la propiedad.</p>
+            } @else if (locationState() === 'UNRESOLVED') {
+              <p class="location-hint">Debes escribir la dirección y confirmar el punto en el mapa antes de registrar la propiedad.</p>
             }
           </div>
 
@@ -116,7 +120,7 @@ import { GeocodingStore } from '../services/geocoding.store';
             type="submit"
             id="btn-register-property"
             class="btn-submit"
-            [disabled]="form.invalid || creating() || !selectedLocation()"
+            [disabled]="form.invalid || creating() || locationState() !== 'CONFIRMED'"
           >
             {{ creating() ? 'Registrando…' : 'Registrar propiedad' }}
           </button>
@@ -126,7 +130,7 @@ import { GeocodingStore } from '../services/geocoding.store';
       <article class="block">
         <h2>Propiedades registradas</h2>
         @if (loading()) {
-          <p> Cargando propiedades… </p>
+          <p>Cargando propiedades…</p>
         } @else if (loadError()) {
           <p class="error">{{ loadError() }}</p>
         } @else if (properties().length === 0) {
@@ -173,21 +177,16 @@ import { GeocodingStore } from '../services/geocoding.store';
     .btn-lookup { background: #fff; color: #2D2E31; border: 1px solid #CEAC78; border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all .2s; }
     .btn-lookup:hover:not(:disabled) { background: #CEAC78; color: #fff; }
     .btn-lookup:disabled { opacity: 0.5; cursor: not-allowed; }
-    .lookup-status, .lookup-warning, .location-hint { font-size: 0.82rem; margin: 0; color: #7A756D; }
-    .lookup-warning { color: #b45309; }
+    .lookup-status, .location-hint { font-size: 0.82rem; margin: 0; color: #7A756D; }
     .location-error { margin: 0; font-size: 0.82rem; }
+    .reverse-warning { font-size: 0.82rem; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 0.4rem 0.6rem; margin: 0; }
 
-    .candidates-card { display: flex; flex-direction: column; gap: 0.45rem; background: #fff; border: 1px solid #e5e0d8; border-radius: 6px; padding: 0.6rem; }
-    .candidates-title { font-size: 0.8rem; font-weight: 600; color: #2D2E31; }
-    .candidates-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-    .candidate-option { width: 100%; text-align: left; background: #fdfcf9; border: 1px solid #efece5; border-radius: 4px; padding: 0.5rem 0.65rem; font-size: 0.82rem; color: #2D2E31; cursor: pointer; transition: background .15s, border-color .15s; }
-    .candidate-option:hover { background: #f6f1e8; border-color: #CEAC78; }
-    .candidate-name { display: block; line-height: 1.35; }
-
-    .selected-location-card { display: flex; align-items: center; gap: 0.7rem; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 0.6rem 0.8rem; }
-    .selected-icon-badge { width: 22px; height: 22px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
-    .selected-info strong { display: block; font-size: 0.82rem; color: #065f46; }
-    .selected-display-name { margin: 0.15rem 0 0; font-size: 0.8rem; color: #047857; line-height: 1.3; }
+    .confirmed-location-card { display: flex; flex-direction: column; gap: 0.75rem; background: #fff; border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem; }
+    .confirmed-header { display: flex; align-items: center; gap: 0.7rem; }
+    .selected-icon-badge { width: 24px; height: 24px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+    .confirmed-info strong { display: block; font-size: 0.84rem; color: #065f46; }
+    .selected-display-name { margin: 0.15rem 0 0; font-size: 0.82rem; color: #047857; line-height: 1.35; }
+    .map-container-box { width: 100%; margin-top: 0.25rem; }
 
     .properties-list { display: grid; gap: 0.75rem; list-style: none; margin: 0; padding: 0; }
     .property-card { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: 0.85rem; background: #faf9f6; border: 1px solid #efece5; border-radius: var(--fixup-radius-md, 8px); }
@@ -198,6 +197,7 @@ import { GeocodingStore } from '../services/geocoding.store';
 })
 export class MyPropertiesComponent implements OnInit, OnDestroy {
   private readonly propertyApi = inject(PropertyControllerService);
+  private readonly locationApi = inject(LocationControllerService);
   private readonly fb = inject(FormBuilder);
   readonly geocodingStore = inject(GeocodingStore);
 
@@ -207,10 +207,17 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
   readonly creating = signal(false);
   readonly createError = signal<string | null>(null);
   readonly createSuccess = signal<string | null>(null);
-  readonly selectedLocation = signal<GeocodingCandidate | null>(null);
+
+  readonly locationState = signal<PropertyLocationState>('UNRESOLVED');
+  readonly confirmedLocation = signal<GeocodingCandidate | null>(null);
+  readonly selectedLocation = computed(() => this.confirmedLocation());
+  readonly isReverseGeocoding = signal(false);
+  readonly lookupError = signal<string | null>(null);
+  readonly reverseGeocodeWarning = signal<string | null>(null);
 
   private addressSub?: Subscription;
   private citySub?: Subscription;
+  private reverseSub?: Subscription;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -218,6 +225,27 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
     city: ['', Validators.required],
     areaM2: [0, [Validators.required, Validators.min(0.01)]]
   });
+
+  constructor() {
+    effect(() => {
+      const state = this.geocodingStore.state();
+      if (state === 'candidates') {
+        const candidates = this.geocodingStore.candidates();
+        if (candidates.length > 0 && !this.confirmedLocation()) {
+          const top = candidates[0];
+          this.confirmedLocation.set(top);
+          this.locationState.set('CONFIRMED');
+          this.geocodingStore.selectCandidate(top);
+        }
+      } else if (state === 'empty') {
+        this.locationState.set('UNRESOLVED');
+        this.lookupError.set('No se encontraron ubicaciones para la dirección indicada. Verifica los datos.');
+      } else if (state === 'error') {
+        this.locationState.set('UNRESOLVED');
+        this.lookupError.set(this.geocodingStore.errorMessage() ?? 'Error al buscar ubicación');
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.geocodingStore.reset();
@@ -235,6 +263,7 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.addressSub?.unsubscribe();
     this.citySub?.unsubscribe();
+    this.reverseSub?.unsubscribe();
   }
 
   canLookupLocation(): boolean {
@@ -248,24 +277,86 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
     const city = this.form.controls.city.value.trim();
     if (!address || !city) return;
 
-    this.selectedLocation.set(null);
+    this.confirmedLocation.set(null);
+    this.lookupError.set(null);
+    this.reverseGeocodeWarning.set(null);
+    this.locationState.set('RESOLVING');
+
     const query = `${address}, ${city}`;
     this.geocodingStore.geocode(query);
   }
 
   selectCandidate(candidate: GeocodingCandidate): void {
-    this.selectedLocation.set(candidate);
+    this.confirmedLocation.set(candidate);
+    this.locationState.set('CONFIRMED');
     this.geocodingStore.selectCandidate(candidate);
   }
 
+  onMarkerPositionChanged(coords: { latitude: number; longitude: number }): void {
+    this.isReverseGeocoding.set(true);
+    this.reverseGeocodeWarning.set(null);
+
+    this.reverseSub?.unsubscribe();
+    this.reverseSub = this.locationApi.reverseGeocode(coords.latitude, coords.longitude, 'body').subscribe({
+      next: (candidates: GeocodingCandidate[]) => {
+        this.isReverseGeocoding.set(false);
+        if (candidates && candidates.length > 0) {
+          const rev = candidates[0];
+          this.confirmedLocation.set({
+            displayName: rev.displayName,
+            latitude: coords.latitude,
+            longitude: coords.longitude
+          });
+          this.locationState.set('CONFIRMED');
+
+          // Actualizar address/city sin disparar invalidación de ubicación
+          const parts = rev.displayName.split(',').map((p) => p.trim());
+          if (parts[0]) {
+            this.form.controls.address.setValue(parts[0], { emitEvent: false });
+          }
+          if (parts.length >= 3 && parts[2]) {
+            this.form.controls.city.setValue(parts[2], { emitEvent: false });
+          } else if (parts[1]) {
+            this.form.controls.city.setValue(parts[1], { emitEvent: false });
+          }
+        } else {
+          this.confirmedLocation.set({
+            displayName: 'Punto ajustado en el mapa',
+            latitude: coords.latitude,
+            longitude: coords.longitude
+          });
+          this.locationState.set('CONFIRMED');
+          this.reverseGeocodeWarning.set(
+            'Punto ajustado en el mapa, pero no se pudo determinar el nombre exacto de la vía. Revisa la dirección escrita.'
+          );
+        }
+      },
+      error: () => {
+        this.isReverseGeocoding.set(false);
+        this.confirmedLocation.set({
+          displayName: 'Punto ajustado en el mapa',
+          latitude: coords.latitude,
+          longitude: coords.longitude
+        });
+        this.locationState.set('CONFIRMED');
+        this.reverseGeocodeWarning.set(
+          'No pudimos actualizar la dirección automáticamente para el punto seleccionado. El marcador se mantiene en las nuevas coordenadas.'
+        );
+      }
+    });
+  }
+
   private invalidateLocation(): void {
-    this.selectedLocation.set(null);
+    this.confirmedLocation.set(null);
+    this.locationState.set('UNRESOLVED');
+    this.lookupError.set(null);
+    this.reverseGeocodeWarning.set(null);
     this.geocodingStore.reset();
   }
 
   create(): void {
-    const location = this.selectedLocation();
-    if (this.form.invalid || !location) {
+    const location = this.confirmedLocation();
+    if (this.form.invalid || !location || this.locationState() !== 'CONFIRMED') {
       this.form.markAllAsTouched();
       return;
     }
@@ -286,7 +377,9 @@ export class MyPropertiesComponent implements OnInit, OnDestroy {
       next: (property: PropertySummary) => {
         this.properties.update((current) => [property, ...current]);
         this.form.reset({ name: '', address: '', city: '', areaM2: 0 });
-        this.selectedLocation.set(null);
+        this.confirmedLocation.set(null);
+        this.locationState.set('UNRESOLVED');
+        this.reverseGeocodeWarning.set(null);
         this.geocodingStore.reset();
         this.createSuccess.set('Propiedad registrada correctamente.');
         this.creating.set(false);

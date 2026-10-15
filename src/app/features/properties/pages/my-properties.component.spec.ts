@@ -248,4 +248,60 @@ describe('MyPropertiesComponent (FR-UC-06 Geolocation Integration)', () => {
     expect(component.createError()).toContain('no tiene autorización');
     expect(component.creating()).toBe(false);
   });
+
+  it('arrastrar el marcador ejecuta reverse geocoding y actualiza dirección y coordenadas confirmadas', () => {
+    initialize();
+    component.form.setValue({
+      name: 'Casa en Chapinero',
+      address: 'Calle 10 # 20-30',
+      city: 'Bogotá',
+      areaM2: 85
+    });
+    component.selectCandidate(candidate);
+    expect(component.locationState()).toBe('CONFIRMED');
+
+    // Simular que el usuario arrastró el marcador en el mapa
+    component.onMarkerPositionChanged({ latitude: 4.651, longitude: -74.052 });
+    expect(component.isReverseGeocoding()).toBe(true);
+
+    const reverseReq = httpTesting.expectOne((req) => req.url.includes('/locations/reverse-geocode'));
+    expect(reverseReq.request.method).toBe('GET');
+    expect(reverseReq.request.params.get('latitude')).toBe('4.651');
+    expect(reverseReq.request.params.get('longitude')).toBe('-74.052');
+
+    const reverseCandidate: GeocodingCandidate = {
+      displayName: 'Carrera 15 # 80-20, Chapinero, Bogotá, Colombia',
+      latitude: 4.651,
+      longitude: -74.052
+    };
+    reverseReq.flush([reverseCandidate]);
+
+    expect(component.isReverseGeocoding()).toBe(false);
+    expect(component.confirmedLocation()?.latitude).toBe(4.651);
+    expect(component.confirmedLocation()?.longitude).toBe(-74.052);
+    expect(component.confirmedLocation()?.displayName).toBe('Carrera 15 # 80-20, Chapinero, Bogotá, Colombia');
+    expect(component.form.controls.address.value).toBe('Carrera 15 # 80-20');
+    expect(component.locationState()).toBe('CONFIRMED');
+  });
+
+  it('falla de reverse geocoding mantiene coordenadas sin perder estado de confirmación con advertencia visual', () => {
+    initialize();
+    component.form.setValue({
+      name: 'Casa',
+      address: 'Calle 10 # 20-30',
+      city: 'Bogotá',
+      areaM2: 85
+    });
+    component.selectCandidate(candidate);
+
+    component.onMarkerPositionChanged({ latitude: 4.70, longitude: -74.03 });
+    const reverseReq = httpTesting.expectOne((req) => req.url.includes('/locations/reverse-geocode'));
+    reverseReq.flush('Error interno', { status: 500, statusText: 'Server Error' });
+
+    expect(component.isReverseGeocoding()).toBe(false);
+    expect(component.confirmedLocation()?.latitude).toBe(4.70);
+    expect(component.confirmedLocation()?.longitude).toBe(-74.03);
+    expect(component.locationState()).toBe('CONFIRMED');
+    expect(component.reverseGeocodeWarning()).toContain('No pudimos actualizar la dirección automáticamente');
+  });
 });
