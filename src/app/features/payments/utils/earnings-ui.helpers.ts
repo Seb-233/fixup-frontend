@@ -1,4 +1,4 @@
-import { EarningStatus, JobStatus } from '../../../api/generated';
+import { EarningStatus, JobStatus, PayoutStatus } from '../../../api/generated';
 
 export function earningStatusLabel(status: EarningStatus): string {
   switch (status) {
@@ -8,6 +8,17 @@ export function earningStatusLabel(status: EarningStatus): string {
       return 'Disponible';
     case EarningStatus.PaidOut:
       return 'Transferencia solicitada';
+    default:
+      return status;
+  }
+}
+
+export function payoutStatusLabel(status: PayoutStatus | string): string {
+  switch (status) {
+    case PayoutStatus.Requested:
+      return 'Solicitada';
+    case PayoutStatus.Transferred:
+      return 'Transferido';
     default:
       return status;
   }

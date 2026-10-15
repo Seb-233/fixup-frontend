@@ -6,9 +6,10 @@ import {
   EarningStatus,
   EarningsResponse,
   PaymentControllerService,
-  PayoutResponse
+  PayoutResponse,
+  PayoutStatus
 } from '../../../../api/generated';
-import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.helpers';
+import { commissionPercent, earningStatusLabel, payoutStatusLabel } from '../../utils/earnings-ui.helpers';
 
 /**
  * FR-UC-20: panel de ingresos del técnico.
@@ -122,11 +123,16 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
             @for (payout of payouts(); track payout.id) {
               <li class="row">
                 <div class="row-head">
-                  <span class="status requested">Solicitada</span>
+                  <span class="status" [class]="payout.status.toLowerCase()">
+                    {{ payoutLabel(payout.status) }}
+                  </span>
                   <strong class="net">{{ payout.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
                 </div>
                 <p class="timeline">
                   {{ payout.requestedAt | date: 'dd/MM/yyyy' }} · {{ payout.earningCount }} servicio(s)
+                  @if (payout.transferredAt) {
+                    · transferido el {{ payout.transferredAt | date: 'dd/MM/yyyy' }}
+                  }
                 </p>
               </li>
             }
@@ -235,6 +241,10 @@ import { commissionPercent, earningStatusLabel } from '../../utils/earnings-ui.h
         background: #e8ecf5;
         color: #33415c;
       }
+      .status.transferred {
+        background: #e2f5e7;
+        color: #1c6b34;
+      }
       .breakdown,
       .timeline {
         margin: 0;
@@ -290,6 +300,10 @@ export class EarningsPanelComponent implements OnInit {
 
   statusLabel(status: EarningStatus): string {
     return earningStatusLabel(status);
+  }
+
+  payoutLabel(status: PayoutStatus): string {
+    return payoutStatusLabel(status);
   }
 
   percent(basisPoints: number): number {
