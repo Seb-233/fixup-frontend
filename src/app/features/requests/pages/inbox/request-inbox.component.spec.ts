@@ -40,6 +40,8 @@ describe('RequestInboxComponent (Bandeja del técnico con resumen y filtro en me
     }
   ];
 
+  let fixture: import('@angular/core/testing').ComponentFixture<RequestInboxComponent>;
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [RequestInboxComponent],
@@ -53,7 +55,8 @@ describe('RequestInboxComponent (Bandeja del técnico con resumen y filtro en me
     });
 
     httpTesting = TestBed.inject(HttpTestingController);
-    component = TestBed.createComponent(RequestInboxComponent).componentInstance;
+    fixture = TestBed.createComponent(RequestInboxComponent);
+    component = fixture.componentInstance;
   });
 
   afterEach(() => {
@@ -111,5 +114,31 @@ describe('RequestInboxComponent (Bandeja del técnico con resumen y filtro en me
 
     expect(component.error()).toContain('No pudimos cargar las solicitudes');
     expect(component.loading()).toBe(false);
+  });
+
+  it('no muestra el selector redundante de especialidades si solo existe 1 especialidad', () => {
+    const singleSpecialtyInbox: OpenRequestSummaryResponse[] = [
+      mockInbox[0],
+      mockInbox[2] // Both are Plumbing
+    ];
+    fixture.detectChanges();
+    httpTesting.expectOne(`${environment.apiOrigin}/requests/open`).flush(singleSpecialtyInbox);
+    fixture.detectChanges();
+
+    expect(component.availableSpecialties().length).toBe(1);
+    const filterEl = fixture.nativeElement.querySelector('#fixer-specialty-filter');
+    expect(filterEl).toBeNull();
+  });
+
+  it('muestra el selector de especialidades cuando el técnico tiene múltiples especialidades autorizadas', () => {
+    fixture.detectChanges();
+    httpTesting.expectOne(`${environment.apiOrigin}/requests/open`).flush(mockInbox); // Has Plumbing and Electrical
+    fixture.detectChanges();
+
+    expect(component.availableSpecialties().length).toBe(2);
+    const filterEl = fixture.nativeElement.querySelector('#fixer-specialty-filter');
+    expect(filterEl).toBeTruthy();
+    const options = filterEl.querySelectorAll('option');
+    expect(options.length).toBe(3); // "Todas", "Plomería", "Electricidad"
   });
 });

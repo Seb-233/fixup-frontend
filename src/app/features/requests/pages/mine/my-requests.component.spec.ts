@@ -97,7 +97,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     properties: PropertySummary[] = [mockProperty],
     debts: OwnerDebtDetail[] = []
   ): void {
-    component.ngOnInit();
+    fixture.detectChanges();
     const requestsRequest = httpTesting.expectOne(`${environment.apiOrigin}/requests/me`);
     expect(requestsRequest.request.method).toBe('GET');
     requestsRequest.flush(requests);
@@ -110,6 +110,7 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     const debtsRequest = httpTesting.expectOne(`${environment.apiOrigin}/payments/me/debts`);
     expect(debtsRequest.request.method).toBe('GET');
     debtsRequest.flush(debts);
+    fixture.detectChanges();
   }
 
   function initializeReadOnly(
@@ -507,5 +508,96 @@ describe('MyRequestsComponent (Creación y listado de solicitudes con medios seg
     expect(element.textContent).toContain(mockRequest.title);
     expect(element.textContent).not.toContain('Nueva solicitud');
     expect(element.querySelector('form')).toBeNull();
+  });
+
+  it('permite alternar entre pestañas Activas e Historial', () => {
+    const completedRequest: RequestDetailResponse = {
+      ...mockRequest,
+      requestId: 'req-completed-1',
+      title: 'Reparación de techo completada',
+      status: RepairRequestStatus.Completed
+    };
+    initialize([mockRequest, completedRequest]);
+    fixture.detectChanges();
+
+    expect(component.activeRequests().length).toBe(1);
+    expect(component.historyRequests().length).toBe(1);
+    expect(component.activeTab()).toBe('ACTIVE');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain(mockRequest.title);
+    expect(compiled.textContent).not.toContain(completedRequest.title);
+
+    // Cambiar a Historial
+    component.activeTab.set('HISTORY');
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain(completedRequest.title);
+    expect(compiled.textContent).not.toContain(mockRequest.title);
+  });
+
+  it('abre el drawer contextual con Ver detalle y lo cierra con el botón X', () => {
+    initialize([mockRequest]);
+    fixture.detectChanges();
+
+    expect(component.selectedRequestForDrawer()).toBeNull();
+    const detailBtn = fixture.nativeElement.querySelector('#btn-detail-req-1111-1111') as HTMLButtonElement;
+    expect(detailBtn).toBeTruthy();
+
+    detailBtn.click();
+    fixture.detectChanges();
+
+    expect(component.selectedRequestForDrawer()?.requestId).toBe(mockRequest.requestId);
+    const drawerElement = fixture.nativeElement.querySelector('#request-detail-drawer');
+    expect(drawerElement).toBeTruthy();
+    expect(drawerElement.textContent).toContain(mockRequest.title);
+    expect(drawerElement.textContent).toContain(mockRequest.description);
+
+    // Cierra con el botón X
+    const closeBtn = fixture.nativeElement.querySelector('#btn-close-request-drawer') as HTMLButtonElement;
+    expect(closeBtn).toBeTruthy();
+    closeBtn.click();
+    fixture.detectChanges();
+
+    expect(component.selectedRequestForDrawer()).toBeNull();
+    expect(fixture.nativeElement.querySelector('#request-detail-drawer')).toBeNull();
+  });
+
+  it('muestra el badge de origen de remodelación si la solicitud pertenece a un proyecto', () => {
+    component.remodelingStore.selectedProject.set({
+      id: 'proj-123',
+      ownerUserId: 'owner-123',
+      propertyId: mockProperty.id!,
+      title: 'Remodelación Baño Principal',
+      status: 'OPEN',
+      requirementCount: 1,
+      assignedCount: 0,
+      completedCount: 0,
+      createdAt: '2026-09-19T10:00:00Z',
+      updatedAt: '2026-09-19T10:00:00Z',
+      requirements: [
+        {
+          requirementId: 'req-item-1',
+          position: 0,
+          specialty: Specialty.Plumbing,
+          requestId: mockRequest.requestId,
+          requestStatus: RepairRequestStatus.Open,
+          paymentMethod: PaymentMethod.Transfer
+        }
+      ]
+    });
+
+    initialize([mockRequest]);
+    fixture.detectChanges();
+
+    const info = component.remodelingInfoFor(mockRequest.requestId);
+    expect(info).toEqual({
+      projectTitle: 'Remodelación Baño Principal',
+      position: 1,
+      projectId: 'proj-123'
+    });
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Remodelación Baño Principal');
   });
 });

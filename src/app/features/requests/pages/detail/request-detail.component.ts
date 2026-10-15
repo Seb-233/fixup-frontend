@@ -48,6 +48,7 @@ import {
           </div>
         }
         <header class="head">
+          <a class="back-link" id="btn-back-request-detail" [routerLink]="backNavigation().commands">{{ backNavigation().label }}</a>
           <div class="head-meta">
             <span class="chip">{{ specialtyName(item.specialty) }}</span>
             @switch (statusExt(item.status)) {
@@ -117,14 +118,22 @@ import {
         </article>
 
         @if (canViewQuotations()) {
-          <a class="board-link" [routerLink]="['/quotations/request', item.requestId]">
+          <a
+            class="board-link"
+            [routerLink]="['/quotations/request', item.requestId]"
+            [queryParams]="fromContext() ? { from: fromContext(), projectId: projectIdContext() } : undefined"
+          >
             Ver las cotizaciones recibidas →
           </a>
         }
 
         <!-- FR-UC-24: chat solo con Fixer asignado -->
         @if (item.status === 'ASSIGNED') {
-          <a class="board-link" [routerLink]="['/requests', item.requestId, 'messages']">
+          <a
+            class="board-link"
+            [routerLink]="['/requests', item.requestId, 'messages']"
+            [queryParams]="fromContext() ? { from: fromContext(), projectId: projectIdContext() } : undefined"
+          >
             Ver conversación →
           </a>
         }
@@ -199,6 +208,8 @@ import {
   `,
   styles: [`
     .detail { display: flex; flex-direction: column; gap: 1.25rem; max-width: 800px; margin: 0 auto; }
+    .back-link { font-size: 0.85rem; font-weight: 600; color: #888; text-decoration: none; margin-bottom: 0.4rem; display: inline-block; }
+    .back-link:hover { color: var(--fixup-color-primary); }
     .state { color: #666; font-size: 0.92rem; padding: 1.5rem 0; }
     .state.error { color: #b91c1c; }
     .head-meta { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
@@ -315,6 +326,24 @@ export class RequestDetailComponent implements OnInit {
 
   readonly maxDays = MAX_ESTIMATED_DAYS;
   readonly maxMessageLength = MAX_MESSAGE_LENGTH;
+
+  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
+
+  readonly backNavigation = computed(() => {
+    const from = this.fromContext();
+    const projectId = this.projectIdContext();
+    if (from === 'remodelings' && projectId) {
+      return {
+        commands: ['/remodelings', projectId],
+        label: '← Volver al proyecto de remodelación'
+      };
+    }
+    return {
+      commands: ['/requests'],
+      label: '← Volver a mis solicitudes'
+    };
+  });
 
   readonly request = signal<RequestDetailResponse | null>(null);
   readonly loading = signal(true);

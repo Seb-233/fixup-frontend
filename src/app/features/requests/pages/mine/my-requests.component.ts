@@ -32,6 +32,11 @@ import {
   URGENCY_LABELS,
   OpenRequestExtended
 } from '../../models/request-extensions';
+import {
+  RequestDrawerComponent,
+  RemodelingContextBadge
+} from '../../components/request-drawer/request-drawer.component';
+import { RemodelingStore } from '../../../remodelings/services/remodeling.store';
 
 export interface RequestPhotoUploadItem {
   id: string;
@@ -47,7 +52,7 @@ export interface RequestPhotoUploadItem {
 @Component({
   selector: 'app-my-requests',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonicModule, RequestDrawerComponent],
   template: `
     <section class="mine">
       <header>
@@ -270,69 +275,141 @@ export interface RequestPhotoUploadItem {
       </article>
       }
 
-      <article class="block">
-        <h2 class="block-title">Solicitudes activas</h2>
+      <!-- Tabs segmentados -->
+      <div class="tabs-segmented-control" role="tablist" aria-label="Filtro de solicitudes">
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          id="tab-active-requests"
+          [class.active]="activeTab() === 'ACTIVE'"
+          [attr.aria-selected]="activeTab() === 'ACTIVE'"
+          (click)="activeTab.set('ACTIVE')"
+        >
+          Activas ({{ activeRequests().length }})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          id="tab-history-requests"
+          [class.active]="activeTab() === 'HISTORY'"
+          [attr.aria-selected]="activeTab() === 'HISTORY'"
+          (click)="activeTab.set('HISTORY')"
+        >
+          Historial ({{ historyRequests().length }})
+        </button>
+      </div>
 
-        @if (loading()) {
-          <p class="state">Cargando…</p>
-        } @else if (loadError()) {
-          <p class="state error">{{ loadError() }}</p>
-        } @else if (activeRequests().length === 0) {
-          <p class="state">No tienes solicitudes activas.</p>
-        } @else {
-          <ul class="list">
-            @for (request of activeRequests(); track request.requestId) {
-              <li class="row">
-                <div class="row-main">
-                  <span class="chip">{{ label(request.specialty) }}</span>
-                  <span
-                    class="urgency-badge"
-                    [class]="'urgency-' + urgencyOf(request).toLowerCase()"
-                  >
-                    {{ urgencyBadgeLabel(urgencyOf(request)) }}
-                  </span>
-                  <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
-                  <span class="row-title">{{ request.title }}</span>
-                </div>
-                <div class="row-side">
-                  <span class="status" [class.assigned]="request.status === 'ASSIGNED'">
-                    {{ statusLabel(request.status) }}
-                  </span>
-                  <div class="cta-group">
-                    <a class="cta" [routerLink]="['/requests', request.requestId]">Ver detalle →</a>
-                    <a class="cta" [routerLink]="['/quotations/request', request.requestId]">Ver ofertas →</a>
+      @if (activeTab() === 'ACTIVE') {
+        <article class="block">
+          <h2 class="block-title">Solicitudes activas</h2>
+
+          @if (loading()) {
+            <p class="state">Cargando…</p>
+          } @else if (loadError()) {
+            <p class="state error">{{ loadError() }}</p>
+          } @else if (activeRequests().length === 0) {
+            <p class="state">No tienes solicitudes activas.</p>
+          } @else {
+            <ul class="list">
+              @for (request of activeRequests(); track request.requestId) {
+                <li class="row">
+                  <div class="row-main">
+                    <span class="chip">{{ label(request.specialty) }}</span>
+                    @if (remodelingInfoFor(request.requestId); as rem) {
+                      <span class="remodeling-origin-badge" [title]="'Proyecto: ' + rem.projectTitle">
+                        🏗️ {{ rem.projectTitle }} · Req #{{ rem.position }}
+                      </span>
+                    }
+                    <span
+                      class="urgency-badge"
+                      [class]="'urgency-' + urgencyOf(request).toLowerCase()"
+                    >
+                      {{ urgencyBadgeLabel(urgencyOf(request)) }}
+                    </span>
+                    <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
+                    <span class="row-title">{{ request.title }}</span>
                   </div>
-                </div>
-              </li>
-            }
-          </ul>
-        }
-      </article>
-
-      @if (historyRequests().length > 0) {
+                  <div class="row-side">
+                    <span class="status" [class.assigned]="request.status === 'ASSIGNED'">
+                      {{ statusLabel(request.status) }}
+                    </span>
+                    <div class="cta-group">
+                      <button
+                        type="button"
+                        class="btn-detail"
+                        [id]="'btn-detail-' + request.requestId"
+                        (click)="openDrawer(request)"
+                      >
+                        Ver detalle
+                      </button>
+                      <a
+                        class="cta cta-offers"
+                        [id]="'link-offers-' + request.requestId"
+                        [routerLink]="['/quotations/request', request.requestId]"
+                        [queryParams]="{ from: 'requests' }"
+                      >
+                        Ver ofertas →
+                      </a>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </article>
+      } @else {
         <article class="block">
           <h2 class="block-title">Historial de solicitudes</h2>
-          <ul class="list">
-            @for (request of historyRequests(); track request.requestId) {
-              <li class="row history-row">
-                <div class="row-main">
-                  <span class="chip">{{ label(request.specialty) }}</span>
-                  <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
-                  <span class="row-title">{{ request.title }}</span>
-                </div>
-                <div class="row-side">
-                  <span class="status completed">
-                    {{ statusLabel(request.status) }}
-                  </span>
-                  <div class="cta-group">
-                    <a class="cta" [routerLink]="['/requests', request.requestId]">Ver detalle →</a>
+
+          @if (loading()) {
+            <p class="state">Cargando…</p>
+          } @else if (loadError()) {
+            <p class="state error">{{ loadError() }}</p>
+          } @else if (historyRequests().length === 0) {
+            <p class="state">No tienes solicitudes en el historial.</p>
+          } @else {
+            <ul class="list">
+              @for (request of historyRequests(); track request.requestId) {
+                <li class="row history-row">
+                  <div class="row-main">
+                    <span class="chip">{{ label(request.specialty) }}</span>
+                    @if (remodelingInfoFor(request.requestId); as rem) {
+                      <span class="remodeling-origin-badge" [title]="'Proyecto: ' + rem.projectTitle">
+                        🏗️ {{ rem.projectTitle }} · Req #{{ rem.position }}
+                      </span>
+                    }
+                    <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
+                    <span class="row-title">{{ request.title }}</span>
                   </div>
-                </div>
-              </li>
-            }
-          </ul>
+                  <div class="row-side">
+                    <span class="status completed">
+                      {{ statusLabel(request.status) }}
+                    </span>
+                    <div class="cta-group">
+                      <button
+                        type="button"
+                        class="btn-detail"
+                        (click)="openDrawer(request)"
+                      >
+                        Ver detalle
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
         </article>
       }
+
+      <!-- Drawer de detalle contextual -->
+      <app-request-drawer
+        [request]="selectedRequestForDrawer()"
+        [remodelingInfo]="selectedRemodelingInfo()"
+        (closeDrawer)="closeDrawer()"
+      />
     </section>
   `,
   styles: [`
@@ -396,8 +473,87 @@ export interface RequestPhotoUploadItem {
       background: rgba(16, 185, 129, 0.15); color: #047857;
     }
     .status.assigned { background: rgba(154, 148, 141, 0.2); color: #57534e; }
+    .status.completed { background: rgba(59, 130, 246, 0.15); color: #1e40af; }
     .cta { color: var(--fixup-color-accent); font-weight: 700; font-size: 0.84rem; text-decoration: none; }
     .cta:hover { text-decoration: underline; }
+
+    .tabs-segmented-control {
+      display: inline-flex;
+      background: #f0ede6;
+      padding: 0.25rem;
+      border-radius: var(--fixup-radius-md);
+      gap: 0.25rem;
+      align-self: flex-start;
+      margin-bottom: 0.25rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--fixup-color-primary); }
+    .tab-btn.active {
+      background: #fff;
+      color: var(--fixup-color-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .remodeling-origin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+      border-radius: 20px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cta-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .btn-detail {
+      background: #fff;
+      border: 1px solid rgba(154, 148, 141, 0.4);
+      color: var(--fixup-color-primary);
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.35rem 0.75rem;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-detail:hover {
+      background: #f5f4f0;
+      border-color: var(--fixup-color-primary);
+    }
+    .cta-offers {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(206, 172, 120, 0.15);
+      color: var(--fixup-color-earth-brown, #8a6a33);
+      border-radius: var(--fixup-radius-sm, 6px);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+    .cta-offers:hover {
+      background: rgba(206, 172, 120, 0.3);
+      text-decoration: none;
+    }
 
     .urgency-select {
       border: 1px solid rgba(154, 148, 141, 0.4);
@@ -547,6 +703,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly userStore = inject(CurrentUserStore);
   private readonly notificationsStore = inject(NotificationsStore);
   private readonly fb = inject(FormBuilder);
+  readonly remodelingStore = inject(RemodelingStore);
 
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
   readonly paymentMethods = PaymentMethod;
@@ -573,6 +730,25 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly submitError = signal<string | null>(null);
   readonly submitSuccess = signal<string | null>(null);
   private requestedPropertyId: string | null = null;
+
+  readonly activeTab = signal<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  readonly selectedRequestForDrawer = signal<RequestDetailResponse | null>(null);
+  readonly selectedRemodelingInfo = computed(() => {
+    const selected = this.selectedRequestForDrawer();
+    return selected ? this.remodelingInfoFor(selected.requestId) : null;
+  });
+
+  openDrawer(request: RequestDetailResponse): void {
+    this.selectedRequestForDrawer.set(request);
+  }
+
+  closeDrawer(): void {
+    this.selectedRequestForDrawer.set(null);
+  }
+
+  remodelingInfoFor(requestId: string): RemodelingContextBadge | null {
+    return this.remodelingStore.getRequirementInfo(requestId);
+  }
 
   readonly form = this.fb.group({
     propertyId: ['', Validators.required],
