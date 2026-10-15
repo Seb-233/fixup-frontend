@@ -1,4 +1,4 @@
-import type { OpenRequest, RequestDetailResponse } from '../../../api/generated';
+import type { OpenRequest, RequestDetailResponse, PaymentMethod } from '../../../api/generated';
 
 export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
@@ -40,6 +40,7 @@ export interface OpenRequestExtended {
   description: string;
   mediaIds?: string[];
   urgencyLevel: UrgencyLevel;
+  paymentMethod: PaymentMethod;
 }
 
 export function adaptRequestDetail(item: RequestDetailResponse | null | undefined): RequestDetailExtended | null {
@@ -53,12 +54,13 @@ export function adaptRequestDetail(item: RequestDetailResponse | null | undefine
   };
 }
 
-export function toOpenRequestPayload(extended: OpenRequestExtended): OpenRequest & { urgencyLevel: UrgencyLevel } {
+export function toOpenRequestPayload(extended: OpenRequestExtended): OpenRequest {
   return {
     propertyId: extended.propertyId,
     title: extended.title,
     description: extended.description,
     mediaIds: extended.mediaIds,
-    urgencyLevel: extended.urgencyLevel
+    urgencyLevel: extended.urgencyLevel,
+    paymentMethod: extended.paymentMethod
   };
 }

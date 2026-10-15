@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IonicModule } from '@ionic/angular/lazy';
 import {
   RepairRequestControllerService,
@@ -11,7 +11,11 @@ import {
   PropertyControllerService,
   PropertySummary,
   Specialty,
-  UploadTicketDto
+  UploadTicketDto,
+  PaymentControllerService,
+  PaymentMethod,
+  OwnerDebtDetail,
+  PaymentDetail
 } from '../../../../api/generated';
 import { RequestMediaService } from '../../services/request-media.service';
 import { RequestsApiAdapterService } from '../../services/requests-api-adapter.service';
@@ -20,7 +24,8 @@ import { NotificationsStore } from '../../../../core/notifications/notifications
 import {
   MAX_REQUEST_PHOTOS,
   requestStatusLabel,
-  specialtyLabel
+  specialtyLabel,
+  paymentMethodLabel
 } from '../../utils/request-ui.helpers';
 import {
   UrgencyLevel,
@@ -50,9 +55,40 @@ export interface RequestPhotoUploadItem {
         <p class="subtitle">Describe el daño y recibe cotizaciones de técnicos verificados.</p>
       </header>
 
+      @if (hasDebt()) {
+        <article class="debt-warning-banner" role="alert">
+          <div class="debt-banner-content">
+            <h2 class="debt-warning-title">Tienes un saldo pendiente</h2>
+            <p class="debt-warning-text">
+              Debes pagarlo antes de crear una nueva solicitud.
+              @if (outstandingDebt(); as debt) {
+                <span class="debt-amount">Monto: {{ debt.amount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</span>
+              }
+            </p>
+          </div>
+          <div class="debt-banner-actions">
+            <button
+              type="button"
+              class="primary pay-debt-btn"
+              [disabled]="payingDebt()"
+              (click)="payOutstandingDebt()"
+            >
+              {{ payingDebt() ? 'Iniciando pago…' : 'Pagar saldo' }}
+            </button>
+          </div>
+          @if (payDebtError()) {
+            <small class="field-error wide">{{ payDebtError() }}</small>
+          }
+        </article>
+      }
+
       @if (canCreateRequest()) {
       <article class="block">
         <h2 class="block-title">Nueva solicitud</h2>
+
+        @if (hasDebt()) {
+          <p class="state error">Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.</p>
+        }
 
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
           @if (propertiesLoading()) {
@@ -119,6 +155,31 @@ export interface RequestPhotoUploadItem {
             }
           </div>
 
+          <div class="field">
+            <span>Forma de pago *</span>
+            <div class="payment-methods-group">
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  formControlName="paymentMethod"
+                  [value]="paymentMethods.Transfer"
+                />
+                <span>Transferencia</span>
+              </label>
+              <label class="radio-label">
+                <input
+                  type="radio"
+                  formControlName="paymentMethod"
+                  [value]="paymentMethods.Cash"
+                />
+                <span>Efectivo</span>
+              </label>
+            </div>
+            @if (form.controls.paymentMethod.touched && form.controls.paymentMethod.invalid) {
+              <small class="field-error">Selecciona una forma de pago.</small>
+            }
+          </div>
+
           <!-- Sección de carga de fotos segura -->
           <div class="field wide photos-section">
             <div class="photos-header">
@@ -136,7 +197,7 @@ export interface RequestPhotoUploadItem {
                   accept="image/jpeg,image/png,image/webp"
                   (change)="onFilesSelected($event)"
                   class="hidden-file-input"
-                  [disabled]="sending()"
+                  [disabled]="sending() || hasDebt()"
                 />
                 <label for="request-photos-input" class="file-picker-btn">
                   <span>+ Agregar fotos (JPEG, PNG, WebP ≤ 10MB)</span>
@@ -168,7 +229,7 @@ export interface RequestPhotoUploadItem {
                             type="button"
                             class="retry-btn"
                             (click)="retryPhotoUpload(item)"
-                            [disabled]="sending()"
+                            [disabled]="sending() || hasDebt()"
                           >
                             Reintentar
                           </button>
@@ -178,7 +239,7 @@ export interface RequestPhotoUploadItem {
                         type="button"
                         class="remove-photo-btn"
                         (click)="removePhoto(item)"
-                        [disabled]="sending()"
+                        [disabled]="sending() || hasDebt()"
                         title="Quitar foto"
                       >
                         ✕
@@ -201,7 +262,7 @@ export interface RequestPhotoUploadItem {
           <button
             type="submit"
             class="primary"
-            [disabled]="form.invalid || !allPhotosReady() || sending()"
+            [disabled]="form.invalid || !allPhotosReady() || sending() || hasDebt()"
           >
             {{ sending() ? 'Publicando…' : 'Publicar solicitud' }}
           </button>
@@ -210,17 +271,17 @@ export interface RequestPhotoUploadItem {
       }
 
       <article class="block">
-        <h2 class="block-title">Publicadas</h2>
+        <h2 class="block-title">Solicitudes activas</h2>
 
         @if (loading()) {
           <p class="state">Cargando…</p>
         } @else if (loadError()) {
           <p class="state error">{{ loadError() }}</p>
-        } @else if (requests().length === 0) {
-          <p class="state">No tienes solicitudes registradas.</p>
+        } @else if (activeRequests().length === 0) {
+          <p class="state">No tienes solicitudes activas.</p>
         } @else {
           <ul class="list">
-            @for (request of requests(); track request.requestId) {
+            @for (request of activeRequests(); track request.requestId) {
               <li class="row">
                 <div class="row-main">
                   <span class="chip">{{ label(request.specialty) }}</span>
@@ -230,6 +291,7 @@ export interface RequestPhotoUploadItem {
                   >
                     {{ urgencyBadgeLabel(urgencyOf(request)) }}
                   </span>
+                  <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
                   <span class="row-title">{{ request.title }}</span>
                 </div>
                 <div class="row-side">
@@ -246,6 +308,31 @@ export interface RequestPhotoUploadItem {
           </ul>
         }
       </article>
+
+      @if (historyRequests().length > 0) {
+        <article class="block">
+          <h2 class="block-title">Historial de solicitudes</h2>
+          <ul class="list">
+            @for (request of historyRequests(); track request.requestId) {
+              <li class="row history-row">
+                <div class="row-main">
+                  <span class="chip">{{ label(request.specialty) }}</span>
+                  <span class="method-chip">{{ methodLabel(request.paymentMethod) }}</span>
+                  <span class="row-title">{{ request.title }}</span>
+                </div>
+                <div class="row-side">
+                  <span class="status completed">
+                    {{ statusLabel(request.status) }}
+                  </span>
+                  <div class="cta-group">
+                    <a class="cta" [routerLink]="['/requests', request.requestId]">Ver detalle →</a>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        </article>
+      }
     </section>
   `,
   styles: [`
@@ -341,6 +428,63 @@ export interface RequestPhotoUploadItem {
       color: #b91c1c;
     }
 
+    .debt-warning-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: var(--fixup-radius-lg);
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .debt-warning-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #991b1b;
+      margin: 0 0 0.25rem 0;
+    }
+    .debt-warning-text {
+      color: #7f1d1d;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+    .debt-amount {
+      display: block;
+      font-weight: 700;
+      margin-top: 0.2rem;
+    }
+    .pay-debt-btn {
+      background: #b91c1c;
+      color: #fff;
+    }
+    .pay-debt-btn:hover:not(:disabled) {
+      background: #991b1b;
+    }
+
+    .payment-methods-group {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.2rem;
+    }
+    .radio-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.88rem;
+      color: var(--fixup-color-primary);
+      cursor: pointer;
+    }
+    .method-chip {
+      background: #f0ede6;
+      color: var(--fixup-color-primary);
+      border-radius: 20px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
     /* Photo uploader styles */
     .photos-section { display: flex; flex-direction: column; gap: 0.5rem; }
     .photos-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
@@ -396,6 +540,8 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly repairRequestApi = inject(RepairRequestControllerService);
   private readonly requestsApi = inject(RequestsApiAdapterService);
   private readonly propertyApi = inject(PropertyControllerService);
+  private readonly paymentsApi = inject(PaymentControllerService);
+  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly mediaService = inject(RequestMediaService);
   private readonly userStore = inject(CurrentUserStore);
@@ -403,6 +549,7 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
 
   readonly maxPhotos = MAX_REQUEST_PHOTOS;
+  readonly paymentMethods = PaymentMethod;
 
   readonly requests = signal<RequestDetailResponse[]>([]);
   readonly loading = signal(true);
@@ -410,6 +557,14 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly properties = signal<PropertySummary[]>([]);
   readonly propertiesLoading = signal(true);
   readonly propertiesError = signal<string | null>(null);
+
+  readonly debts = signal<OwnerDebtDetail[]>([]);
+  readonly outstandingDebt = computed(() =>
+    this.debts().find((d) => d.status === 'OUTSTANDING')
+  );
+  readonly hasDebt = computed(() => !!this.outstandingDebt());
+  readonly payingDebt = signal(false);
+  readonly payDebtError = signal<string | null>(null);
 
   readonly photos = signal<RequestPhotoUploadItem[]>([]);
   readonly photoValidationError = signal<string | null>(null);
@@ -419,11 +574,12 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   readonly submitSuccess = signal<string | null>(null);
   private requestedPropertyId: string | null = null;
 
-  readonly form = this.fb.nonNullable.group({
+  readonly form = this.fb.group({
     propertyId: ['', Validators.required],
     title: ['', [Validators.required, Validators.maxLength(150)]],
     description: ['', [Validators.required, Validators.maxLength(2000)]],
-    urgencyLevel: ['MEDIUM' as UrgencyLevel, Validators.required]
+    urgencyLevel: ['MEDIUM' as UrgencyLevel, Validators.required],
+    paymentMethod: [null as PaymentMethod | null, Validators.required]
   });
 
   readonly allPhotosReady = computed(() => {
@@ -433,11 +589,26 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
   readonly canCreateRequest = computed(() => this.userStore.activeRole() === 'OWNER');
 
+  readonly activeRequests = computed(() =>
+    this.requests().filter(
+      (r) =>
+        r.status === 'OPEN' ||
+        r.status === 'ASSIGNED' ||
+        r.status === 'SLA_WARNING' ||
+        r.status === 'SLA_BREACHED'
+    )
+  );
+
+  readonly historyRequests = computed(() =>
+    this.requests().filter((r) => r.status === 'COMPLETED' || r.status === 'CANCELLED')
+  );
+
   ngOnInit(): void {
     this.load();
     if (this.canCreateRequest()) {
       this.requestedPropertyId = this.route.snapshot.queryParamMap.get('propertyId');
       this.loadProperties();
+      this.loadDebts();
     }
   }
 
@@ -456,8 +627,12 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
     return specialtyLabel(specialty);
   }
 
-  statusLabel(status: RepairRequestStatus): string {
+  statusLabel(status: RepairRequestStatus | string): string {
     return requestStatusLabel(status);
+  }
+
+  methodLabel(method?: PaymentMethod | string | null): string {
+    return paymentMethodLabel(method);
   }
 
   private castExt(item: RequestDetailResponse): OpenRequestExtended {
@@ -471,6 +646,33 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
 
   urgencyBadgeLabel(level: UrgencyLevel | string): string {
     return URGENCY_LABELS[level as UrgencyLevel] ?? level;
+  }
+
+  loadDebts(): void {
+    if (!this.canCreateRequest()) return;
+    this.paymentsApi.debts().subscribe({
+      next: (debts) => this.debts.set(debts),
+      error: () => this.debts.set([])
+    });
+  }
+
+  payOutstandingDebt(): void {
+    const debt = this.outstandingDebt();
+    if (!debt?.debtId) return;
+
+    this.payingDebt.set(true);
+    this.payDebtError.set(null);
+
+    this.paymentsApi.initiateDebt(debt.debtId).subscribe({
+      next: (payment: PaymentDetail) => {
+        this.payingDebt.set(false);
+        this.router.navigate(['/payments', payment.paymentId]);
+      },
+      error: () => {
+        this.payingDebt.set(false);
+        this.payDebtError.set('No pudimos iniciar el pago de la deuda. Intenta de nuevo.');
+      }
+    });
   }
 
   onFilesSelected(event: Event): void {
@@ -588,12 +790,22 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
   }
 
   submit(): void {
+    if (this.hasDebt()) {
+      this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.');
+      return;
+    }
+
     if (!this.canCreateRequest() || this.form.invalid || !this.allPhotosReady()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const { propertyId, title, description, urgencyLevel } = this.form.getRawValue();
+    const { propertyId, title, description, urgencyLevel, paymentMethod } = this.form.getRawValue();
+    if (!paymentMethod) {
+      this.form.controls.paymentMethod.markAsTouched();
+      return;
+    }
+
     this.sending.set(true);
     this.submitError.set(null);
     this.submitSuccess.set(null);
@@ -603,10 +815,11 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
       .filter((id): id is string => Boolean(id));
 
     const body: OpenRequestExtended = {
-      propertyId,
-      title: title.trim(),
-      description: description.trim(),
-      urgencyLevel,
+      propertyId: propertyId!,
+      title: title!.trim(),
+      description: description!.trim(),
+      urgencyLevel: urgencyLevel!,
+      paymentMethod,
       mediaIds: mediaIds.length > 0 ? mediaIds : undefined
     };
 
@@ -624,7 +837,13 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
             }
           });
           this.photos.set([]);
-          this.form.reset({ propertyId, title: '', description: '', urgencyLevel: 'MEDIUM' as UrgencyLevel });
+          this.form.reset({
+            propertyId: propertyId!,
+            title: '',
+            description: '',
+            urgencyLevel: 'MEDIUM' as UrgencyLevel,
+            paymentMethod: null
+          });
           this.submitSuccess.set(`Solicitud creada. Especialidad detectada: ${specialtyLabel(created.specialty)}`);
           this.sending.set(false);
 
@@ -640,13 +859,16 @@ export class MyRequestsComponent implements OnInit, OnDestroy {
         error: (error: HttpErrorResponse) => {
           this.sending.set(false);
           // Crucial: keep this.photos() intact with confirmed mediaIds, do not re-upload
-          this.submitError.set(
-            error.status === 403
-              ? 'Tu cuenta no puede abrir solicitudes con el rol actual.'
-              : error.status === 400
-              ? 'Datos de la solicitud inválidos. Revisa el formulario.'
-              : 'No pudimos publicar la solicitud. Revisa los datos e intenta de nuevo.'
-          );
+          if (error.status === 409 || error.error?.code === 'OWNER_HAS_OUTSTANDING_DEBT') {
+            this.loadDebts();
+            this.submitError.set('Tienes un saldo pendiente. Debes pagarlo antes de crear una nueva solicitud.');
+          } else if (error.status === 403) {
+            this.submitError.set('Tu cuenta no puede abrir solicitudes con el rol actual.');
+          } else if (error.status === 400) {
+            this.submitError.set('Datos de la solicitud inválidos. Revisa el formulario.');
+          } else {
+            this.submitError.set('No pudimos publicar la solicitud. Revisa los datos e intenta de nuevo.');
+          }
         }
       });
   }
