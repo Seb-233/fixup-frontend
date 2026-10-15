@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
+  AcceptedQuotationResponse,
+  PaymentMethod,
   QuotationControllerService,
   QuotationResponse,
   QuotationStatus,
@@ -148,6 +150,7 @@ export class QuotationBoardComponent implements OnInit {
   private readonly quotationsApi = inject(QuotationControllerService);
   private readonly requestsApi = inject(RepairRequestControllerService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly requestId = this.route.snapshot.paramMap.get('requestId') ?? '';
   readonly quotations = signal<QuotationResponse[]>([]);
@@ -188,11 +191,15 @@ export class QuotationBoardComponent implements OnInit {
     this.actionError.set(null);
 
     this.quotationsApi.accept(quotation.id).subscribe({
-      next: () => {
+      next: (res: AcceptedQuotationResponse) => {
         this.operatingId.set(null);
         this.operatingAction.set(null);
-        // Reload board: backend accepted this and rejected others in same transaction
-        this.load();
+        if (res.paymentMethod === PaymentMethod.Transfer && res.paymentId) {
+          this.router.navigate(['/payments', res.paymentId]);
+        } else {
+          // CASH: el backend creó el Job directamente. Reconsultar el estado correspondiente.
+          this.load();
+        }
       },
       error: (error: HttpErrorResponse) => {
         this.operatingId.set(null);

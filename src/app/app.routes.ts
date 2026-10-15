@@ -244,6 +244,15 @@ export const routes: Routes = [
           ),
         data: { title: 'Mis Ingresos', roles: ['FIXER'] }
       },
+      {
+        path: 'payments/:paymentId',
+        canActivate: [roleGuard],
+        loadComponent: () =>
+          import('./features/payments/pages/checkout/payment-checkout.component').then(
+            (m) => m.PaymentCheckoutComponent
+          ),
+        data: { title: 'Pasarela de Pagos', roles: ['OWNER'] }
+      },
 
       {
         path: 'fixers/verification',
