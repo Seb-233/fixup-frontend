@@ -212,6 +212,7 @@ export class PropertySearchFiltersComponent {
   readonly resolveAddress = output<string>();
   readonly candidateSelected = output<GeocodingCandidate>();
   readonly retryGeocoding = output<void>();
+  readonly radiusChanged = output<number>();
   readonly searchRequested = output<PropertySearchFormValue>();
 
   readonly radiusOptions = RADIUS_OPTIONS_KM;
@@ -230,6 +231,14 @@ export class PropertySearchFiltersComponent {
     this.form.controls.addressQuery.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((value) => this.addressEdited.emit(value));
+
+    this.form.controls.radiusKm.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((value) => {
+        if (value && value > 0) {
+          this.radiusChanged.emit(value);
+        }
+      });
 
     effect(() => {
       // Con GPS el texto escrito deja de describir la ubicación: se limpia sin emitir evento.

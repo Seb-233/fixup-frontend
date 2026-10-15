@@ -91,7 +91,7 @@ describe('PropertyMapComponent (FR-UC-06 / F7)', () => {
     expect(marker2?.getLatLng().lng).toBeCloseTo(-74.031);
   });
 
-  it('dibuja el círculo con radiusKm y el marcador del centro de búsqueda', () => {
+  it('no dibuja círculo por defecto y posiciona el marcador del centro de búsqueda', () => {
     fixture.componentRef.setInput('searchCenter', sampleCenter);
     fixture.componentRef.setInput('radiusKm', 3);
     fixture.detectChanges();
@@ -99,8 +99,7 @@ describe('PropertyMapComponent (FR-UC-06 / F7)', () => {
     const circle = (component as unknown as { radiusCircle: L.Circle | null }).radiusCircle;
     const centerMarker = (component as unknown as { centerMarker: L.Marker | null }).centerMarker;
 
-    expect(circle).not.toBeNull();
-    expect(circle?.getRadius()).toBe(3000); // 3 km en metros
+    expect(circle).toBeNull();
     expect(centerMarker).not.toBeNull();
     expect(centerMarker?.getLatLng().lat).toBeCloseTo(sampleCenter.latitude);
   });

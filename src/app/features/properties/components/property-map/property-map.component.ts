@@ -204,17 +204,6 @@ export class PropertyMapComponent implements AfterViewInit {
         interactive: false,
         zIndexOffset: -100
       }).addTo(this.mapInstance);
-
-      if (radiusKm > 0) {
-        this.radiusCircle = L.circle(centerLatLng, {
-          radius: radiusKm * 1000,
-          color: '#2563eb',
-          weight: 2,
-          fillColor: '#3b82f6',
-          fillOpacity: 0.08,
-          interactive: false
-        }).addTo(this.mapInstance);
-      }
     }
 
     // Dibujar marcadores de propiedades

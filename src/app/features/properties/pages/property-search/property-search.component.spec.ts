@@ -686,6 +686,25 @@ describe('PropertySearchComponent (FR-UC-06)', () => {
     expect(page().searchStore.state()).toBe('success');
     expect(host.querySelectorAll('.property-card').length).toBe(2);
   });
+
+  it('cambio de radio con coordenadas listas dispara refetch inmediato al backend con el nuevo radio', () => {
+    searchApiSpy.mockReturnValue(of(mockApiResults));
+    create('TENANT');
+    getCurrentLocation.mockReturnValue(gpsSuccess);
+    clickUseLocation();
+    clickSearch();
+
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '5', 'ALL');
+
+    // Cambiar el radio a 10 km
+    const radiusSelect = host.querySelector('#search-radius') as HTMLSelectElement;
+    radiusSelect.selectedIndex = 3; // 10 km
+    radiusSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(searchApiSpy).toHaveBeenCalledWith('4.65', '-74.05', '10', 'ALL');
+    expect(page().searchParameters()?.radiusKm).toBe(10);
+  });
 });
 
 describe('Ruta /properties/search y navegación (FR-UC-06)', () => {

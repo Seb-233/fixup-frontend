@@ -39,118 +39,147 @@ const FAILURE_MESSAGES: Record<LocationFailureReason, string> = {
     PropertyResultListComponent
   ],
   template: `
-    <section class="search-page">
-      <header>
+    <section class="search-page map-first-search-page">
+      <header class="visually-hidden">
         <h1>Explorar inmuebles</h1>
         <p>Indica una dirección o usa tu ubicación y un radio para explorar inmuebles cercanos.</p>
       </header>
 
-      <article class="block">
-        <h2>Ubicación y radio</h2>
-        <app-property-search-filters
-          [coordinates]="coordinates()"
-          [locating]="state() === 'locating'"
-          [showOwnership]="isOwner()"
-          [locationSource]="locationSource()"
-          [geocoding]="geocodingStore.isGeocoding()"
-          [geocodingState]="geocodingStore.state()"
-          [geocodingError]="geocodingStore.errorMessage()"
-          [geocodingErrorType]="geocodingStore.errorType()"
-          [candidates]="geocodingStore.candidates()"
-          [selectedCandidate]="geocodingStore.selectedCandidate()"
-          [attribution]="geocodingStore.attribution()"
-          (useLocation)="requestLocation()"
-          (addressEdited)="onAddressEdited($event)"
-          (resolveAddress)="onResolveAddress($event)"
-          (candidateSelected)="onCandidateSelected($event)"
-          (retryGeocoding)="onRetryGeocoding()"
-          (searchRequested)="onSearch($event)"
-        />
+      <div class="map-viewport-stage">
+        <!-- Isla flotante superior con controles compactos -->
+        <article class="floating-controls-island" role="region" aria-label="Controles de búsqueda">
+          <app-property-search-filters
+            [coordinates]="coordinates()"
+            [locating]="state() === 'locating'"
+            [showOwnership]="isOwner()"
+            [locationSource]="locationSource()"
+            [geocoding]="geocodingStore.isGeocoding()"
+            [geocodingState]="geocodingStore.state()"
+            [geocodingError]="geocodingStore.errorMessage()"
+            [geocodingErrorType]="geocodingStore.errorType()"
+            [candidates]="geocodingStore.candidates()"
+            [selectedCandidate]="geocodingStore.selectedCandidate()"
+            [attribution]="geocodingStore.attribution()"
+            (useLocation)="requestLocation()"
+            (addressEdited)="onAddressEdited($event)"
+            (resolveAddress)="onResolveAddress($event)"
+            (candidateSelected)="onCandidateSelected($event)"
+            (retryGeocoding)="onRetryGeocoding()"
+            (radiusChanged)="onRadiusChanged($event)"
+            (searchRequested)="onSearch($event)"
+          />
 
-        <p
-          id="location-status"
-          class="status"
-          [class.status-error]="state() === 'locationError'"
-          role="status"
-          aria-live="polite"
-        >
-          {{ statusMessage() }}
-        </p>
-
-        @if (locationRequired()) {
-          <p id="search-hint" class="status status-error" role="alert">
-            Selecciona una ubicación válida para continuar.
+          <p
+            id="location-status"
+            class="status"
+            [class.status-error]="state() === 'locationError'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ statusMessage() }}
           </p>
-        }
 
-        @if (searchParameters(); as parameters) {
-          <p id="search-parameters" class="parameters">
-            Búsqueda lista: {{ sourceLabel() }}, radio {{ parameters.radiusKm }} km{{
-              ownershipLabel()
-            }}.
-          </p>
-        }
+          @if (locationRequired()) {
+            <p id="search-hint" class="status status-error" role="alert">
+              Selecciona una ubicación válida para continuar.
+            </p>
+          }
 
-        @if (searchStore.isSearching()) {
-          <p id="search-loading" class="loading-status" role="status">
-            <span class="loading-spinner" aria-hidden="true"></span>
-            Buscando inmuebles cercanos…
-          </p>
-        }
+          @if (searchParameters(); as parameters) {
+            <p id="search-parameters" class="parameters">
+              Búsqueda lista: {{ sourceLabel() }}, radio {{ parameters.radiusKm }} km{{
+                ownershipLabel()
+              }}.
+            </p>
+          }
 
-        @if (searchStore.state() === 'idle' && !searchStore.isSearching()) {
-          <div id="property-search-initial" class="initial-search-card" role="region" aria-label="Guía de búsqueda inicial">
-            <div class="initial-icon-box" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-              </svg>
+          @if (searchStore.isSearching()) {
+            <p id="search-loading" class="loading-status" role="status">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              Buscando inmuebles cercanos…
+            </p>
+          }
+
+          @if (searchStore.state() === 'idle' && !searchStore.isSearching()) {
+            <div id="property-search-initial" class="initial-search-card" role="region" aria-label="Guía de búsqueda inicial">
+              <div class="initial-icon-box" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                </svg>
+              </div>
+              <div class="initial-content">
+                <h3 class="initial-title">Explora inmuebles cercanos</h3>
+                <p class="initial-subtitle">
+                  Escribe una dirección o pulsa <strong>Usar mi ubicación</strong> para explorar inmuebles cercanos en el mapa.
+                </p>
+              </div>
             </div>
-            <div class="initial-content">
-              <h3 class="initial-title">Explora inmuebles cercanos</h3>
-              <p class="initial-subtitle">
-                Escribe una dirección o pulsa <strong>Usar mi ubicación</strong> para explorar inmuebles cercanos en el mapa y la lista.
-              </p>
+          }
+
+          @if (searchStore.state() === 'apiError') {
+            <div id="api-error" class="api-error-block" role="alert">
+              <p class="api-error-message">{{ searchStore.error() }}</p>
+              <button
+                type="button"
+                id="search-retry"
+                class="retry-button"
+                (click)="searchStore.retry()"
+              >
+                Reintentar búsqueda
+              </button>
             </div>
-          </div>
-        }
+          }
+        </article>
 
-        @if (searchStore.state() === 'apiError') {
-          <div id="api-error" class="api-error-block" role="alert">
-            <p class="api-error-message">{{ searchStore.error() }}</p>
-            <button
-              type="button"
-              id="search-retry"
-              class="retry-button"
-              (click)="searchStore.retry()"
-            >
-              Reintentar búsqueda
-            </button>
-          </div>
-        }
+        <!-- Área principal de mapa y resultados -->
+        <main class="map-canvas-container">
+          @if (searchStore.state() === 'success' || searchStore.state() === 'empty') {
+            <div class="search-results-layout" id="search-results-layout">
+              <div class="map-column">
+                <app-property-map
+                  [results]="searchStore.results()"
+                  [searchCenter]="coordinates()"
+                  [radiusKm]="searchParameters()?.radiusKm ?? 5"
+                  [selectedPropertyId]="searchStore.selectedPropertyId()"
+                  (propertySelected)="onPropertySelected($event)"
+                />
+              </div>
 
-        @if (searchStore.state() === 'success' || searchStore.state() === 'empty') {
-          <div class="search-results-layout" id="search-results-layout">
-            <div class="map-column">
+              <div class="list-column" [class.collapsed]="isListCollapsed()">
+                <div class="list-toggle-bar">
+                  <span class="results-count-badge">{{ searchStore.results().length }} inmuebles encontrados</span>
+                  <button
+                    type="button"
+                    class="btn-toggle-list"
+                    (click)="isListCollapsed.set(!isListCollapsed())"
+                  >
+                    {{ isListCollapsed() ? 'Ver lista' : 'Ocultar lista' }}
+                  </button>
+                </div>
+                @if (!isListCollapsed()) {
+                  <div class="list-scroll-pane">
+                    <app-property-result-list
+                      [results]="searchStore.results()"
+                      [selectedPropertyId]="searchStore.selectedPropertyId()"
+                      (propertySelected)="onPropertySelected($event)"
+                    />
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="map-backdrop">
               <app-property-map
-                [results]="searchStore.results()"
+                [results]="[]"
                 [searchCenter]="coordinates()"
-                [radiusKm]="searchParameters()?.radiusKm ?? 5"
-                [selectedPropertyId]="searchStore.selectedPropertyId()"
-                (propertySelected)="onPropertySelected($event)"
+                [radiusKm]="5"
+                [selectedPropertyId]="null"
               />
             </div>
-
-            <div class="list-column">
-              <app-property-result-list
-                [results]="searchStore.results()"
-                [selectedPropertyId]="searchStore.selectedPropertyId()"
-                (propertySelected)="onPropertySelected($event)"
-              />
-            </div>
-          </div>
-        }
-      </article>
+          }
+        </main>
+      </div>
     </section>
   `,
   styleUrls: ['./property-search.component.scss']
@@ -171,6 +200,7 @@ export class PropertySearchComponent {
   readonly searchParameters = signal<PropertySearchParameters | null>(null);
   /** El usuario pulsó buscar sin tener una ubicación utilizable. */
   readonly locationRequired = signal(false);
+  readonly isListCollapsed = signal(false);
 
   readonly isOwner = computed(() => this.userStore.activeRole() === 'OWNER');
 
@@ -261,6 +291,28 @@ export class PropertySearchComponent {
 
   onRetryGeocoding(): void {
     this.geocodingStore.retry();
+  }
+
+  onRadiusChanged(newRadius: number): void {
+    const coordinates = this.coordinates();
+    if (!coordinates) return;
+
+    const currentParams = this.searchParameters();
+    const ownership = currentParams?.ownership ?? (this.isOwner() ? 'ALL' : undefined);
+
+    this.searchParameters.set({
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      radiusKm: newRadius,
+      ...(ownership ? { ownership } : {})
+    });
+
+    this.searchStore.search({
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      radiusKm: newRadius,
+      ownershipScope: this.isOwner() ? (ownership ?? 'ALL') : 'ALL'
+    });
   }
 
   onSearch(value: PropertySearchFormValue): void {
