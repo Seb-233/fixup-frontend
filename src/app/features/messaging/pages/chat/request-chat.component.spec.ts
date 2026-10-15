@@ -54,7 +54,10 @@ describe('RequestChatComponent (FR-UC-24: chat privado por solicitud asignada)',
     notificationStatus: 'SENT'
   };
 
+  let queryParamsMap: Map<string, string>;
+
   beforeEach(() => {
+    queryParamsMap = new Map<string, string>();
     TestBed.configureTestingModule({
       imports: [RequestChatComponent],
       providers: [
@@ -70,6 +73,9 @@ describe('RequestChatComponent (FR-UC-24: chat privado por solicitud asignada)',
             snapshot: {
               paramMap: {
                 get: (key: string) => (key === 'requestId' ? REQUEST_ID : null)
+              },
+              queryParamMap: {
+                get: (key: string) => queryParamsMap.get(key) ?? null
               }
             }
           }
@@ -237,5 +243,41 @@ describe('RequestChatComponent (FR-UC-24: chat privado por solicitud asignada)',
   it('no debe permitir componer mensajes cuando el rol activo es PLATFORM_ADMIN', () => {
     userStore.setActiveRole('PLATFORM_ADMIN');
     expect(component.canSend()).toBe(false);
+  });
+
+  describe('Navegación contextual de retorno (Secciones 9 y 21)', () => {
+    it('con from=jobs propaga queryParams hacia /requests/:requestId', () => {
+      queryParamsMap.set('from', 'jobs');
+      const fixture2 = TestBed.createComponent(RequestChatComponent);
+      const comp = fixture2.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests', REQUEST_ID]);
+      expect(comp.backNavigation().queryParams).toEqual({ from: 'jobs' });
+      expect(comp.backNavigation().label).toBe('← Volver a la solicitud');
+    });
+
+    it('con from=inbox propaga queryParams hacia /requests/:requestId', () => {
+      queryParamsMap.set('from', 'inbox');
+      const fixture2 = TestBed.createComponent(RequestChatComponent);
+      const comp = fixture2.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests', REQUEST_ID]);
+      expect(comp.backNavigation().queryParams).toEqual({ from: 'inbox' });
+    });
+
+    it('con from=remodelings y projectId retorna directamente al proyecto', () => {
+      queryParamsMap.set('from', 'remodelings');
+      queryParamsMap.set('projectId', 'proj-123');
+      const fixture2 = TestBed.createComponent(RequestChatComponent);
+      const comp = fixture2.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/remodelings', 'proj-123']);
+      expect(comp.backNavigation().label).toBe('← Volver al proyecto de remodelación');
+    });
+
+    it('con from=requests retorna a /requests', () => {
+      queryParamsMap.set('from', 'requests');
+      const fixture2 = TestBed.createComponent(RequestChatComponent);
+      const comp = fixture2.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests']);
+      expect(comp.backNavigation().label).toBe('← Volver a mis solicitudes');
+    });
   });
 });

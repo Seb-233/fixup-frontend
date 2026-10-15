@@ -41,7 +41,10 @@ describe('RequestDetailComponent (Detalle de solicitud y envío de cotizaciones)
     paymentMethod: PaymentMethod.Transfer
   };
 
+  let queryParamsMap: Map<string, string>;
+
   beforeEach(() => {
+    queryParamsMap = new Map<string, string>();
     TestBed.configureTestingModule({
       imports: [RequestDetailComponent],
       providers: [
@@ -58,6 +61,9 @@ describe('RequestDetailComponent (Detalle de solicitud y envío de cotizaciones)
             snapshot: {
               paramMap: {
                 get: (key: string) => (key === 'requestId' ? 'req-detail-1234' : null)
+              },
+              queryParamMap: {
+                get: (key: string) => queryParamsMap.get(key) ?? null
               }
             }
           }
@@ -250,6 +256,81 @@ describe('RequestDetailComponent (Detalle de solicitud y envío de cotizaciones)
       postReq.flush(null, { status: 400, statusText: 'Bad Request' });
 
       expect(component.submitError()).toContain('Los datos de la cotización son inválidos');
+    });
+  });
+
+  describe('Contexto de navegación y propagación de chat (Secciones 20 y 21)', () => {
+    it('A. FIXER con from=jobs: botón muestra "← Volver a mis trabajos" y navega a /jobs/me', () => {
+      queryParamsMap.set('from', 'jobs');
+      userStore.setActiveRole('FIXER');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/jobs/me']);
+      expect(comp.backNavigation().label).toBe('← Volver a mis trabajos');
+      expect(comp.chatQueryParams()).toEqual({ from: 'jobs' });
+    });
+
+    it('B. FIXER con from=inbox: botón muestra "← Volver a solicitudes disponibles" y navega a /requests/inbox', () => {
+      queryParamsMap.set('from', 'inbox');
+      userStore.setActiveRole('FIXER');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests/inbox']);
+      expect(comp.backNavigation().label).toBe('← Volver a solicitudes disponibles');
+      expect(comp.chatQueryParams()).toEqual({ from: 'inbox' });
+    });
+
+    it('C. OWNER con from=requests: navega a /requests', () => {
+      queryParamsMap.set('from', 'requests');
+      userStore.setActiveRole('OWNER');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests']);
+      expect(comp.backNavigation().label).toBe('← Volver a mis solicitudes');
+      expect(comp.chatQueryParams()).toEqual({ from: 'requests' });
+    });
+
+    it('D. con from=remodelings + projectId: navega a /remodelings/:projectId', () => {
+      queryParamsMap.set('from', 'remodelings');
+      queryParamsMap.set('projectId', 'proj-123');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/remodelings', 'proj-123']);
+      expect(comp.backNavigation().label).toBe('← Volver al proyecto de remodelación');
+      expect(comp.chatQueryParams()).toEqual({ from: 'remodelings', projectId: 'proj-123' });
+    });
+
+    it('E. deep link FIXER sin from: fallback a /requests/inbox y nunca a /requests', () => {
+      userStore.setActiveRole('FIXER');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests/inbox']);
+      expect(comp.backNavigation().commands).not.toEqual(['/requests']);
+      expect(comp.backNavigation().label).toBe('← Volver a solicitudes disponibles');
+      expect(comp.chatQueryParams()).toBeUndefined();
+    });
+
+    it('deep link PLATFORM_ADMIN sin from: fallback seguro a /dashboard', () => {
+      userStore.setActiveRole('PLATFORM_ADMIN');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/dashboard']);
+      expect(comp.backNavigation().label).toBe('← Volver al panel principal');
+    });
+
+    it('deep link OWNER sin from: fallback a /requests', () => {
+      userStore.setActiveRole('OWNER');
+
+      const fixture = TestBed.createComponent(RequestDetailComponent);
+      const comp = fixture.componentInstance;
+      expect(comp.backNavigation().commands).toEqual(['/requests']);
+      expect(comp.backNavigation().label).toBe('← Volver a mis solicitudes');
     });
   });
 });

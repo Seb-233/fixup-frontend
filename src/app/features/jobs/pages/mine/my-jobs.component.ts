@@ -63,7 +63,7 @@ import { paymentMethodLabel } from '../../../requests/utils/request-ui.helpers';
                   <strong class="amount-value">{{ job.agreedAmount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
                 </div>
 
-                <a class="link" [routerLink]="['/requests', job.requestId]">Ver la solicitud →</a>
+                <a class="link" [routerLink]="['/requests', job.requestId]" [queryParams]="{ from: 'jobs' }">Ver la solicitud →</a>
 
                 <div class="card-foot">
                   <button
@@ -96,7 +96,7 @@ import { paymentMethodLabel } from '../../../requests/utils/request-ui.helpers';
                   <span class="amount-label">Monto acordado:</span>
                   <strong class="amount-value">{{ job.agreedAmount | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
                 </div>
-                <a class="link" [routerLink]="['/requests', job.requestId]">Ver la solicitud →</a>
+                <a class="link" [routerLink]="['/requests', job.requestId]" [queryParams]="{ from: 'jobs' }">Ver la solicitud →</a>
               </li>
             }
           </ul>

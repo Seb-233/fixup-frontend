@@ -56,7 +56,7 @@ import { specialtyLabel } from '../../utils/request-ui.helpers';
               <h2 class="card-title">{{ request.title }}</h2>
               <div class="card-footer">
                 <span class="status-indicator">Disponible para cotizar</span>
-                <a class="cta" [routerLink]="['/requests', request.requestId]">Ver y cotizar →</a>
+                <a class="cta" [routerLink]="['/requests', request.requestId]" [queryParams]="{ from: 'inbox' }">Ver y cotizar →</a>
               </div>
             </li>
           }

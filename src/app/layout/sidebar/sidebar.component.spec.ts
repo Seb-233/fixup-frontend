@@ -242,4 +242,28 @@ describe('SidebarComponent (Apertura Suave, Sombreado Deslizante y Timer de 3s)'
     const dot = fixture.nativeElement.querySelector('.unread-icon-dot');
     expect(dot).toBeTruthy();
   });
+
+  it('resalta la sección Mis trabajos cuando el contexto del FIXER tiene from=jobs', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    setRole('FIXER');
+
+    component.onSelectNav('/requests/req-123?from=jobs');
+    fixture.detectChanges();
+
+    const jobsIndex = component.visibleItems().findIndex((i) => i.path === '/jobs/me');
+    expect(jobsIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(jobsIndex);
+  });
+
+  it('resalta la sección Solicitudes disponibles cuando el contexto del FIXER tiene from=inbox', () => {
+    vi.spyOn(verificationStore, 'verified').mockReturnValue(true);
+    setRole('FIXER');
+
+    component.onSelectNav('/requests/req-123?from=inbox');
+    fixture.detectChanges();
+
+    const inboxIndex = component.visibleItems().findIndex((i) => i.path === '/requests/inbox');
+    expect(inboxIndex).toBeGreaterThanOrEqual(0);
+    expect(component.activeIndex()).toBe(inboxIndex);
+  });
 });

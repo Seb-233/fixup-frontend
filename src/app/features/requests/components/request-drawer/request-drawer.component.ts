@@ -137,7 +137,7 @@ export interface RemodelingContextBadge {
               <a
                 class="btn-full-page"
                 [routerLink]="['/requests', item.requestId]"
-                [queryParams]="remodelingInfo() ? { from: 'remodelings', projectId: remodelingInfo()?.projectId } : undefined"
+                [queryParams]="remodelingInfo() ? { from: 'remodelings', projectId: remodelingInfo()?.projectId } : (isOwner() ? { from: 'requests' } : { from: 'inbox' })"
                 (click)="closeDrawer.emit()"
               >
                 Abrir en pantalla completa ↗

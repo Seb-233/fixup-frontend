@@ -70,7 +70,7 @@ const MAX_MESSAGE_LENGTH = 2000;
   template: `
     <section class="chat">
       <header class="chat-header">
-        <a class="back" id="btn-back-chat" [routerLink]="backNavigation().commands">{{ backNavigation().label }}</a>
+        <a class="back" id="btn-back-chat" [routerLink]="backNavigation().commands" [queryParams]="backNavigation().queryParams">{{ backNavigation().label }}</a>
         <h1 class="title">Conversación</h1>
         @if (request(); as item) {
           <p class="subtitle">{{ item.title }}</p>
@@ -222,17 +222,34 @@ export class RequestChatComponent implements OnInit {
     if (from === 'remodelings' && projectId) {
       return {
         commands: ['/remodelings', projectId],
+        queryParams: undefined,
         label: '← Volver al proyecto de remodelación'
+      };
+    }
+    if (from === 'jobs') {
+      return {
+        commands: ['/requests', this.requestId],
+        queryParams: { from: 'jobs' },
+        label: '← Volver a la solicitud'
+      };
+    }
+    if (from === 'inbox') {
+      return {
+        commands: ['/requests', this.requestId],
+        queryParams: { from: 'inbox' },
+        label: '← Volver a la solicitud'
       };
     }
     if (from === 'requests') {
       return {
         commands: ['/requests'],
+        queryParams: undefined,
         label: '← Volver a mis solicitudes'
       };
     }
     return {
       commands: ['/requests', this.requestId],
+      queryParams: undefined,
       label: '← Volver a la solicitud'
     };
   });

@@ -136,11 +136,25 @@ export class SidebarComponent implements OnDestroy {
     const rawUrl = this.currentUrl();
     const url = rawUrl.split('?')[0].split('#')[0];
     const isFromRemodeling = rawUrl.includes('from=remodelings');
+    const isFromJobs = rawUrl.includes('from=jobs');
+    const isFromInbox = rawUrl.includes('from=inbox');
 
     // Contexto de remodelaciones explícito (Req 28)
     if (isFromRemodeling) {
       const remodelingIdx = items.findIndex((i) => i.path === '/remodelings');
       if (remodelingIdx >= 0) return remodelingIdx;
+    }
+
+    // Contexto de mis trabajos (Fixer)
+    if (isFromJobs) {
+      const jobsIdx = items.findIndex((i) => i.path === '/jobs/me');
+      if (jobsIdx >= 0) return jobsIdx;
+    }
+
+    // Contexto de solicitudes disponibles (Fixer)
+    if (isFromInbox) {
+      const inboxIdx = items.findIndex((i) => i.path === '/requests/inbox');
+      if (inboxIdx >= 0) return inboxIdx;
     }
 
     // Contexto de cotizaciones de solicitud (Req 28)

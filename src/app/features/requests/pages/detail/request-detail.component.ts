@@ -12,6 +12,7 @@ import {
   Specialty
 } from '../../../../api/generated';
 import { CurrentUserStore } from '../../../../core/auth/current-user.store';
+import { NavigationOrigin } from '../../../../core/navigation/navigation-context';
 import {
   MAX_ESTIMATED_DAYS,
   MAX_MESSAGE_LENGTH,
@@ -121,7 +122,7 @@ import {
           <a
             class="board-link"
             [routerLink]="['/quotations/request', item.requestId]"
-            [queryParams]="fromContext() ? { from: fromContext(), projectId: projectIdContext() } : undefined"
+            [queryParams]="quotationsQueryParams()"
           >
             Ver las cotizaciones recibidas →
           </a>
@@ -132,7 +133,7 @@ import {
           <a
             class="board-link"
             [routerLink]="['/requests', item.requestId, 'messages']"
-            [queryParams]="fromContext() ? { from: fromContext(), projectId: projectIdContext() } : undefined"
+            [queryParams]="chatQueryParams()"
           >
             Ver conversación →
           </a>
@@ -327,7 +328,9 @@ export class RequestDetailComponent implements OnInit {
   readonly maxDays = MAX_ESTIMATED_DAYS;
   readonly maxMessageLength = MAX_MESSAGE_LENGTH;
 
-  readonly fromContext = computed(() => this.route.snapshot.queryParamMap?.get('from') ?? null);
+  readonly fromContext = computed<NavigationOrigin | null>(
+    () => (this.route.snapshot.queryParamMap?.get('from') as NavigationOrigin) ?? null
+  );
   readonly projectIdContext = computed(() => this.route.snapshot.queryParamMap?.get('projectId') ?? null);
 
   readonly backNavigation = computed(() => {
@@ -339,10 +342,57 @@ export class RequestDetailComponent implements OnInit {
         label: '← Volver al proyecto de remodelación'
       };
     }
+    if (from === 'jobs') {
+      return {
+        commands: ['/jobs/me'],
+        label: '← Volver a mis trabajos'
+      };
+    }
+    if (from === 'inbox') {
+      return {
+        commands: ['/requests/inbox'],
+        label: '← Volver a solicitudes disponibles'
+      };
+    }
+    if (from === 'requests') {
+      return {
+        commands: ['/requests'],
+        label: '← Volver a mis solicitudes'
+      };
+    }
+
+    // Fallback sin "from" según el rol activo
+    const role = this.users.activeRole();
+    if (role === 'FIXER') {
+      return {
+        commands: ['/requests/inbox'],
+        label: '← Volver a solicitudes disponibles'
+      };
+    }
+    if (role === 'PLATFORM_ADMIN') {
+      return {
+        commands: ['/dashboard'],
+        label: '← Volver al panel principal'
+      };
+    }
     return {
       commands: ['/requests'],
       label: '← Volver a mis solicitudes'
     };
+  });
+
+  readonly chatQueryParams = computed(() => {
+    const from = this.fromContext();
+    if (!from) return undefined;
+    const projectId = this.projectIdContext();
+    return projectId ? { from, projectId } : { from };
+  });
+
+  readonly quotationsQueryParams = computed(() => {
+    const from = this.fromContext();
+    if (!from) return undefined;
+    const projectId = this.projectIdContext();
+    return projectId ? { from, projectId } : { from };
   });
 
   readonly request = signal<RequestDetailResponse | null>(null);
