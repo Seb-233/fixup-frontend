@@ -5,6 +5,7 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
   JobStatus,
+  PaymentMethod,
   ProjectResponse,
   RemodelingProgressStatus,
   RepairRequestStatus,
@@ -40,7 +41,8 @@ describe('RemodelingDetailComponent', () => {
         requestStatus: RepairRequestStatus.Open,
         assignedFixerUserId: null,
         jobId: null,
-        jobStatus: undefined
+        jobStatus: undefined,
+        paymentMethod: PaymentMethod.Transfer
       },
       {
         requirementId: 'req-2',
@@ -50,7 +52,8 @@ describe('RemodelingDetailComponent', () => {
         requestStatus: RepairRequestStatus.Assigned,
         assignedFixerUserId: 'fixer-john-doe',
         jobId: 'job-999',
-        jobStatus: JobStatus.Assigned
+        jobStatus: JobStatus.Assigned,
+        paymentMethod: PaymentMethod.Cash
       }
     ]
   };

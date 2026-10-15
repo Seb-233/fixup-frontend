@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
   OpenRequestSummaryResponse,
+  PaymentMethod,
   RepairRequestControllerService,
   Specialty,
   provideApi
@@ -20,19 +21,22 @@ describe('RequestInboxComponent (Bandeja del técnico con resumen y filtro en me
       requestId: 'req-plumbing-1',
       specialty: Specialty.Plumbing,
       title: 'Fuga de agua en cocina',
-      createdAt: '2026-09-19T08:00:00Z'
+      createdAt: '2026-09-19T08:00:00Z',
+      paymentMethod: PaymentMethod.Transfer
     },
     {
       requestId: 'req-electrical-1',
       specialty: Specialty.Electrical,
       title: 'Cortocircuito en sala',
-      createdAt: '2026-09-19T09:00:00Z'
+      createdAt: '2026-09-19T09:00:00Z',
+      paymentMethod: PaymentMethod.Cash
     },
     {
       requestId: 'req-plumbing-2',
       specialty: Specialty.Plumbing,
       title: 'Cambio de grifería',
-      createdAt: '2026-09-19T10:00:00Z'
+      createdAt: '2026-09-19T10:00:00Z',
+      paymentMethod: PaymentMethod.Transfer
     }
   ];
 

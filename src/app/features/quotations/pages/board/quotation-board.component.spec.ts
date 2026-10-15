@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
+  AcceptedQuotationResponse,
+  PaymentMethod,
   QuotationControllerService,
   QuotationResponse,
   QuotationStatus,
@@ -17,6 +19,7 @@ import { QuotationBoardComponent } from './quotation-board.component';
 describe('QuotationBoardComponent (Tablero comparativo con accept y reject)', () => {
   let component: QuotationBoardComponent;
   let httpTesting: HttpTestingController;
+  let router: Router;
 
   const mockQuotations: QuotationResponse[] = [
     {
@@ -65,6 +68,7 @@ describe('QuotationBoardComponent (Tablero comparativo con accept y reject)', ()
     });
 
     httpTesting = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
     component = TestBed.createComponent(QuotationBoardComponent).componentInstance;
   });
 
@@ -96,7 +100,8 @@ describe('QuotationBoardComponent (Tablero comparativo con accept y reject)', ()
     expect(component.assigned()).toBe(false);
   });
 
-  it('debe ejecutar la acción de ACEPTAR cotización y recargar el tablero', () => {
+  it('debe aceptar cotización con método TRANSFER y navegar a la pasarela de pagos', () => {
+    vi.spyOn(router, 'navigate');
     component.ngOnInit();
     httpTesting.expectOne(`${environment.apiOrigin}/requests/req-board-1`).flush(null);
     httpTesting.expectOne(`${environment.apiOrigin}/quotations/for-request/req-board-1`).flush(mockQuotations);
@@ -108,14 +113,39 @@ describe('QuotationBoardComponent (Tablero comparativo con accept y reject)', ()
 
     const acceptReq = httpTesting.expectOne(`${environment.apiOrigin}/quotations/quot-1/accept`);
     expect(acceptReq.request.method).toBe('POST');
-    acceptReq.flush({
-      ...mockQuotations[0],
-      status: QuotationStatus.Accepted
-    });
+    const transferResponse: AcceptedQuotationResponse = {
+      quotationId: 'quot-1',
+      requestId: 'req-board-1',
+      paymentMethod: PaymentMethod.Transfer,
+      paymentId: 'pay-transfer-123'
+    };
+    acceptReq.flush(transferResponse);
 
     expect(component.operatingId()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/payments', 'pay-transfer-123']);
+  });
 
-    // Recarga del tablero tras la aceptación
+  it('debe aceptar cotización con método CASH, recargar el tablero y no navegar a pasarela', () => {
+    vi.spyOn(router, 'navigate');
+    component.ngOnInit();
+    httpTesting.expectOne(`${environment.apiOrigin}/requests/req-board-1`).flush(null);
+    httpTesting.expectOne(`${environment.apiOrigin}/quotations/for-request/req-board-1`).flush(mockQuotations);
+
+    component.accept(mockQuotations[0]);
+
+    const acceptReq = httpTesting.expectOne(`${environment.apiOrigin}/quotations/quot-1/accept`);
+    expect(acceptReq.request.method).toBe('POST');
+    const cashResponse: AcceptedQuotationResponse = {
+      quotationId: 'quot-1',
+      requestId: 'req-board-1',
+      paymentMethod: PaymentMethod.Cash
+    };
+    acceptReq.flush(cashResponse);
+
+    expect(component.operatingId()).toBeNull();
+    expect(router.navigate).not.toHaveBeenCalled();
+
+    // Recarga del tablero tras la aceptación en efectivo
     const reloadReq = httpTesting.expectOne(`${environment.apiOrigin}/quotations/for-request/req-board-1`);
     reloadReq.flush([
       { ...mockQuotations[0], status: QuotationStatus.Accepted },

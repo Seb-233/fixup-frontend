@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
+  PaymentMethod,
   QuotationControllerService,
   RepairRequestControllerService,
   RepairRequestStatus,
@@ -36,7 +37,8 @@ describe('RequestDetailComponent (Detalle de solicitud y envío de cotizaciones)
     status: RepairRequestStatus.Open,
     assignedFixerUserId: null,
     createdAt: '2026-09-19T10:00:00Z',
-    urgencyLevel: UrgencyLevel.Medium
+    urgencyLevel: UrgencyLevel.Medium,
+    paymentMethod: PaymentMethod.Transfer
   };
 
   beforeEach(() => {

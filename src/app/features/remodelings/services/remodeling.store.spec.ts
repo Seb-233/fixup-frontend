@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import {
   CreateProjectRequest,
+  PaymentMethod,
   ProjectResponse,
   ProjectSummaryResponse,
   RemodelingProgressStatus,
@@ -48,7 +49,8 @@ describe('RemodelingStore', () => {
         specialty: Specialty.Plumbing,
         requestStatus: RepairRequestStatus.Open,
         assignedFixerUserId: null,
-        jobId: null
+        jobId: null,
+        paymentMethod: PaymentMethod.Transfer
       },
       {
         requirementId: 'req-2',
@@ -57,7 +59,8 @@ describe('RemodelingStore', () => {
         specialty: Specialty.Masonry,
         requestStatus: RepairRequestStatus.Open,
         assignedFixerUserId: null,
-        jobId: null
+        jobId: null,
+        paymentMethod: PaymentMethod.Cash
       }
     ]
   };
@@ -138,7 +141,8 @@ describe('RemodelingStore', () => {
           title: 'Arreglar fuga',
           description: 'Fuga bajo el lavaplatos',
           urgencyLevel: 'HIGH',
-          mediaIds: []
+          mediaIds: [],
+          paymentMethod: PaymentMethod.Transfer
         }
       ]
     };
