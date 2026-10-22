@@ -117,6 +117,9 @@
         @if (isOtherFixer()) {
           <section class="panel stack" aria-labelledby="myquote-title">
             <h2 id="myquote-title" class="text-lg">Tu cotización</h2>
+            @if (r.paymentMethod) {
+              <p class="text-sm">Forma de pago: {{ r.paymentMethod | label: methods }}{{ r.paymentMethod === 'CASH' ? '. Cobras en persona al terminar el trabajo.' : '. El cliente paga en la pasarela antes de que empieces.' }}</p>
+            }
             @if (myQuotation.hasValue() && myQuotation.value(); as mine) {
               <div class="spread">
                 <span><span class="price">{{ mine.amount | money }}</span> · {{ mine.estimatedDays }} días</span>
