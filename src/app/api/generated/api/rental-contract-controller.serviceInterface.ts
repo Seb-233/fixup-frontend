@@ -13,6 +13,7 @@ import { Observable }                                        from 'rxjs';
 
 import { ContractResponse } from '../model/models';
 import { CreateContractRequest } from '../model/models';
+import { TenantCard } from '../model/models';
 import { UpdateContractRequest } from '../model/models';
 
 
@@ -46,7 +47,7 @@ export interface RentalContractControllerServiceInterface {
      * @endpoint get /contracts/{id}
      * @param id 
      */
-    get(id: string, extraHttpRequestParams?: any): Observable<ContractResponse>;
+    get1(id: string, extraHttpRequestParams?: any): Observable<ContractResponse>;
 
     /**
      * 
@@ -67,6 +68,14 @@ export interface RentalContractControllerServiceInterface {
     /**
      * 
      * 
+     * @endpoint get /contracts/tenant-lookup
+     * @param email 
+     */
+    tenantLookup(email: string, extraHttpRequestParams?: any): Observable<TenantCard>;
+
+    /**
+     * 
+     * 
      * @endpoint post /contracts/{id}/terminate
      * @param id 
      * @param requestBody 
@@ -80,6 +89,6 @@ export interface RentalContractControllerServiceInterface {
      * @param id 
      * @param updateContractRequest 
      */
-    update(id: string, updateContractRequest: UpdateContractRequest, extraHttpRequestParams?: any): Observable<ContractResponse>;
+    update1(id: string, updateContractRequest: UpdateContractRequest, extraHttpRequestParams?: any): Observable<ContractResponse>;
 
 }

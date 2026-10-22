@@ -19,6 +19,11 @@ export interface QuotationResponse {
     message?: string | null;
     status: QuotationStatus;
     createdAt: string;
+    fixerName?: string | null;
+    fixerRatingAverage?: number | null;
+    fixerRatingCount?: number | null;
+    fixerCity?: string | null;
+    requestTitle?: string | null;
 }
 export namespace QuotationResponse {
 }

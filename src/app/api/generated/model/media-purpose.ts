@@ -13,6 +13,8 @@ export const MediaPurpose = {
     FixerPortfolio: 'FIXER_PORTFOLIO',
     RepairRequest: 'REPAIR_REQUEST',
     FixerVerification: 'FIXER_VERIFICATION',
+    PropertyPhoto: 'PROPERTY_PHOTO',
+    JobEvidence: 'JOB_EVIDENCE',
 } as const;
 export type MediaPurpose = typeof MediaPurpose[keyof typeof MediaPurpose];
 

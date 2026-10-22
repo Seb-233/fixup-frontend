@@ -1,0 +1,102 @@
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<div class="shell" [class.menu-open]="menuOpen()">
+  <aside class="sidebar" id="menu-principal" aria-label="Menú principal">
+    <div class="brand">
+      <a routerLink="/dashboard" class="brand-mark">Fix<span>&amp;</span>Rent</a>
+      <button type="button" class="btn btn-ghost btn-icon close-menu" (click)="menuOpen.set(false)" aria-label="Cerrar menú">
+        <app-icon name="close" />
+      </button>
+    </div>
+
+    @if (user.roles().length > 1) {
+      <label class="role-switch">
+        <span>Trabajando como</span>
+        <select class="select" [value]="user.activeRole()" (change)="switchRole($any($event.target).value)">
+          @for (role of user.roles(); track role) {
+            <option [value]="role">{{ roleNames[role] }}</option>
+          }
+        </select>
+      </label>
+    } @else if (user.activeRole()) {
+      <p class="role-single">{{ roleNames[user.activeRole()!] }}</p>
+    }
+
+    <nav>
+      <ul class="nav-list">
+        @for (item of nav(); track item.label) {
+          <li>
+            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/requests' || item.path === '/properties' }">
+              <app-icon [name]="item.icon" />
+              <span>{{ item.label }}</span>
+              @if (item.requiresVerification) {
+                <span class="nav-note">Requiere verificación</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a routerLink="/profile" class="me">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <span class="me-text">
+          <span class="me-name">{{ user.user()?.displayName || 'Mi perfil' }}</span>
+          <span class="me-mail">{{ user.user()?.email }}</span>
+        </span>
+      </a>
+      <button type="button" class="btn btn-ghost logout" (click)="logout()">
+        <app-icon name="logout" />
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  @if (menuOpen()) {
+    <button type="button" class="scrim" (click)="menuOpen.set(false)" aria-label="Cerrar menú"></button>
+  }
+
+  <div class="main-column">
+    <header class="topbar">
+      <button type="button" class="btn btn-ghost menu-button" (click)="menuOpen.set(true)" aria-controls="menu-principal" [attr.aria-expanded]="menuOpen()">
+        <app-icon name="menu" />
+        <span>Menú</span>
+      </button>
+      <a routerLink="/dashboard" class="brand-mark topbar-brand">Fix<span>&amp;</span>Rent</a>
+
+      <div class="topbar-actions">
+        <button type="button" class="btn btn-ghost btn-icon" (click)="theme.toggle()"
+                [attr.aria-label]="theme.theme() === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'">
+          <app-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+        </button>
+        <a routerLink="/notifications" class="btn btn-ghost btn-icon bell"
+           [attr.aria-label]="unread() ? 'Notificaciones, ' + unread() + ' sin leer' : 'Notificaciones'">
+          <app-icon name="bell" />
+          @if (unread()) {
+            <span class="bell-count" aria-hidden="true">{{ unread() > 99 ? '99+' : unread() }}</span>
+          }
+        </a>
+        <a routerLink="/profile" class="avatar topbar-avatar" aria-label="Mi perfil">{{ initials() }}</a>
+      </div>
+    </header>
+
+    <main id="contenido" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Accesos principales">
+    @for (item of primary(); track item.label) {
+      <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/requests' || item.path === '/properties' }"
+         [attr.aria-label]="item.shortLabel ? item.label : null">
+        <app-icon [name]="item.icon" />
+        <span>{{ item.shortLabel ?? item.label }}</span>
+      </a>
+    }
+    <button type="button" (click)="menuOpen.set(true)" aria-controls="menu-principal" [attr.aria-expanded]="menuOpen()">
+      <app-icon name="menu" />
+      <span>Más</span>
+    </button>
+  </nav>
+</div>

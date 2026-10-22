@@ -51,7 +51,7 @@ export interface NotificationsControllerServiceInterface {
      * @param type 
      * @param unreadOnly 
      */
-    mine3(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, extraHttpRequestParams?: any): Observable<NotificationPageResponse>;
+    mine4(page?: number, size?: number, type?: NotificationType, unreadOnly?: boolean, extraHttpRequestParams?: any): Observable<NotificationPageResponse>;
 
     /**
      * Register a device token for push notifications

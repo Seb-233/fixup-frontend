@@ -1,0 +1,244 @@
+<div class="page">
+  @if (role() === 'FIXER') {
+    <a [routerLink]="isAssignedFixer() ? '/jobs/me' : '/requests/inbox'" class="back-link"><app-icon name="chevron-left" [size]="16" />{{ isAssignedFixer() ? 'Mis trabajos' : 'Solicitudes disponibles' }}</a>
+  } @else if (role() === 'REAL_ESTATE_MANAGER') {
+    <a routerLink="/management" class="back-link"><app-icon name="chevron-left" [size]="16" />Mantenimiento</a>
+  } @else if (role() === 'PLATFORM_ADMIN') {
+    <a routerLink="/administration/sla-board" class="back-link"><app-icon name="chevron-left" [size]="16" />Plazos</a>
+  } @else {
+    <a routerLink="/requests" class="back-link"><app-icon name="chevron-left" [size]="16" />Solicitudes</a>
+  }
+
+  @if (request.isLoading() && !request.hasValue()) {
+    <app-loading text="Cargando la solicitud…" />
+  } @else if (request.error()) {
+    <app-error title="No pudimos abrir la solicitud" message="Puede que ya no esté disponible para ti." (retry)="request.reload()" />
+  } @else if (request.hasValue()) {
+    @let r = request.value();
+    <header class="page-header">
+      <div>
+        <div class="cluster">
+          <app-status [map]="statusMap" [value]="r.status" />
+          <app-status [map]="urgency" [value]="r.urgencyLevel" />
+          <span class="chip">{{ r.specialty | label: specialty }}</span>
+        </div>
+        <h1 class="request-title">{{ r.title }}</h1>
+        <p class="lede">
+          {{ r.propertyName || 'Inmueble' }}{{ r.propertyAddress ? ' · ' + r.propertyAddress : '' }}{{ r.propertyCity ? ', ' + r.propertyCity : '' }}
+        </p>
+        <p class="text-sm text-muted">
+          Reportada {{ r.createdAt | ago }}{{ r.requestedByName ? ' por ' + r.requestedByName : '' }}
+          @if (r.ownerName && r.requestedByUserId !== r.ownerUserId) { · propietario {{ r.ownerName }} }
+        </p>
+      </div>
+      <div class="actions">
+        @if (hasJob() && isParticipant()) {
+          <a [routerLink]="['/requests', r.requestId, 'messages']" class="btn btn-secondary"><app-icon name="chat" />Conversación</a>
+        }
+        @if (isAssignedFixer() && job.hasValue() && job.value(); as j) {
+          <a [routerLink]="['/jobs', j.job.id]" class="btn btn-primary">Gestionar trabajo</a>
+        }
+        @if (isOpen() && (isDecider() || isRequester())) {
+          <button type="button" class="btn btn-ghost" (click)="cancelRequest()" [disabled]="busy() === 'cancel'">Cancelar solicitud</button>
+        }
+      </div>
+    </header>
+
+    @if (r.status !== 'CANCELLED') {
+      <ol class="progress" aria-label="Avance de la solicitud">
+        @for (step of steps(); track step.label) {
+          <li [class.done]="step.done"><span class="dot" aria-hidden="true"></span>{{ step.label }}<span class="visually-hidden">{{ step.done ? ', hecho' : ', pendiente' }}</span></li>
+        }
+      </ol>
+    }
+
+    @if (notice()) { <div class="alert alert-success" role="status">{{ notice() }}</div> }
+    @if (actionError()) { <div class="alert alert-danger" role="alert">{{ actionError() }}</div> }
+
+    <div class="split">
+      <div class="stack">
+        <section class="panel stack-sm" aria-labelledby="desc-title">
+          <h2 id="desc-title" class="text-lg">Lo que reportaron</h2>
+          <p class="description">{{ r.description }}</p>
+          @if (r.photos.length) {
+            <ul class="gallery photos">
+              @for (p of r.photos; track p.mediaId; let i = $index) {
+                <li><a [href]="p.readUrl" target="_blank" rel="noopener"><app-photo [src]="p.readUrl" [alt]="'Foto ' + (i + 1) + ' del daño'" /></a></li>
+              }
+            </ul>
+          }
+        </section>
+
+        <!-- Cotizaciones: quien decide compara y elige -->
+        @if (isDecider()) {
+          <section class="stack" aria-labelledby="quotes-title">
+            <div class="spread">
+              <h2 id="quotes-title">Cotizaciones</h2>
+              @if (quotations.hasValue()) { <span class="text-sm text-muted">{{ quotations.value().length }} recibidas</span> }
+            </div>
+            @if (quotations.isLoading() && !quotations.hasValue()) {
+              <app-loading text="Cargando cotizaciones…" />
+            } @else if (quotations.hasValue() && !quotations.value().length) {
+              <p class="text-muted">Aún no llegan cotizaciones. Los técnicos de {{ r.specialty | label: specialty }} en {{ r.propertyCity }} ya pueden verla.</p>
+            } @else {
+              <ul class="quotes">
+                @for (q of sortedQuotations(); track q.id) {
+                  <li class="panel quote" [class.accepted]="q.status === 'ACCEPTED'">
+                    <div class="quote-main">
+                      <div class="stack-sm">
+                        <a [routerLink]="['/fixers', q.fixerUserId]" class="row-title link">{{ q.fixerName || 'Técnico' }}</a>
+                        <span class="text-sm text-muted">{{ q.fixerCity || 'Ciudad sin indicar' }}</span>
+                        <app-stars [average]="q.fixerRatingAverage" [count]="q.fixerRatingCount" />
+                      </div>
+                      <div class="quote-figures">
+                        <span class="price">{{ q.amount | money }}</span>
+                        <span class="text-sm text-muted">{{ q.estimatedDays }} {{ q.estimatedDays === 1 ? 'día' : 'días' }}</span>
+                        @if (q.id === cheapest() && sortedQuotations().length > 1) { <span class="chip chip-accent">Menor valor</span> }
+                      </div>
+                    </div>
+                    @if (q.message) { <p class="text-sm quote-message">{{ q.message }}</p> }
+                    <div class="spread">
+                      <app-status [map]="quotationStatus" [value]="q.status" />
+                      @if (q.status === 'SUBMITTED' && isOpen()) {
+                        <div class="cluster">
+                          <button type="button" class="btn btn-ghost" (click)="reject(q)" [disabled]="busy() === q.id">Descartar</button>
+                          <button type="button" class="btn btn-primary" (click)="accept(q)" [disabled]="busy() === q.id">Elegir a {{ (q.fixerName || 'este técnico').split(' ')[0] }}</button>
+                        </div>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        <!-- Técnico que aún no tiene el trabajo: cotiza o ve su cotización -->
+        @if (isOtherFixer()) {
+          <section class="panel stack" aria-labelledby="myquote-title">
+            <h2 id="myquote-title" class="text-lg">Tu cotización</h2>
+            @if (myQuotation.hasValue() && myQuotation.value(); as mine) {
+              <div class="spread">
+                <span><span class="price">{{ mine.amount | money }}</span> · {{ mine.estimatedDays }} días</span>
+                <app-status [map]="quotationStatus" [value]="mine.status" />
+              </div>
+              @if (mine.message) { <p class="text-sm">{{ mine.message }}</p> }
+            } @else if (isOpen()) {
+              <form class="stack" (ngSubmit)="submitQuote()">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="amount">Valor total (COP)</label>
+                    <input id="amount" class="input" type="number" min="10000" step="1000" inputmode="numeric" name="amount" required [(ngModel)]="quoteAmount" />
+                  </div>
+                  <div class="field">
+                    <label for="days">Días estimados</label>
+                    <input id="days" class="input" type="number" min="1" max="60" name="days" required [(ngModel)]="quoteDays" />
+                  </div>
+                  <div class="field span-all">
+                    <label for="message">Mensaje para el cliente</label>
+                    <textarea id="message" class="textarea" rows="3" maxlength="1000" name="message" [(ngModel)]="quoteMessage"
+                              placeholder="Qué incluye el valor, materiales, garantía…"></textarea>
+                  </div>
+                </div>
+                <div><button type="submit" class="btn btn-primary" [disabled]="busy() === 'quote'">Enviar cotización</button></div>
+              </form>
+            } @else {
+              <p class="text-muted">Esta solicitud ya no recibe cotizaciones.</p>
+            }
+          </section>
+        }
+
+        <!-- Visitas técnicas -->
+        @if (isParticipant() || (role() === 'FIXER' && visits.hasValue() && visits.value().length)) {
+          <section class="stack" aria-labelledby="visits-title">
+            <div class="spread">
+              <h2 id="visits-title">Visitas</h2>
+              @if (canProposeVisit() && !proposing()) {
+                <button type="button" class="btn btn-secondary" (click)="proposing.set(true)"><app-icon name="calendar" />Proponer visita</button>
+              }
+            </div>
+            @if (proposing()) {
+              <div class="panel">
+                <app-propose-visit [requestId]="r.requestId" [fixers]="role() === 'FIXER' ? [] : visitFixers()" [kinds]="visitKinds()"
+                                   (created)="onVisitCreated($event)" (cancelled)="proposing.set(false)" />
+              </div>
+            }
+            @if (visits.hasValue() && visits.value().length) {
+              @for (v of visits.value(); track v.id) {
+                <app-visit-card [visit]="v" [me]="me()" [readonly]="r.status === 'COMPLETED' || r.status === 'CANCELLED'" (changed)="onVisitChanged($event)" />
+              }
+            } @else if (!proposing()) {
+              <p class="text-muted">
+                @if (canProposeVisit()) { Sin visitas. Propón una para revisar el daño en persona. }
+                @else if (isOpen()) { Cuando llegue la primera cotización podrás agendar una visita de diagnóstico con ese técnico. }
+                @else { Sin visitas registradas. }
+              </p>
+            }
+          </section>
+        }
+
+        <!-- Avance del trabajo -->
+        @if (job.hasValue() && job.value(); as j) {
+          <section class="panel stack" aria-labelledby="job-title">
+            <h2 id="job-title" class="text-lg">Avance del trabajo</h2>
+            <app-job-progress [detail]="j" />
+          </section>
+          @if (r.status === 'COMPLETED') {
+            <app-rating-panel [jobId]="j.job.id" [fixerName]="j.fixerName" [canRate]="canRate()" />
+          }
+        }
+      </div>
+
+      <aside class="stack sticky-aside">
+        @if (r.slaDeadline && r.status !== 'COMPLETED' && r.status !== 'CANCELLED') {
+          <div class="panel stack-sm">
+            <div class="spread">
+              <h3>Plazo de atención</h3>
+              <app-status [map]="sla" [value]="r.slaState" />
+            </div>
+            <p class="text-sm">Vence {{ r.slaDeadline | when }} ({{ r.slaDeadline | ago }}).</p>
+          </div>
+        }
+
+        @if (r.assignedFixerUserId) {
+          <div class="panel stack-sm">
+            <h3>Técnico asignado</h3>
+            <a [routerLink]="['/fixers', r.assignedFixerUserId]" class="row-title link">{{ r.assignedFixerName || 'Ver perfil' }}</a>
+            @if (r.completedAt) { <p class="text-sm text-muted">Terminó el {{ r.completedAt | day }}</p> }
+          </div>
+        }
+
+        @if (r.assignedFixerUserId) {
+          <div class="panel stack-sm">
+            <h3>Forma de pago</h3>
+            <p class="text-sm">{{ r.paymentMethod | label: methods }}{{ r.paymentMethod === 'CASH' ? ': se le paga al técnico al terminar.' : ' en la pasarela de prueba.' }}</p>
+            @if (awaitingPayment() && isAssignedFixer()) {
+              <p class="text-sm">El trabajo se abre en cuanto el cliente apruebe el pago.</p>
+            }
+            @if (cash.hasValue() && cash.value(); as c) {
+              <dl class="facts">
+                <div><dt>Acordado</dt><dd>{{ c.agreedAmount | money }}</dd></div>
+                <div><dt>Recibido</dt><dd>{{ c.receivedAmount | money }}</dd></div>
+                @if (c.outstandingAmount) { <div><dt>Saldo pendiente</dt><dd class="price">{{ c.outstandingAmount | money }}</dd></div> }
+              </dl>
+              @if (c.outstandingAmount && isDecider()) {
+                <a routerLink="/payments" class="btn btn-secondary">Pagar el saldo</a>
+              }
+            }
+          </div>
+        }
+
+        @if (payment.hasValue() && payment.value(); as p) {
+          <app-payment-panel [payment]="p" [canPay]="isDecider()" (paid)="onPaid($event)" />
+        }
+
+        @if (isOpen() && isRequester() && !isDecider()) {
+          <div class="panel panel-quiet stack-sm">
+            <h3>¿Quién elige al técnico?</h3>
+            <p class="text-sm">{{ r.ownerName || 'El propietario' }} compara las cotizaciones y elige. Tú puedes proponer una visita cuando haya cotizaciones.</p>
+          </div>
+        }
+      </aside>
+    </div>
+  }
+</div>

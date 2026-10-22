@@ -13,7 +13,10 @@ import { Observable }                                        from 'rxjs';
 
 import { CompletionRequest } from '../model/models';
 import { ErrorResponse } from '../model/models';
+import { EvidenceRequest } from '../model/models';
 import { JobResponse } from '../model/models';
+import { NoteRequest } from '../model/models';
+import { ScheduleRequest } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -26,18 +29,61 @@ export interface JobControllerServiceInterface {
 
     /**
      * Close a finished job
-     * Releases from escrow the amount the owner committed when accepting the quotation. Only the assigned fixer can close his own job.
+     * Records the work in the property\&#39;s history and settles the payment: a transfer releases the held earning; a cash job records the amount received and any balance the owner still owes. Then the request is closed. Only the assigned fixer can close his own job.
      * @endpoint post /jobs/{jobId}/complete
      * @param jobId 
      * @param completionRequest 
      */
-    complete(jobId: string, completionRequest?: CompletionRequest, extraHttpRequestParams?: any): Observable<JobResponse>;
+    complete1(jobId: string, completionRequest?: CompletionRequest, extraHttpRequestParams?: any): Observable<JobResponse>;
+
+    /**
+     * Read a job with its log and evidence photos (FR-UC-19)
+     * 
+     * @endpoint get /jobs/{jobId}
+     * @param jobId 
+     */
+    detail2(jobId: string, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
+     * Attach before, during or after photos to the job
+     * 
+     * @endpoint post /jobs/{jobId}/evidence
+     * @param jobId 
+     * @param evidenceRequest 
+     */
+    evidence(jobId: string, evidenceRequest: EvidenceRequest, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
+     * Read the job opened for a repair request (FR-UC-19)
+     * 
+     * @endpoint get /jobs/for-request/{requestId}
+     * @param requestId 
+     */
+    forRequest2(requestId: string, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
      * List the jobs assigned to the current fixer
      * 
      * @endpoint get /jobs/me
      */
-    mine4(extraHttpRequestParams?: any): Observable<Array<JobResponse>>;
+    mine5(extraHttpRequestParams?: any): Observable<Array<JobResponse>>;
+
+    /**
+     * Set or move the date agreed with the client
+     * 
+     * @endpoint post /jobs/{jobId}/schedule
+     * @param jobId 
+     * @param scheduleRequest 
+     */
+    schedule(jobId: string, scheduleRequest: ScheduleRequest, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
+     * Mark the job as in progress
+     * 
+     * @endpoint post /jobs/{jobId}/start
+     * @param jobId 
+     * @param noteRequest 
+     */
+    start(jobId: string, noteRequest: NoteRequest, extraHttpRequestParams?: any): Observable<{}>;
 
 }

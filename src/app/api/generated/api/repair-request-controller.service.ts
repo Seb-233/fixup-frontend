@@ -23,6 +23,8 @@ import { OpenRequest } from '../model/open-request';
 // @ts-ignore
 import { OpenRequestSummaryResponse } from '../model/open-request-summary-response';
 // @ts-ignore
+import { ReportablePropertyResponse } from '../model/reportable-property-response';
+// @ts-ignore
 import { RequestDetailResponse } from '../model/request-detail-response';
 
 // @ts-ignore
@@ -45,8 +47,67 @@ export class RepairRequestControllerService extends BaseService implements Repai
     }
 
     /**
+     * Withdraw an open request nobody has taken yet
+     * @endpoint post /requests/{requestId}/cancel
+     * @param requestId 
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public cancel1(requestId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<RequestDetailResponse>;
+    public cancel1(requestId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<RequestDetailResponse>>;
+    public cancel1(requestId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<RequestDetailResponse>>;
+    public cancel1(requestId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+        if (requestId === null || requestId === undefined) {
+            throw new Error('Required parameter requestId was null or undefined when calling cancel1.');
+        }
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/requests/${this.configuration.encodeParam({name: "requestId", value: requestId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/cancel`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<RequestDetailResponse>('post', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
      * Read one repair request
-     * The owner always reads it; a verified compatible fixer reads it while open, or afterwards only when the work was assigned to him.
+     * The people related to the property always read it; a verified compatible fixer reads it while open, or afterwards only when the work was assigned to him.
      * @endpoint get /requests/{requestId}
      * @param requestId 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
@@ -105,16 +166,16 @@ export class RepairRequestControllerService extends BaseService implements Repai
     }
 
     /**
-     * List the repair requests opened by the current user
+     * List the repair requests of the properties the user owns, rents or manages
      * @endpoint get /requests/me
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public mine(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<RequestDetailResponse>>;
-    public mine(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<RequestDetailResponse>>>;
-    public mine(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<RequestDetailResponse>>>;
-    public mine(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+    public mine1(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<RequestDetailResponse>>;
+    public mine1(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<RequestDetailResponse>>>;
+    public mine1(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<RequestDetailResponse>>>;
+    public mine1(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
 
         let localVarHeaders = this.defaultHeaders;
 
@@ -161,7 +222,7 @@ export class RepairRequestControllerService extends BaseService implements Repai
 
     /**
      * Open a repair request
-     * The body carries media asset IDs. No raw image binary content crosses this API.
+     * The owner, the property\&#39;s real estate manager or a tenant with an active lease may open it (FR-UC-08). The body carries media asset IDs. No raw image binary content crosses this API.
      * @endpoint post /requests
      * @param openRequest 
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
@@ -231,7 +292,7 @@ export class RepairRequestControllerService extends BaseService implements Repai
 
     /**
      * List the open requests offered to fixers
-     * FR-UC-18: the fixer\&#39;s inbox. Requires active, verified FIXER and filters by fixer specialties.
+     * FR-UC-18: the fixer\&#39;s inbox. Requires active, verified FIXER and filters by fixer specialties and city. Requests a manager invited the fixer to (FR-UC-11) come first, from any city.
      * @endpoint get /requests/open
      * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
      * @param reportProgress flag to report request and response progress.
@@ -273,6 +334,61 @@ export class RepairRequestControllerService extends BaseService implements Repai
         let localVarPath = `/requests/open`;
         const { basePath, withCredentials } = this.configuration;
         return this.httpClient.request<Array<OpenRequestSummaryResponse>>('get', `${basePath}${localVarPath}`,
+            {
+                context: localVarHttpContext,
+                responseType: <any>responseType_,
+                ...(withCredentials ? { withCredentials } : {}),
+                headers: localVarHeaders,
+                observe: observe,
+                ...(localVarTransferCache !== undefined ? { transferCache: localVarTransferCache } : {}),
+                reportProgress: reportProgress
+            }
+        );
+    }
+
+    /**
+     * Properties the current tenant rents with an active lease (FR-UC-08)
+     * @endpoint get /requests/reportable-properties
+     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
+     * @param reportProgress flag to report request and response progress.
+     * @param options additional options
+     */
+    public reportableProperties(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<ReportablePropertyResponse>>;
+    public reportableProperties(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<ReportablePropertyResponse>>>;
+    public reportableProperties(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<ReportablePropertyResponse>>>;
+    public reportableProperties(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
+
+        let localVarHeaders = this.defaultHeaders;
+
+        // authentication (bearerAuth) required
+        localVarHeaders = this.configuration.addCredentialToHeaders('bearerAuth', 'Authorization', localVarHeaders, 'Bearer ');
+
+        const localVarHttpHeaderAcceptSelected: string | undefined = options?.httpHeaderAccept ?? this.configuration.selectHeaderAccept([
+            'application/json'
+        ]);
+        if (localVarHttpHeaderAcceptSelected !== undefined) {
+            localVarHeaders = localVarHeaders.set('Accept', localVarHttpHeaderAcceptSelected);
+        }
+
+        const localVarHttpContext: HttpContext = options?.context ?? new HttpContext();
+
+        const localVarTransferCache: boolean = options?.transferCache ?? true;
+
+
+        let responseType_: 'text' | 'json' | 'blob' = 'json';
+        if (localVarHttpHeaderAcceptSelected) {
+            if (localVarHttpHeaderAcceptSelected.startsWith('text')) {
+                responseType_ = 'text';
+            } else if (this.configuration.isJsonMime(localVarHttpHeaderAcceptSelected)) {
+                responseType_ = 'json';
+            } else {
+                responseType_ = 'blob';
+            }
+        }
+
+        let localVarPath = `/requests/reportable-properties`;
+        const { basePath, withCredentials } = this.configuration;
+        return this.httpClient.request<Array<ReportablePropertyResponse>>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
