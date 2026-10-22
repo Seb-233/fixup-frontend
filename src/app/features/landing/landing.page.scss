@@ -1,0 +1,182 @@
+@use '../../../styles/tokens' as *;
+@use '../../../styles/public-site';
+
+:host {
+  display: block;
+  background: var(--bg);
+}
+
+@include public-site.public-chrome;
+
+// ------------------------------------------------------------ portada
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: var(--s-7);
+  align-items: center;
+  padding: var(--s-7) 0 var(--s-8);
+
+  h1 {
+    font-size: var(--fs-3xl);
+    max-width: 18ch;
+    text-wrap: balance;
+  }
+
+  @media (max-width: #{$breakpoint-desktop - 1px}) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+    padding: var(--s-4) 0 var(--s-7);
+  }
+}
+
+.hero-copy {
+  display: grid;
+  gap: var(--s-5);
+
+  .lede {
+    font-size: var(--fs-lg);
+    color: var(--text-muted);
+    max-width: 52ch;
+  }
+}
+
+// ------------------------------------------------------------ roles: lista, no tarjetas
+.roles {
+  padding: var(--s-7) 0;
+  border-top: 1px solid var(--border);
+
+  h2 {
+    margin-bottom: var(--s-5);
+  }
+}
+
+.role-list {
+  margin: 0;
+  display: grid;
+}
+
+.role-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--s-5);
+  padding: var(--s-5) 0;
+  border-top: 1px solid var(--border);
+
+  dt {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--fs-lg);
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.1em;
+    display: grid;
+    gap: var(--s-2);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-2);
+  }
+}
+
+// ------------------------------------------------------------ flujo: banda carbón
+.flow {
+  margin: var(--s-6) calc(-1 * var(--s-6));
+  padding: var(--s-7) var(--s-6);
+  background: var(--surface-ink);
+  color: var(--text-on-ink);
+  border-radius: var(--r-lg);
+
+  h2,
+  h3 {
+    color: var(--text-on-ink);
+  }
+
+  .text-muted,
+  p {
+    color: var(--text-on-ink-muted);
+  }
+
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    margin: var(--s-5) calc(-1 * var(--s-4));
+    padding: var(--s-6) var(--s-4);
+    border-radius: 0;
+  }
+}
+
+.flow-head {
+  display: grid;
+  gap: var(--s-2);
+  margin-bottom: var(--s-6);
+  max-width: 60ch;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-5);
+
+  li {
+    display: grid;
+    align-content: start;
+    gap: var(--s-2);
+    padding-top: var(--s-3);
+    border-top: 2px solid rgb(255 255 255 / 18%);
+  }
+
+  h3 {
+    font-size: var(--fs-base);
+  }
+
+  p {
+    font-size: var(--fs-sm);
+  }
+
+  @media (max-width: #{$breakpoint-desktop - 1px}) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.step-number {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xl);
+  color: var(--accent);
+}
+
+// ------------------------------------------------------------ sello
+.seal-section {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--s-7);
+  align-items: center;
+  padding: var(--s-7) 0 var(--s-8);
+
+  p {
+    color: var(--text-muted);
+    max-width: 58ch;
+  }
+
+  .seal {
+    align-self: flex-start;
+  }
+
+  @media (max-width: #{$breakpoint-desktop - 1px}) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+  }
+}

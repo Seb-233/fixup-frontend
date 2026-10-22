@@ -59,6 +59,13 @@ export interface PaymentControllerServiceInterface {
     initiateDebt(debtId: string, extraHttpRequestParams?: any): Observable<PaymentDetail>;
 
     /**
+     * List the payments the current owner or delegated manager owes or made
+     * Newest first. A PENDING, DECLINED or ERROR transfer can be retried from here.
+     * @endpoint get /payments/me
+     */
+    myPayments(extraHttpRequestParams?: any): Observable<Array<PaymentDetail>>;
+
+    /**
      * Read a simulated service or outstanding-balance payment
      * Owners, the assigned fixer and platform administrators can audit a payment they may see.
      * @endpoint get /payments/{paymentId}

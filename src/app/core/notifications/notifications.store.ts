@@ -1,4 +1,5 @@
-import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, effect, inject, signal, untracked } from '@angular/core';
+import { ConnectivityService } from '../connectivity/connectivity.service';
 import { forkJoin, interval, Subject, Subscription, takeUntil } from 'rxjs';
 import {
   NotificationItem,
@@ -22,6 +23,14 @@ export class NotificationsStore implements OnDestroy {
   private totalPages = 1;
   private pollingStarted = false;
   private pollingSub?: Subscription;
+
+  constructor() {
+    // Al volver la conexión se refresca enseguida en lugar de esperar al próximo sondeo.
+    const connectivity = inject(ConnectivityService);
+    effect(() => {
+      if (connectivity.reconnections() > 0 && this.pollingStarted) untracked(() => this.refresh());
+    });
+  }
 
   init(): void {
     if (this.pollingStarted) {

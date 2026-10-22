@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { RemodelingGoal } from './remodeling-goal';
 import { RequirementRequest } from './requirement-request';
 
 
@@ -15,5 +16,11 @@ export interface CreateProjectRequest {
     title: string;
     description?: string;
     requirements: Array<RequirementRequest>;
+    goal?: RemodelingGoal;
+    targetRent?: number;
+    targetReadyDate?: string;
 }
+export namespace CreateProjectRequest {
+}
+
 

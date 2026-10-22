@@ -1,7 +1,27 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { BackendUserProfile, Role, UserStatus } from './auth.types';
 
-// Almacén reactivo en memoria para el estado y perfil del usuario autenticado
+const ACTIVE_ROLE_KEY = 'fixrent.active-role';
+
+function storedRole(): Role | null {
+  try {
+    return (sessionStorage.getItem(ACTIVE_ROLE_KEY) as Role | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function storeRole(role: Role | null): void {
+  try {
+    if (role) sessionStorage.setItem(ACTIVE_ROLE_KEY, role);
+    else sessionStorage.removeItem(ACTIVE_ROLE_KEY);
+  } catch {
+    // Sin almacenamiento, el rol elegido dura hasta recargar.
+  }
+}
+
+// Almacén reactivo en memoria para el estado y perfil del usuario autenticado. El rol activo se
+// recuerda en la pestaña para que recargar la página no devuelva a la persona a su primer rol.
 @Injectable({
   providedIn: 'root'
 })
@@ -38,9 +58,18 @@ export class CurrentUserStore {
     }
   }
 
+  /** Vuelve al rol que la persona eligió antes de recargar la pestaña, si su cuenta aún lo tiene. */
+  restoreRememberedRole(): boolean {
+    const remembered = storedRole();
+    if (!remembered || !this.roles().includes(remembered)) return false;
+    this.activeRoleState.set(remembered);
+    return true;
+  }
+
   // Establece el rol actualmente activo
   setActiveRole(role: Role | null): void {
     this.activeRoleState.set(role);
+    storeRole(role);
   }
 
   // Actualiza el conjunto de roles tras asignación
@@ -88,6 +117,7 @@ export class CurrentUserStore {
   clear(): void {
     this.userState.set(null);
     this.activeRoleState.set(null);
+    storeRole(null);
     this.loadingState.set(false);
     this.profileLoadedState.set(false);
     this.errorState.set(null);

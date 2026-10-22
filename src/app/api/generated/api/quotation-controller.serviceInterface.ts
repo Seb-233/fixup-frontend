@@ -39,14 +39,14 @@ export interface QuotationControllerServiceInterface {
      * @endpoint get /quotations/for-request/{requestId}
      * @param requestId 
      */
-    forRequest(requestId: string, extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
+    forRequest1(requestId: string, extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
 
     /**
      * List the quotations sent by the current fixer
      * 
      * @endpoint get /quotations/me
      */
-    mine2(extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
+    mine3(extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
 
     /**
      * Explicitly reject a quotation

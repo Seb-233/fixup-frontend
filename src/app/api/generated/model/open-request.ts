@@ -17,7 +17,10 @@ export interface OpenRequest {
     description: string;
     mediaIds?: Array<string>;
     urgencyLevel?: UrgencyLevel;
-    paymentMethod: PaymentMethod;
+    /**
+     * TRANSFER or CASH. Required from the owner or the manager; a tenant\'s report is always paid by transfer (FR-UC-05).
+     */
+    paymentMethod?: PaymentMethod;
 }
 export namespace OpenRequest {
 }

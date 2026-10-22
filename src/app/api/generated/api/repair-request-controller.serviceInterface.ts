@@ -14,6 +14,7 @@ import { Observable }                                        from 'rxjs';
 import { ErrorResponse } from '../model/models';
 import { OpenRequest } from '../model/models';
 import { OpenRequestSummaryResponse } from '../model/models';
+import { ReportablePropertyResponse } from '../model/models';
 import { RequestDetailResponse } from '../model/models';
 
 
@@ -26,23 +27,31 @@ export interface RepairRequestControllerServiceInterface {
     configuration: Configuration;
 
     /**
+     * Withdraw an open request nobody has taken yet
+     * 
+     * @endpoint post /requests/{requestId}/cancel
+     * @param requestId 
+     */
+    cancel1(requestId: string, extraHttpRequestParams?: any): Observable<RequestDetailResponse>;
+
+    /**
      * Read one repair request
-     * The owner always reads it; a verified compatible fixer reads it while open, or afterwards only when the work was assigned to him.
+     * The people related to the property always read it; a verified compatible fixer reads it while open, or afterwards only when the work was assigned to him.
      * @endpoint get /requests/{requestId}
      * @param requestId 
      */
     detail(requestId: string, extraHttpRequestParams?: any): Observable<RequestDetailResponse>;
 
     /**
-     * List the repair requests opened by the current user
+     * List the repair requests of the properties the user owns, rents or manages
      * 
      * @endpoint get /requests/me
      */
-    mine(extraHttpRequestParams?: any): Observable<Array<RequestDetailResponse>>;
+    mine1(extraHttpRequestParams?: any): Observable<Array<RequestDetailResponse>>;
 
     /**
      * Open a repair request
-     * The body carries media asset IDs. No raw image binary content crosses this API.
+     * The owner, the property\&#39;s real estate manager or a tenant with an active lease may open it (FR-UC-08). The body carries media asset IDs. No raw image binary content crosses this API.
      * @endpoint post /requests
      * @param openRequest 
      */
@@ -50,9 +59,16 @@ export interface RepairRequestControllerServiceInterface {
 
     /**
      * List the open requests offered to fixers
-     * FR-UC-18: the fixer\&#39;s inbox. Requires active, verified FIXER and filters by fixer specialties.
+     * FR-UC-18: the fixer\&#39;s inbox. Requires active, verified FIXER and filters by fixer specialties and city. Requests a manager invited the fixer to (FR-UC-11) come first, from any city.
      * @endpoint get /requests/open
      */
     open1(extraHttpRequestParams?: any): Observable<Array<OpenRequestSummaryResponse>>;
+
+    /**
+     * Properties the current tenant rents with an active lease (FR-UC-08)
+     * 
+     * @endpoint get /requests/reportable-properties
+     */
+    reportableProperties(extraHttpRequestParams?: any): Observable<Array<ReportablePropertyResponse>>;
 
 }

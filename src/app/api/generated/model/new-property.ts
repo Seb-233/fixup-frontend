@@ -7,6 +7,8 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { PropertyType } from './property-type';
+import { ListingType } from './listing-type';
 
 
 export interface NewProperty { 
@@ -16,5 +18,20 @@ export interface NewProperty {
     areaM2?: number;
     latitude: number;
     longitude: number;
+    listingType?: ListingType;
+    propertyType?: PropertyType;
+    price?: number;
+    adminFee?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    parkingSpots?: number;
+    stratum?: number;
+    neighborhood?: string;
+    description?: string;
+    photoMediaIds?: Array<string>;
+    publish?: boolean;
 }
+export namespace NewProperty {
+}
+
 

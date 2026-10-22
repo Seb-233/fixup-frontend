@@ -40,7 +40,7 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     const component = await rootRoute?.loadComponent?.();
     expect(component).toBeDefined();
     expect((component as { ɵcmp?: { selectors?: string[][] } }).ɵcmp?.selectors).toContainEqual([
-      'app-landing'
+      'app-landing-page'
     ]);
   });
 
@@ -68,14 +68,14 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(privateChildren.some((child) => child.path === 'auth/callback')).toBe(false);
   });
 
-  it('4. /properties carga la pantalla del owner de forma diferida', () => {
+  it('4. /properties carga de forma diferida la pantalla de propietarios e inmobiliarias', () => {
     const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
     const propertiesRoute = privateLayoutRoute?.children?.find((route) => route.path === 'properties');
 
     expect(propertiesRoute).toBeDefined();
     expect(propertiesRoute?.loadComponent).toBeDefined();
     expect(propertiesRoute?.component).toBeUndefined();
-    expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER']);
+    expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
   });
 
   it('5. /dashboard sigue dentro del shell privado autenticado y exige un rol activo', () => {
@@ -84,7 +84,8 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
 
     expect(privateLayoutRoute?.canActivate).toBeDefined();
     expect(dashboardRoute?.loadComponent).toBeDefined();
-    expect(dashboardRoute?.canActivate).toContain(roleGuard);
+    // El guard de rol cubre a todas las rutas hijas del shell privado.
+    expect(privateLayoutRoute?.canActivateChild).toContain(roleGuard);
     expect(dashboardRoute?.data?.['roles']).toBeUndefined();
   });
 
@@ -109,5 +110,24 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(detailRoute).toBeDefined();
     expect(detailRoute?.loadComponent).toBeDefined();
     expect(detailRoute?.data?.['roles']).toEqual(['OWNER', 'PLATFORM_ADMIN']);
+  });
+
+  it('8. los enlaces de notificaciones del backend tienen destino', () => {
+    const privateLayoutRoute = routes.find((route) => route.component && route.children);
+    const childPaths = privateLayoutRoute?.children?.map((route) => route.path) ?? [];
+    for (const path of [
+      'properties/:propertyId',
+      'visits/:visitId',
+      'management/requests',
+      'fixers/:fixerUserId/profile',
+      'quotations/request/:requestId',
+      'requests/:requestId/messages',
+      'jobs/me',
+      'payments/earnings',
+      'fixers/verification',
+      'contracts/:contractId'
+    ]) {
+      expect(childPaths).toContain(path);
+    }
   });
 });

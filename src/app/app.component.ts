@@ -1,14 +1,13 @@
-import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ConnectionBannerComponent } from './core/connectivity/connection-banner.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  imports: [RouterOutlet, ConnectionBannerComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '<app-connection-banner /><router-outlet />'
 })
 export class App {
-  readonly title = signal('FixUp');
+  readonly title = signal('Fix&Rent');
 }

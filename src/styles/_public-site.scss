@@ -1,0 +1,78 @@
+@use 'tokens' as *;
+
+// Marco de las páginas públicas (portada e ingreso): mismo ancho, mismo encabezado con la marca y el
+// mismo pie, para que pasar de la portada al ingreso no se sienta como cambiar de sitio.
+@mixin public-chrome {
+  .site-header,
+  main,
+  .site-footer {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: var(--s-6);
+    padding-right: var(--s-6);
+
+    @media (max-width: #{$breakpoint-tablet - 1px}) {
+      padding-left: var(--s-4);
+      padding-right: var(--s-4);
+    }
+  }
+
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    height: 72px;
+  }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--text);
+    text-decoration: none;
+
+    span {
+      color: var(--accent-text);
+    }
+
+    &.small {
+      font-size: 1.125rem;
+    }
+  }
+
+  .site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding-top: var(--s-5);
+    padding-bottom: var(--s-6);
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  figure {
+    margin: 0;
+
+    img {
+      width: 100%;
+      height: auto;
+      border-radius: var(--r-lg);
+      aspect-ratio: 3 / 2;
+      object-fit: cover;
+      background: var(--surface-2);
+    }
+
+    figcaption {
+      margin-top: var(--s-2);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+  }
+}
