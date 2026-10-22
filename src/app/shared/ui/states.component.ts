@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, untracked } from '@angular/core';
+import { ConnectivityService } from '../../core/connectivity/connectivity.service';
 
 @Component({
   selector: 'app-loading',
@@ -16,7 +17,11 @@ export class LoadingComponent {
     <div class="alert alert-danger" role="alert">
       <div class="stack-sm">
         <strong>{{ title() }}</strong>
-        <span>{{ message() }}</span>
+        @if (offline()) {
+          <span>Se perdió la conexión con el servidor. Esto se vuelve a cargar solo cuando vuelva.</span>
+        } @else {
+          <span>{{ message() }}</span>
+        }
         @if (retryable()) {
           <div><button type="button" class="btn btn-secondary" (click)="retry.emit()">Reintentar</button></div>
         }
@@ -29,6 +34,17 @@ export class ErrorStateComponent {
   readonly message = input('Revisa tu conexión e inténtalo de nuevo.');
   readonly retryable = input(true);
   readonly retry = output<void>();
+  private readonly connectivity = inject(ConnectivityService);
+  readonly offline = computed(() => this.connectivity.state() === 'offline');
+
+  constructor() {
+    // Si la carga falló por una caída de la conexión, se vuelve a intentar sola cuando vuelve.
+    const connectivity = this.connectivity;
+    const seen = connectivity.reconnections();
+    effect(() => {
+      if (connectivity.reconnections() > seen && untracked(this.retryable)) this.retry.emit();
+    });
+  }
 }
 
 @Component({

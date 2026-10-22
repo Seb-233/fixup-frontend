@@ -12,6 +12,7 @@ import { routes } from './app.routes';
 import { provideFixUpAuth } from './core/auth/auth.config';
 import { NativeAuthService } from './core/auth/native-auth.service';
 import { fixupAuthInterceptor } from './core/demo/fixup-auth.interceptor';
+import { connectivityInterceptor } from './core/connectivity/connectivity.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { ThemeService } from './core/theme/theme.service';
 import { FixRentTitleStrategy } from './core/title.strategy';
@@ -24,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ scrollPositionRestoration: 'top', anchorScrolling: 'enabled' })),
     { provide: TitleStrategy, useClass: FixRentTitleStrategy },
-    provideHttpClient(withFetch(), withInterceptors([fixupAuthInterceptor, errorInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([connectivityInterceptor, fixupAuthInterceptor, errorInterceptor])),
     provideFixUpAuth(),
     // El cliente de src/app/api/generated se genera desde docs/openapi.json del backend.
     provideApi(environment.apiOrigin),
