@@ -5,7 +5,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { Role } from '../../core/auth/auth.types';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
-import { getNavigationForRole } from '../../core/navigation/role-navigation';
+import { ROLE_PANEL, getNavigationGroupsForRole } from '../../core/navigation/role-navigation';
 import { NotificationsStore } from '../../core/notifications/notifications.store';
 import { ThemeService } from '../../core/theme/theme.service';
 import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
@@ -32,10 +32,19 @@ export class ShellComponent implements OnInit {
 
   readonly menuOpen = signal(false);
   readonly roleNames = ROLE_NAME;
-  readonly nav = computed(() =>
-    getNavigationForRole(this.user.activeRole(), this.user.activeRole() !== 'FIXER' || this.verification.verified())
+  readonly panelNames = ROLE_PANEL;
+  // Rutas que tienen hijas propias en el menú (/requests/inbox, /properties/new): solo se marcan
+  // activas en su página exacta.
+  readonly exactPaths = new Set(['/dashboard', '/requests', '/properties']);
+  readonly groups = computed(() =>
+    getNavigationGroupsForRole(this.user.activeRole(), this.user.activeRole() !== 'FIXER' || this.verification.verified())
   );
-  readonly primary = computed(() => this.nav().filter((item) => item.mobilePrimary).slice(0, 4));
+  readonly primary = computed(() =>
+    this.groups()
+      .flatMap((section) => section.items)
+      .filter((item) => item.mobilePrimary)
+      .slice(0, 4)
+  );
   readonly initials = computed(() => initials(this.user.user()?.displayName));
   readonly unread = computed(() => this.notifications.unreadCount());
 

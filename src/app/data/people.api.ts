@@ -6,6 +6,7 @@ import {
   OwnPortfolioResponse,
   PendingVerification,
   PieceResponse,
+  PortfolioFeedResponse,
   ReviewResponse,
   SlaBoardItemResponse,
   Specialty,
@@ -42,6 +43,11 @@ export class PeopleApi {
 
   portfolioOf(fixerUserId: string): Observable<PieceResponse[]> {
     return this.api.get(`/media/fixers/${fixerUserId}/portfolio`);
+  }
+
+  /** Ideas de remodelación: piezas públicas de todos los portafolios publicados, por páginas. */
+  feed(page: number, size = 24, fixerUserIds?: readonly string[]): Observable<PortfolioFeedResponse> {
+    return this.api.get('/media/portfolio/feed', { page, size, fixerUserIds: fixerUserIds?.join(',') });
   }
 
   myPortfolio(): Observable<OwnPortfolioResponse> {

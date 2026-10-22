@@ -34,8 +34,13 @@ const URGENCY_HELP: Record<UrgencyLevel, string> = {
       <a routerLink="/requests" class="back-link"><app-icon name="chevron-left" [size]="16" />Solicitudes</a>
       <header class="page-header">
         <div>
-          <h1>Reportar un daño</h1>
-          <p class="lede">Describe qué pasó y adjunta fotos. Fix&amp;Rent detecta la especialidad y la solicitud les aparece a los técnicos verificados de esa especialidad en la ciudad del inmueble.</p>
+          @if (fromIdea()) {
+            <h1>Pedir una obra parecida</h1>
+            <p class="lede">Cuenta qué quieres hacer y en qué inmueble. Los técnicos verificados de esa especialidad en tu ciudad te enviarán su cotización.</p>
+          } @else {
+            <h1>Reportar un daño</h1>
+            <p class="lede">Describe qué pasó y adjunta fotos. Fix&amp;Rent detecta la especialidad y la solicitud les aparece a los técnicos verificados de esa especialidad en la ciudad del inmueble.</p>
+          }
         </div>
       </header>
 
@@ -63,7 +68,7 @@ const URGENCY_HELP: Record<UrgencyLevel, string> = {
           </div>
 
           <div class="field">
-            <label for="title">¿Qué se dañó? *</label>
+            <label for="title">{{ fromIdea() ? '¿Qué quieres hacer?' : '¿Qué se dañó?' }} *</label>
             <input id="title" name="title" class="input" required minlength="5" maxlength="150" [(ngModel)]="title" #titleRef="ngModel"
                    placeholder="Fuga en el lavaplatos de la cocina" [attr.aria-invalid]="submitted() && titleRef.invalid" />
             @if (submitted() && titleRef.invalid) { <span class="error">Escribe un título de al menos 5 caracteres.</span> }
@@ -159,6 +164,7 @@ export class NewRequestPage implements OnInit {
 
   propertyId = '';
   title = '';
+  readonly fromIdea = signal(false);
   description = '';
   urgency: UrgencyLevel = 'MEDIUM';
   paymentMethod: PaymentMethod = 'TRANSFER';
@@ -169,7 +175,11 @@ export class NewRequestPage implements OnInit {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.propertyId = this.route.snapshot.queryParamMap.get('propertyId') ?? '';
+    const query = this.route.snapshot.queryParamMap;
+    this.propertyId = query.get('propertyId') ?? '';
+    // Desde una idea del feed llega el título de la obra que la persona quiere replicar.
+    this.title = (query.get('title') ?? '').slice(0, 150);
+    this.fromIdea.set(!!this.title);
   }
 
   submit(valid: boolean): void {

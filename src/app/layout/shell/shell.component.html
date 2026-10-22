@@ -1,6 +1,6 @@
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
-<div class="shell" [class.menu-open]="menuOpen()">
+<div class="shell" [class.menu-open]="menuOpen()" [attr.data-role]="user.activeRole()">
   <aside class="sidebar" id="menu-principal" aria-label="Menú principal">
     <div class="brand">
       <a routerLink="/dashboard" class="brand-mark">Fix<span>&amp;</span>Rent</a>
@@ -9,33 +9,43 @@
       </button>
     </div>
 
-    @if (user.roles().length > 1) {
-      <label class="role-switch">
-        <span>Trabajando como</span>
-        <select class="select" [value]="user.activeRole()" (change)="switchRole($any($event.target).value)">
-          @for (role of user.roles(); track role) {
-            <option [value]="role">{{ roleNames[role] }}</option>
-          }
-        </select>
-      </label>
-    } @else if (user.activeRole()) {
-      <p class="role-single">{{ roleNames[user.activeRole()!] }}</p>
+    @if (user.activeRole(); as role) {
+      <div class="panel-badge">
+        <span class="panel-name">{{ panelNames[role] }}</span>
+        @if (user.roles().length > 1) {
+          <label class="role-switch">
+            <span>Cambiar de panel</span>
+            <select class="select" (change)="switchRole($any($event.target).value)">
+              @for (option of user.roles(); track option) {
+                <option [value]="option" [selected]="option === role">{{ roleNames[option] }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
     }
 
     <nav>
-      <ul class="nav-list">
-        @for (item of nav(); track item.label) {
-          <li>
-            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/requests' || item.path === '/properties' }">
-              <app-icon [name]="item.icon" />
-              <span>{{ item.label }}</span>
-              @if (item.requiresVerification) {
-                <span class="nav-note">Requiere verificación</span>
-              }
-            </a>
-          </li>
-        }
-      </ul>
+      @for (section of groups(); track $index) {
+        <div class="nav-group">
+          @if (section.label) {
+            <p class="nav-heading" [id]="'nav-' + $index">{{ section.label }}</p>
+          }
+          <ul class="nav-list" [attr.aria-labelledby]="section.label ? 'nav-' + $index : null">
+            @for (item of section.items; track item.label) {
+              <li>
+                <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: exactPaths.has(item.path) }">
+                  <app-icon [name]="item.icon" />
+                  <span>{{ item.label }}</span>
+                  @if (item.requiresVerification) {
+                    <span class="nav-note">Requiere verificación</span>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
+      }
     </nav>
 
     <div class="sidebar-footer">
@@ -65,6 +75,10 @@
       </button>
       <a routerLink="/dashboard" class="brand-mark topbar-brand">Fix<span>&amp;</span>Rent</a>
 
+      @if (user.activeRole(); as role) {
+        <span class="role-pill">{{ roleNames[role] }}</span>
+      }
+
       <div class="topbar-actions">
         <button type="button" class="btn btn-ghost btn-icon" (click)="theme.toggle()"
                 [attr.aria-label]="theme.theme() === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'">
@@ -88,7 +102,7 @@
 
   <nav class="bottom-nav" aria-label="Accesos principales">
     @for (item of primary(); track item.label) {
-      <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' || item.path === '/requests' || item.path === '/properties' }"
+      <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: exactPaths.has(item.path) }"
          [attr.aria-label]="item.shortLabel ? item.label : null">
         <app-icon [name]="item.icon" />
         <span>{{ item.shortLabel ?? item.label }}</span>

@@ -1,5 +1,5 @@
 import { Role } from '../auth/auth.types';
-import { getNavigationForRole } from './role-navigation';
+import { ROLE_PANEL, getNavigationForRole, getNavigationGroupsForRole } from './role-navigation';
 
 const paths = (role: Role, verified = true) => getNavigationForRole(role, verified).map((item) => item.path);
 
@@ -55,5 +55,26 @@ describe('Navegación por rol', () => {
     for (const role of ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] as const) {
       expect(paths(role)).toContain('/visits');
     }
+  });
+
+  it.each(['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const)(
+    '%s agrupa el menú en secciones con rótulo, cada una con pocos accesos y sin repetir destinos',
+    (role) => {
+      const groups = getNavigationGroupsForRole(role);
+      expect(groups[0]).toEqual({ label: null, items: [expect.objectContaining({ path: '/dashboard' })] });
+      for (const section of groups.slice(1)) {
+        expect(section.label).toBeTruthy();
+        expect(section.items.length).toBeGreaterThan(0);
+        expect(section.items.length).toBeLessThanOrEqual(4);
+      }
+      const all = paths(role);
+      expect(new Set(all).size).toBe(all.length);
+      expect(ROLE_PANEL[role]).toBeTruthy();
+    }
+  );
+
+  it('las secciones del técnico sin verificar también llevan a la verificación', () => {
+    const trabajo = getNavigationGroupsForRole('FIXER', false).find((section) => section.label === 'Trabajo')!;
+    expect(trabajo.items.find((entry) => entry.label === 'Disponibles')?.path).toBe('/fixers/verification');
   });
 });

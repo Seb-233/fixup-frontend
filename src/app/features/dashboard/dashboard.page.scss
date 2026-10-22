@@ -100,3 +100,41 @@
   font-size: var(--fs-sm);
   text-align: center;
 }
+
+// Inicio de clientes: los pendientes caben en una franja de mosaicos cortos para que el feed de
+// ideas, que es lo que se recorre, empiece en la primera pantalla.
+.glance {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2) var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  height: 100%;
+  min-height: var(--tap);
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--border-control);
+  }
+
+  > app-icon:last-child {
+    color: var(--text-muted);
+  }
+
+  .visit-date {
+    min-width: 48px;
+    padding: var(--s-1) var(--s-2);
+  }
+}

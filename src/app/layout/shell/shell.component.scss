@@ -20,8 +20,9 @@
   min-height: 100dvh;
 }
 
-// ------------------------------------------------------------ barra lateral (carbón)
-// El carbón del logo ancla la navegación y deja la página en blanco cálido: dos planos, sin sombras.
+// ------------------------------------------------------------ barra lateral (tinta del rol)
+// La tinta del rol ancla la navegación y deja la página en blanco cálido: dos planos, sin sombras.
+// Cambiar de panel cambia el color del marco, así cada rol reconoce el suyo de un vistazo.
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -31,7 +32,7 @@
   flex-direction: column;
   gap: var(--s-4);
   padding: var(--s-5) var(--s-3) var(--s-4);
-  background: var(--surface-ink);
+  background: var(--role-ink);
   color: var(--text-on-ink);
   overflow-y: auto;
 }
@@ -60,10 +61,25 @@
   color: var(--text-on-ink);
 }
 
+.panel-badge {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 var(--s-1);
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--role-accent);
+  background: rgb(255 255 255 / 6%);
+}
+
+.panel-name {
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  color: var(--text-on-ink);
+}
+
 .role-switch {
   display: grid;
   gap: var(--s-1);
-  padding: 0 var(--s-2);
   font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-on-ink-muted);
@@ -79,10 +95,23 @@
   }
 }
 
-.role-single {
-  padding: 0 var(--s-2);
+nav {
+  display: grid;
+  gap: var(--s-4);
+}
+
+.nav-group {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.nav-heading {
+  margin: 0;
+  padding: 0 var(--s-3);
   font-size: var(--fs-xs);
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-on-ink-muted);
 }
 
@@ -117,7 +146,7 @@
       font-weight: 600;
 
       app-icon {
-        color: var(--accent);
+        color: var(--role-accent);
       }
     }
   }
@@ -127,7 +156,7 @@
   flex-basis: 100%;
   padding-left: calc(20px + var(--s-3));
   font-size: var(--fs-xs);
-  color: var(--accent);
+  color: var(--role-accent);
 }
 
 .sidebar-footer {
@@ -200,6 +229,20 @@
   padding: 0 var(--s-5);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  box-shadow: inset 0 3px 0 var(--role-accent);
+}
+
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--s-3);
+  border-radius: 14px;
+  background: var(--role-soft);
+  color: var(--role-text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .menu-button,
@@ -344,10 +387,11 @@ main:focus {
     }
 
     .active {
-      color: var(--text);
+      color: var(--role-text);
+      box-shadow: inset 0 3px 0 var(--role-text);
 
       app-icon {
-        color: var(--accent-text);
+        color: var(--role-text);
       }
     }
   }

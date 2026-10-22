@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 README.md
 api.base.service.ts
 api.module.ts
@@ -83,6 +82,7 @@ model/earnings-response.ts
 model/error-response.ts
 model/evidence-request.ts
 model/expense-report.ts
+model/feed-piece-response.ts
 model/fixer-verification-document-type.ts
 model/geocoding-candidate.ts
 model/indicators-response.ts
@@ -121,6 +121,7 @@ model/photo-response.ts
 model/photo.ts
 model/piece-request.ts
 model/piece-response.ts
+model/portfolio-feed-response.ts
 model/portfolio-status-response.ts
 model/presentation-request.ts
 model/project-response.ts

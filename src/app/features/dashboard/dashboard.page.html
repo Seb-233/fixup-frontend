@@ -1,7 +1,7 @@
 <div class="page">
   <header class="page-header">
     <div>
-      <p class="text-muted text-sm">{{ today | day }} · {{ role() ? roleNames[role()!] : '' }}</p>
+      <p class="text-muted text-sm">{{ today | day }}</p>
       <h1>Hola{{ firstName() ? ', ' + firstName() : '' }}</h1>
     </div>
     <div class="actions">
@@ -23,35 +23,16 @@
     </div>
   </header>
 
-  @if (data.isLoading() && !data.hasValue()) {
-    <app-loading text="Revisando tus pendientes…" />
-  } @else if (data.error()) {
-    <app-error (retry)="data.reload()" />
-  } @else {
-    <dl class="figures">
-      @for (figure of figures(); track figure.label) {
-        <div>
-          <dt>{{ figure.label }}</dt>
-          <dd>
-            @if (figure.link) {
-              <a [routerLink]="figure.link">{{ figure.value }}</a>
-            } @else {
-              {{ figure.value }}
-            }
-          </dd>
-        </div>
-      }
-    </dl>
-
-    <div class="split">
-      <section class="stack" aria-labelledby="tasks-title">
-        <h2 id="tasks-title">Requiere tu atención</h2>
-        @if (tasks().length) {
-          <ul class="list tasks">
+  @if (isClient()) {
+    @if (data.hasValue()) {
+      @if (tasks().length || upcoming().length || activeContract()) {
+        <section aria-labelledby="glance-title" class="stack-sm">
+          <h2 id="glance-title" class="visually-hidden">Tus pendientes</h2>
+          <ul class="glance">
             @for (task of tasks(); track task.text) {
               <li>
-                <a [routerLink]="task.link" class="row-link">
-                  <span class="task-mark" [class]="'task-mark tone-' + task.tone" aria-hidden="true"></span>
+                <a [routerLink]="task.link" class="tile">
+                  <span [class]="'task-mark tone-' + task.tone" aria-hidden="true"></span>
                   <span class="stack-sm grow">
                     <span class="row-title">{{ task.text }}</span>
                     <span class="row-meta">{{ task.detail }}</span>
@@ -60,95 +41,168 @@
                 </a>
               </li>
             }
-          </ul>
-        } @else {
-          <p class="quiet">Nada pendiente por ahora. Te avisaremos cuando algo necesite una decisión tuya.</p>
-        }
-
-        @if (activeContract(); as contract) {
-          <div class="panel stack-sm">
-            <h3>Tu contrato</h3>
-            <p><strong>{{ contract.propertyName }}</strong> · {{ contract.propertyAddress }}, {{ contract.propertyCity }}</p>
-            <p class="text-muted text-sm">Vigente hasta el {{ contract.endDate | day }} · Canon {{ contract.monthlyRentAmount | money }}</p>
-            <div class="cluster">
-              <a routerLink="/requests/new" class="btn btn-secondary">Reportar un daño de este inmueble</a>
-              <a [routerLink]="['/contracts', contract.id]" class="link">Ver contrato</a>
-            </div>
-          </div>
-        }
-
-        @if (recentRequests().length) {
-          <div class="stack-sm">
-            <div class="spread">
-              <h3>Solicitudes recientes</h3>
-              <a routerLink="/requests" class="link text-sm">Ver todas</a>
-            </div>
-            <ul class="list">
-              @for (request of recentRequests(); track request.requestId) {
-                <li>
-                  <a [routerLink]="['/requests', request.requestId]" class="row-link">
-                    <span class="stack-sm grow">
-                      <span class="row-title">{{ request.title }}</span>
-                      <span class="row-meta">{{ request.specialty | label: specialty }} · {{ request.propertyName }}</span>
-                    </span>
-                    <app-status [map]="requestStatus" [value]="request.status" />
-                  </a>
-                </li>
-              }
-            </ul>
-          </div>
-        }
-
-        @if (activeJobs().length) {
-          <div class="stack-sm">
-            <div class="spread">
-              <h3>Trabajos activos</h3>
-              <a routerLink="/jobs/me" class="link text-sm">Ver todos</a>
-            </div>
-            <ul class="list">
-              @for (job of activeJobs(); track job.id) {
-                <li>
-                  <a [routerLink]="['/jobs', job.id]" class="row-link">
-                    <span class="stack-sm grow">
-                      <span class="row-title">{{ job.requestTitle }}</span>
-                      <span class="row-meta">{{ job.propertyCity }} · {{ job.ownerName }}</span>
-                    </span>
-                    <app-status [map]="jobStatus" [value]="job.status" />
-                  </a>
-                </li>
-              }
-            </ul>
-          </div>
-        }
-      </section>
-
-      @if (role() !== 'PLATFORM_ADMIN') {
-        <aside class="stack" aria-labelledby="agenda-title">
-          <div class="spread">
-            <h2 id="agenda-title">Próximas visitas</h2>
-            <a routerLink="/visits" class="link text-sm">Agenda</a>
-          </div>
-          @if (upcoming().length) {
-            <ul class="list">
-              @for (visit of upcoming(); track visit.id) {
-                <li class="visit">
-                  <span class="visit-date">
-                    <span>{{ visit.scheduledAt | day: 'short' }}</span>
-                  </span>
+            @if (upcoming()[0]; as visit) {
+              <li>
+                <a routerLink="/visits" class="tile">
+                  <span class="visit-date"><span>{{ visit.scheduledAt | day: 'short' }}</span></span>
                   <span class="stack-sm grow">
-                    <span class="row-title">{{ visit.kind | label: visitKind }}</span>
-                    <span class="row-meta">{{ visit.scheduledAt | when }}</span>
-                    <span class="row-meta">{{ role() === 'FIXER' ? visit.ownerName : visit.fixerName }}{{ visit.address ? ' · ' + visit.address : '' }}</span>
+                    <span class="row-title">Próxima visita: {{ visit.kind | label: visitKind }}</span>
+                    <span class="row-meta">{{ visit.scheduledAt | when }} · {{ visit.fixerName }}</span>
                   </span>
-                  <app-status [map]="visitStatus" [value]="visit.status" />
+                  <app-icon name="chevron-right" />
+                </a>
+              </li>
+            }
+            @if (activeContract(); as contract) {
+              <li>
+                <a [routerLink]="['/contracts', contract.id]" class="tile">
+                  <app-icon name="file" />
+                  <span class="stack-sm grow">
+                    <span class="row-title">{{ contract.propertyName }}</span>
+                    <span class="row-meta">Contrato vigente hasta el {{ contract.endDate | day }} · Canon {{ contract.monthlyRentAmount | money }}</span>
+                  </span>
+                  <app-icon name="chevron-right" />
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
+      } @else {
+        <p class="quiet">Todo al día: no tienes pendientes ni visitas próximas.</p>
+      }
+    } @else if (data.error()) {
+      <app-error (retry)="data.reload()" />
+    }
+
+    <app-ideas-feed />
+  } @else {
+    @if (data.isLoading() && !data.hasValue()) {
+      <app-loading text="Revisando tus pendientes…" />
+    } @else if (data.error()) {
+      <app-error (retry)="data.reload()" />
+    } @else {
+      <dl class="figures">
+        @for (figure of figures(); track figure.label) {
+          <div>
+            <dt>{{ figure.label }}</dt>
+            <dd>
+              @if (figure.link) {
+                <a [routerLink]="figure.link">{{ figure.value }}</a>
+              } @else {
+                {{ figure.value }}
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+
+      <div class="split">
+        <section class="stack" aria-labelledby="tasks-title">
+          <h2 id="tasks-title">Requiere tu atención</h2>
+          @if (tasks().length) {
+            <ul class="list tasks">
+              @for (task of tasks(); track task.text) {
+                <li>
+                  <a [routerLink]="task.link" class="row-link">
+                    <span class="task-mark" [class]="'task-mark tone-' + task.tone" aria-hidden="true"></span>
+                    <span class="stack-sm grow">
+                      <span class="row-title">{{ task.text }}</span>
+                      <span class="row-meta">{{ task.detail }}</span>
+                    </span>
+                    <app-icon name="chevron-right" />
+                  </a>
                 </li>
               }
             </ul>
           } @else {
-            <p class="quiet">No tienes visitas agendadas.</p>
+            <p class="quiet">Nada pendiente por ahora. Te avisaremos cuando algo necesite una decisión tuya.</p>
           }
-        </aside>
-      }
-    </div>
+
+          @if (activeContract(); as contract) {
+            <div class="panel stack-sm">
+              <h3>Tu contrato</h3>
+              <p><strong>{{ contract.propertyName }}</strong> · {{ contract.propertyAddress }}, {{ contract.propertyCity }}</p>
+              <p class="text-muted text-sm">Vigente hasta el {{ contract.endDate | day }} · Canon {{ contract.monthlyRentAmount | money }}</p>
+              <div class="cluster">
+                <a routerLink="/requests/new" class="btn btn-secondary">Reportar un daño de este inmueble</a>
+                <a [routerLink]="['/contracts', contract.id]" class="link">Ver contrato</a>
+              </div>
+            </div>
+          }
+
+          @if (recentRequests().length) {
+            <div class="stack-sm">
+              <div class="spread">
+                <h3>Solicitudes recientes</h3>
+                <a routerLink="/requests" class="link text-sm">Ver todas</a>
+              </div>
+              <ul class="list">
+                @for (request of recentRequests(); track request.requestId) {
+                  <li>
+                    <a [routerLink]="['/requests', request.requestId]" class="row-link">
+                      <span class="stack-sm grow">
+                        <span class="row-title">{{ request.title }}</span>
+                        <span class="row-meta">{{ request.specialty | label: specialty }} · {{ request.propertyName }}</span>
+                      </span>
+                      <app-status [map]="requestStatus" [value]="request.status" />
+                    </a>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (activeJobs().length) {
+            <div class="stack-sm">
+              <div class="spread">
+                <h3>Trabajos activos</h3>
+                <a routerLink="/jobs/me" class="link text-sm">Ver todos</a>
+              </div>
+              <ul class="list">
+                @for (job of activeJobs(); track job.id) {
+                  <li>
+                    <a [routerLink]="['/jobs', job.id]" class="row-link">
+                      <span class="stack-sm grow">
+                        <span class="row-title">{{ job.requestTitle }}</span>
+                        <span class="row-meta">{{ job.propertyCity }} · {{ job.ownerName }}</span>
+                      </span>
+                      <app-status [map]="jobStatus" [value]="job.status" />
+                    </a>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+
+        @if (role() !== 'PLATFORM_ADMIN') {
+          <aside class="stack" aria-labelledby="agenda-title">
+            <div class="spread">
+              <h2 id="agenda-title">Próximas visitas</h2>
+              <a routerLink="/visits" class="link text-sm">Agenda</a>
+            </div>
+            @if (upcoming().length) {
+              <ul class="list">
+                @for (visit of upcoming(); track visit.id) {
+                  <li class="visit">
+                    <span class="visit-date">
+                      <span>{{ visit.scheduledAt | day: 'short' }}</span>
+                    </span>
+                    <span class="stack-sm grow">
+                      <span class="row-title">{{ visit.kind | label: visitKind }}</span>
+                      <span class="row-meta">{{ visit.scheduledAt | when }}</span>
+                      <span class="row-meta">{{ role() === 'FIXER' ? visit.ownerName : visit.fixerName }}{{ visit.address ? ' · ' + visit.address : '' }}</span>
+                    </span>
+                    <app-status [map]="visitStatus" [value]="visit.status" />
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="quiet">No tienes visitas agendadas.</p>
+            }
+          </aside>
+        }
+      </div>
+    }
   }
 </div>

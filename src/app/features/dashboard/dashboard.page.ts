@@ -25,6 +25,7 @@ import {
 } from '../../data/models';
 import { JOB_STATUS, REQUEST_STATUS, ROLE_NAME, SPECIALTY, VISIT_KIND, VISIT_STATUS, money } from '../../shared/format';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { IdeasFeedComponent } from '../ideas/ideas-feed.component';
 import { DayPipe, LabelPipe, MoneyPipe, WhenPipe } from '../../shared/ui/pipes';
 import { ErrorStateComponent, LoadingComponent } from '../../shared/ui/states.component';
 import { StatusComponent } from '../../shared/ui/status.component';
@@ -55,7 +56,7 @@ interface Task {
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [RouterLink, IconComponent, LoadingComponent, ErrorStateComponent, StatusComponent, MoneyPipe, WhenPipe, DayPipe, LabelPipe],
+  imports: [RouterLink, IconComponent, IdeasFeedComponent, LoadingComponent, ErrorStateComponent, StatusComponent, MoneyPipe, WhenPipe, DayPipe, LabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss'
@@ -77,6 +78,8 @@ export class DashboardPage {
   readonly jobStatus = JOB_STATUS;
   readonly firstName = computed(() => (this.user.user()?.displayName ?? '').split(' ')[0]);
   readonly today = new Date();
+  /** Propietario y arrendatario: su inicio es un resumen corto y el feed de ideas de remodelación. */
+  readonly isClient = computed(() => this.role() === 'OWNER' || this.role() === 'TENANT');
 
   readonly data = rxResource({
     params: () => ({ role: this.role(), userId: this.user.user()?.id }),

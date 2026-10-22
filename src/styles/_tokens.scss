@@ -121,3 +121,66 @@ $breakpoint-wide: 1400px;
 :root[data-theme='dark'] {
   @include dark-tokens;
 }
+
+// Identidad por rol. Cada panel tiñe su marco (barra lateral, franja y pastilla) para que nadie
+// confunda dónde está: clientes en carbón y dorado, técnico en tierra, inmobiliaria en pizarra y
+// administración en ciruela. El dorado de la marca sigue siendo el acento de las acciones.
+// Contrastes: blanco sobre tinta >= 13.4:1, texto apagado sobre tinta >= 7.1:1, acento sobre
+// tinta >= 6.3:1, texto del rol sobre blanco >= 6.1:1 y sobre su fondo suave >= 5.2:1.
+:root,
+[data-role='OWNER'],
+[data-role='TENANT'] {
+  --role-ink: #2d2e31;
+  --role-accent: #ceac78;
+  --role-text: #7a5c2e;
+  --role-soft: #f3ebdd;
+}
+
+[data-role='FIXER'] {
+  --role-ink: #34261f;
+  --role-accent: #e2a467;
+  --role-text: #8a4b17;
+  --role-soft: #f8e7d6;
+}
+
+[data-role='REAL_ESTATE_MANAGER'] {
+  --role-ink: #1e2b38;
+  --role-accent: #8fb6d6;
+  --role-text: #2f5577;
+  --role-soft: #e3edf5;
+}
+
+[data-role='PLATFORM_ADMIN'] {
+  --role-ink: #2e1a24;
+  --role-accent: #e59aa8;
+  --role-text: #8a2f4a;
+  --role-soft: #f6e2e7;
+}
+
+:root[data-theme='dark'],
+:root[data-theme='dark'] [data-role='OWNER'],
+:root[data-theme='dark'] [data-role='TENANT'] {
+  --role-ink: #131416;
+  --role-text: #ceac78;
+  --role-soft: #3a3226;
+}
+
+:root[data-theme='dark'] [data-role='FIXER'] {
+  --role-ink: #2e1d12;
+  --role-text: #e2a467;
+  --role-soft: #3a2a1d;
+}
+
+:root[data-theme='dark'] [data-role='REAL_ESTATE_MANAGER'] {
+  --role-ink: #132435;
+  --role-accent: #9dbbd3;
+  --role-text: #9dbbd3;
+  --role-soft: #1f2a35;
+}
+
+:root[data-theme='dark'] [data-role='PLATFORM_ADMIN'] {
+  --role-ink: #2c1420;
+  --role-accent: #e9a3b1;
+  --role-text: #e9a3b1;
+  --role-soft: #3a2129;
+}
