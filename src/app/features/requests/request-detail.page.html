@@ -32,7 +32,7 @@
         </p>
       </div>
       <div class="actions">
-        @if (hasJob() && isParticipant()) {
+        @if (hasAssignedFixer() && isParticipant()) {
           <a [routerLink]="['/requests', r.requestId, 'messages']" class="btn btn-secondary"><app-icon name="chat" />Conversación</a>
         }
         @if (isAssignedFixer() && job.hasValue() && job.value(); as j) {
@@ -214,9 +214,18 @@
         @if (r.assignedFixerUserId) {
           <div class="panel stack-sm">
             <h3>Forma de pago</h3>
-            <p class="text-sm">{{ r.paymentMethod | label: methods }}{{ r.paymentMethod === 'CASH' ? ': se le paga al técnico al terminar.' : ' en la pasarela de prueba.' }}</p>
-            @if (awaitingPayment() && isAssignedFixer()) {
-              <p class="text-sm">El trabajo se abre en cuanto el cliente apruebe el pago.</p>
+            <p class="text-sm">{{ r.paymentMethod | label: methods }}{{ r.paymentMethod === 'CASH' ? ': operación histórica en efectivo.' : ' digital (simulación académica).' }}</p>
+            @if (awaitingPayment()) {
+              <div class="alert alert-info">
+                <strong>Pago pendiente:</strong>
+                @if (isAssignedFixer()) {
+                  <span> El cliente debe aprobar el pago digital antes de que se habilite el trabajo en "Mis trabajos".</span>
+                } @else if (canPay()) {
+                  <span> Cotización aceptada. El trabajo se abrirá una vez apruebes el pago digital.</span>
+                } @else {
+                  <span> Esperando confirmación del pago digital para abrir el trabajo.</span>
+                }
+              </div>
             }
             @if (cash.hasValue() && cash.value(); as c) {
               <dl class="facts">
@@ -224,7 +233,7 @@
                 <div><dt>Recibido</dt><dd>{{ c.receivedAmount | money }}</dd></div>
                 @if (c.outstandingAmount) { <div><dt>Saldo pendiente</dt><dd class="price">{{ c.outstandingAmount | money }}</dd></div> }
               </dl>
-              @if (c.outstandingAmount && isDecider()) {
+              @if (c.outstandingAmount && canPay()) {
                 <a routerLink="/payments" class="btn btn-secondary">Pagar el saldo</a>
               }
             }
@@ -232,7 +241,13 @@
         }
 
         @if (payment.hasValue() && payment.value(); as p) {
-          <app-payment-panel [payment]="p" [canPay]="isDecider()" (paid)="onPaid($event)" />
+          <app-payment-panel [payment]="p" [canPay]="canPay()" (paid)="onPaid($event)" />
+        } @else if (awaitingPayment() && canPay() && knownPaymentId()) {
+          <div class="panel stack-sm">
+            <h3>Pago pendiente</h3>
+            <p class="text-sm">Tienes un pago digital pendiente para esta solicitud.</p>
+            <a [routerLink]="['/payments', knownPaymentId()]" class="btn btn-primary">Ir al Checkout</a>
+          </div>
         }
 
         @if (isOpen() && isRequester() && !isDecider()) {

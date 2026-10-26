@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { PaymentMethod, RemodelingGoal, UrgencyLevel } from '../../data/models';
+import { RemodelingGoal, UrgencyLevel } from '../../data/models';
 import { ProjectsApi } from '../../data/projects.api';
 import { PropertiesApi } from '../../data/properties.api';
 import { errorMessage } from '../../shared/format';
@@ -13,8 +13,8 @@ interface RequirementDraft {
   title: string;
   description: string;
   urgencyLevel: UrgencyLevel;
-  /** FR-UC-05: cada requerimiento abre una solicitud, y cada una acuerda cómo se paga. */
-  paymentMethod: PaymentMethod;
+  /** FixUp es 100 % digital: cada requerimiento se tramita como transferencia digital. */
+  paymentMethod: 'TRANSFER';
 }
 
 @Component({
@@ -105,11 +105,8 @@ interface RequirementDraft {
                     <option value="LOW">Baja</option><option value="MEDIUM">Media</option><option value="HIGH">Alta</option><option value="URGENT">Urgente</option>
                   </select>
                 </div>
-                <div class="field">
-                  <label [for]="'req-pay-' + i">Pago</label>
-                  <select [id]="'req-pay-' + i" class="select" [name]="'reqPay' + i" [(ngModel)]="req.paymentMethod">
-                    <option value="TRANSFER">Transferencia en la pasarela</option><option value="CASH">Efectivo al terminar</option>
-                  </select>
+                <div class="hint text-xs text-muted">
+                  Pago 100 % digital por transferencia simulada al aprobar la cotización.
                 </div>
               </div>
             }

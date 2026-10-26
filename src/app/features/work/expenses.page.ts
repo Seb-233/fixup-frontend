@@ -65,6 +65,31 @@ export class ExpensesPage {
   readonly downloading = signal(false);
   readonly downloadError = signal<string | null>(null);
 
+  readonly reportErrorCode = computed(() => {
+    const err = this.report.error();
+    if (err && typeof err === 'object' && 'error' in err) {
+      const errObj = (err as { error?: { code?: string } }).error;
+      if (errObj && typeof errObj === 'object' && 'code' in errObj && errObj.code) {
+        return String(errObj.code);
+      }
+    }
+    return null;
+  });
+
+  readonly reportErrorMessage = computed(() => {
+    const code = this.reportErrorCode();
+    if (code === 'INVALID_PERIOD') {
+      return 'El periodo seleccionado no es válido. Comprueba las fechas ingresadas.';
+    }
+    if (code === 'EXPENSE_CONTEXT_INCOMPLETE') {
+      return 'El contexto contable está incompleto para este inmueble o periodo. No se puede calcular el total.';
+    }
+    if (code === 'ACCESS_DENIED') {
+      return 'No tienes autorización para consultar el reporte de gastos de este inmueble o periodo.';
+    }
+    return errorMessage(this.report.error(), 'No pudimos cargar el reporte de gastos.');
+  });
+
   apply(): void {
     if (this.form.from > this.form.to) return;
     this.range.set({ ...this.form });

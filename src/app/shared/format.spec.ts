@@ -1,4 +1,15 @@
-import { date, dateTime, errorMessage, initials, money, month, relative, toLocalInput } from './format';
+import {
+  CryptographicSourceUnavailableError,
+  date,
+  dateTime,
+  errorMessage,
+  generateUuid,
+  initials,
+  money,
+  month,
+  relative,
+  toLocalInput
+} from './format';
 
 describe('formato en español de Colombia', () => {
   it('escribe pesos colombianos sin decimales', () => {
@@ -43,9 +54,61 @@ describe('formato en español de Colombia', () => {
     expect(errorMessage({ status: 403 })).toContain('permiso');
   });
 
-  it('explica el bloqueo por un saldo pendiente de un trabajo en efectivo', () => {
-    const text = errorMessage({ status: 409, error: { code: 'OWNER_HAS_OUTSTANDING_DEBT' } });
-    expect(text).toContain('saldo pendiente');
-    expect(text).toContain('Pagos');
+  it('escribe importes representados por BigInt sin perder precisión', () => {
+    expect(money(BigInt(500000)).replace(/\s/g, ' ')).toMatch(/\$\s?500\.000/);
+    expect(money(BigInt('9007199254740993')).replace(/\s/g, ' ')).toMatch(/\$\s?9\.007\.199\.254\.740\.993/);
+  });
+
+  it('traduce errores financieros de la integración digital', () => {
+    expect(errorMessage({ status: 400, error: { code: 'AMOUNT_NOT_INT64' } })).toContain('número entero');
+    expect(errorMessage({ status: 409, error: { code: 'IDEMPOTENCY_CONFLICT' } })).toContain('clave idempotente');
+    expect(errorMessage({ status: 400, error: { code: 'INVALID_PERIOD' } })).toContain('periodo de consulta');
+    expect(errorMessage({ status: 403, error: { code: 'ACCESS_DENIED' } })).toContain('permiso');
+    expect(errorMessage({ status: 400, error: { code: 'PAYMENT_METHOD_REQUIRED' } })).toContain('transferencia digital');
+  });
+
+  it('genera UUIDs RFC4122 v4 válidos para claves de idempotencia', () => {
+    const uuid1 = generateUuid();
+    const uuid2 = generateUuid();
+    expect(uuid1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(uuid2).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(uuid1).not.toBe(uuid2);
+  });
+
+  it('garantiza unicidad razonable generando múltiples UUIDs sin colisiones', () => {
+    const set = new Set<string>();
+    for (let i = 0; i < 50; i++) {
+      set.add(generateUuid());
+    }
+    expect(set.size).toBe(50);
+  });
+
+  it('utiliza getRandomValues si randomUUID no está disponible, generando un UUID v4 válido', () => {
+    const originalRandomUuid = globalThis.crypto.randomUUID;
+    try {
+      (globalThis.crypto as unknown as { randomUUID: unknown }).randomUUID = undefined;
+      const uuid = generateUuid();
+      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    } finally {
+      (globalThis.crypto as unknown as { randomUUID: unknown }).randomUUID = originalRandomUuid;
+    }
+  });
+
+  it('falla con CryptographicSourceUnavailableError de forma explícita si no hay CSPRNG disponible', () => {
+    const originalCrypto = globalThis.crypto;
+    try {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: undefined,
+        configurable: true,
+        writable: true
+      });
+      expect(() => generateUuid()).toThrow(CryptographicSourceUnavailableError);
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: originalCrypto,
+        configurable: true,
+        writable: true
+      });
+    }
   });
 });

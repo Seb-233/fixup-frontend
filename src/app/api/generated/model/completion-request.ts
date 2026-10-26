@@ -10,7 +10,7 @@
 
 
 export interface CompletionRequest { 
-    note?: string;
     receivedAmount?: string;
+    note?: string;
 }
 

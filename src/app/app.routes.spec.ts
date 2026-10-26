@@ -130,4 +130,26 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
       expect(childPaths).toContain(path);
     }
   });
+
+  it('9. /payments y /payments/:paymentId restringen acceso a roles pagadores (OWNER, REAL_ESTATE_MANAGER)', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const paymentsRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments');
+    const checkoutRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments/:paymentId');
+
+    expect(paymentsRoute).toBeDefined();
+    expect(paymentsRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
+    expect(checkoutRoute).toBeDefined();
+    expect(checkoutRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
+  });
+
+  it('10. /payments/earnings restringe a FIXER y /expenses a pagadores', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const earningsRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments/earnings');
+    const expensesRoute = privateLayoutRoute?.children?.find((route) => route.path === 'expenses');
+
+    expect(earningsRoute).toBeDefined();
+    expect(earningsRoute?.data?.['roles']).toEqual(['FIXER']);
+    expect(expensesRoute).toBeDefined();
+    expect(expensesRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
+  });
 });

@@ -3,7 +3,7 @@ import * as f from '../format';
 
 @Pipe({ name: 'money' })
 export class MoneyPipe implements PipeTransform {
-  transform(value: number | null | undefined): string {
+  transform(value: number | bigint | null | undefined): string {
     return f.money(value);
   }
 }

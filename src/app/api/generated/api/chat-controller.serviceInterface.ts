@@ -26,7 +26,7 @@ export interface ChatControllerServiceInterface {
 
     /**
      * Read the chat thread for a repair request
-     * Requires an active account that is either the owner of the request, its assigned fixer, or an active PLATFORM_ADMIN. Oldest message first.
+     * Active owner, original reporter, request manager, assigned fixer or PLATFORM_ADMIN. History remains readable after completion. Oldest message first; third parties are denied.
      * @endpoint get /requests/{requestId}/messages
      * @param requestId 
      */
@@ -34,7 +34,7 @@ export interface ChatControllerServiceInterface {
 
     /**
      * Send a chat message
-     * Requires an active account that is either the owner of the request or its assigned fixer, and the request must already have an assigned fixer.
+     * Active owner, original reporter, request manager or assigned fixer. Requires ASSIGNED, SLA_WARNING or SLA_BREACHED with an assigned fixer. COMPLETED is read-only (409 REQUEST_NOT_ASSIGNED).
      * @endpoint post /requests/{requestId}/messages
      * @param requestId 
      * @param sendMessageRequest 

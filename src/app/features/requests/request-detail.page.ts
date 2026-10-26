@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Observable, catchError, map, of } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
-import { CashSettlementDetail, JobDetail, PaymentDetail, QuotationResponse, VisitResponse } from '../../data/models';
+import { CashSettlementDetail, JobDetail, PaymentDetail, QuotationResponse, VisitResponse, AcceptedQuotationResponse } from '../../data/models';
+import { KnownPaymentsService } from '../../data/known-payments';
 import { RequestsApi } from '../../data/requests.api';
 import { WorkApi } from '../../data/work.api';
 import { PAYMENT_METHOD, QUOTATION_STATUS, REQUEST_STATUS, SLA_STATE, SPECIALTY, URGENCY, errorMessage } from '../../shared/format';
@@ -55,6 +56,7 @@ export class RequestDetailPage {
   private readonly requests = inject(RequestsApi);
   private readonly work = inject(WorkApi);
   private readonly user = inject(CurrentUserStore);
+  private readonly knownPayments = inject(KnownPaymentsService);
   private readonly router = inject(Router);
 
   readonly requestId = input.required<string>();
@@ -77,11 +79,20 @@ export class RequestDetailPage {
     const r = this.request.value();
     return r.ownerUserId === this.me() || (!!r.managerUserId && r.managerUserId === this.me());
   });
+  /** Solo el propietario o el administrador vigente pueden pagar */
+  readonly canPay = computed(() => {
+    const role = this.role();
+    if (role !== 'OWNER' && role !== 'REAL_ESTATE_MANAGER') return false;
+    return this.isDecider();
+  });
   readonly isRequester = computed(() => this.request.hasValue() && this.request.value().requestedByUserId === this.me());
   readonly isAssignedFixer = computed(() => this.request.hasValue() && this.request.value().assignedFixerUserId === this.me());
   readonly isOtherFixer = computed(() => this.role() === 'FIXER' && !this.isAssignedFixer());
   readonly isOpen = computed(() => this.request.hasValue() && this.request.value().status === 'OPEN');
-  readonly hasJob = computed(() => this.request.hasValue() && !!this.request.value().assignedFixerUserId);
+  /** Presencia de técnico asignado en la solicitud */
+  readonly hasAssignedFixer = computed(() => this.request.hasValue() && !!this.request.value().assignedFixerUserId);
+  /** Un trabajo solo existe de forma efectiva cuando el pago está aprobado (o cash histórico) */
+  readonly hasJob = computed(() => this.job.hasValue() && !!this.job.value());
   readonly isParticipant = computed(() => this.isDecider() || this.isRequester() || this.isAssignedFixer());
 
   // Cotizaciones: las ve quien decide. El técnico ve la suya en "Mis cotizaciones".
@@ -105,21 +116,16 @@ export class RequestDetailPage {
   });
 
   readonly job = rxResource({
-    params: () => (this.hasJob() && (this.isParticipant() || this.role() === 'PLATFORM_ADMIN') ? this.requestId() : undefined),
+    params: () => (this.hasAssignedFixer() && (this.isParticipant() || this.role() === 'PLATFORM_ADMIN') ? this.requestId() : undefined),
     stream: ({ params }) => this.work.jobForRequest(params).pipe(catchError(() => of<JobDetail | null>(null)))
   });
 
-  // FR-UC-05: con transferencia, quien decide paga en la pasarela y el trabajo se abre al aprobarse;
-  // el pago del servicio se busca entre los suyos. Con efectivo no hay pago en línea: el técnico
-  // registra al cerrar lo que recibió y el saldo, si quedó, es una deuda del propietario.
-  readonly isTransfer = computed(() => this.request.hasValue() && this.request.value().paymentMethod === 'TRANSFER');
+  // Operación 100 % digital: el pago digital precede a la apertura del trabajo.
+  readonly isTransfer = computed(() => this.request.hasValue() && this.request.value().paymentMethod !== 'CASH');
+  readonly knownPaymentId = computed(() => this.knownPayments.findForRequest(this.requestId())?.paymentId ?? null);
   readonly payment = rxResource({
-    params: () => (this.hasJob() && this.isTransfer() && this.isDecider() ? this.requestId() : undefined),
-    stream: ({ params }) =>
-      this.work.myPayments().pipe(
-        map((list) => list.find((p) => p.requestId === params && p.purpose === 'SERVICE') ?? null),
-        catchError(() => of<PaymentDetail | null>(null))
-      )
+    params: () => (this.knownPaymentId() && (this.canPay() || this.role() === 'PLATFORM_ADMIN') ? this.knownPaymentId()! : undefined),
+    stream: ({ params }) => this.work.payment(params).pipe(catchError(() => of<PaymentDetail | null>(null)))
   });
   readonly cash = rxResource({
     params: () => {
@@ -129,10 +135,14 @@ export class RequestDetailPage {
     },
     stream: ({ params }) => this.work.cashSettlement(params).pipe(catchError(() => of<CashSettlementDetail | null>(null)))
   });
-  /** El técnico asignado espera la transferencia: todavía no hay trabajo. */
-  readonly awaitingPayment = computed(
-    () => this.isTransfer() && this.hasJob() && !this.job.isLoading() && !(this.job.hasValue() && this.job.value()) && this.request.hasValue() && this.request.value().status !== 'COMPLETED'
-  );
+  /** Cotización aceptada pero trabajo aún no abierto por pago digital pendiente */
+  readonly awaitingPayment = computed(() => {
+    if (!this.hasAssignedFixer()) return false;
+    if (this.hasJob()) return false;
+    const r = this.request.value();
+    if (!r || r.status === 'COMPLETED' || r.status === 'CANCELLED') return false;
+    return this.isTransfer();
+  });
 
   readonly steps = computed<Step[]>(() => {
     if (!this.request.hasValue()) return [];
@@ -262,19 +272,32 @@ export class RequestDetailPage {
   private decide(q: QuotationResponse, action: 'accept' | 'reject'): void {
     this.busy.set(q.id);
     this.actionError.set(null);
-    const call: Observable<unknown> = action === 'accept' ? this.requests.acceptQuotation(q.id) : this.requests.rejectQuotation(q.id);
+    const call: Observable<AcceptedQuotationResponse | QuotationResponse> =
+      action === 'accept' ? this.requests.acceptQuotation(q.id) : this.requests.rejectQuotation(q.id);
     call.subscribe({
       next: (result) => {
         this.busy.set(null);
         this.quotations.reload();
         if (action === 'accept') {
-          const accepted = result as { paymentMethod?: string; paymentId?: string | null };
-          // Con transferencia el siguiente paso es pagar: se va directo a la pasarela.
-          if (accepted.paymentMethod === 'TRANSFER' && accepted.paymentId) {
+          const accepted = result as AcceptedQuotationResponse;
+          // Operación digital: si devuelve paymentId, registramos y navegamos al checkout
+          if (accepted.paymentId) {
+            this.knownPayments.remember(accepted.paymentId, {
+              paymentId: accepted.paymentId,
+              requestId: this.requestId(),
+              propertyTitle: this.request.value()?.propertyName ?? undefined,
+              amount: q.amount,
+              status: 'PENDING',
+              purpose: 'SERVICE'
+            });
             void this.router.navigate(['/payments', accepted.paymentId]);
             return;
           }
-          this.notice.set(`Elegiste a ${q.fixerName ?? 'el técnico'}. El pago es en efectivo: el trabajo ya quedó abierto y le pagas al técnico al terminar.`);
+          if (accepted.paymentMethod === 'CASH') {
+            this.notice.set(`Elegiste a ${q.fixerName ?? 'el técnico'}. Operación histórica en efectivo: el trabajo quedó abierto.`);
+          } else {
+            this.notice.set(`Elegiste a ${q.fixerName ?? 'el técnico'}. Esperando confirmación de pago para abrir el trabajo.`);
+          }
           this.request.reload();
         }
       },

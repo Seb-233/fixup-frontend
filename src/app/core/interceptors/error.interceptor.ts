@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { CurrentUserStore } from '../auth/current-user.store';
 import { DemoSession } from '../demo/demo-session';
+import { KnownPaymentsService } from '../../data/known-payments';
 
 const RESTRICTED_CODES = new Set(['ACCOUNT_RESTRICTED', 'ACCOUNT_SUSPENDED', 'ACCOUNT_DISABLED']);
 
@@ -14,12 +15,14 @@ export const errorInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, n
   const router = inject(Router);
   const userStore = inject(CurrentUserStore);
   const demo = inject(DemoSession);
+  const knownPayments = inject(KnownPaymentsService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
         demo.end();
         userStore.clear();
+        knownPayments.clearSessionFinancialData();
         router.navigate(['/auth/login']);
       } else if (error.status === 403) {
         const restricted =

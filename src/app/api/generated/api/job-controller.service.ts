@@ -23,6 +23,10 @@ import { ErrorResponse } from '../model/error-response';
 // @ts-ignore
 import { EvidenceRequest } from '../model/evidence-request';
 // @ts-ignore
+import { EvidenceResponse } from '../model/evidence-response';
+// @ts-ignore
+import { JobDetailResponse } from '../model/job-detail-response';
+// @ts-ignore
 import { JobResponse } from '../model/job-response';
 // @ts-ignore
 import { NoteRequest } from '../model/note-request';
@@ -50,7 +54,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
     /**
      * Close a finished job
-     * Records the work in the property\&#39;s history and settles the payment: a transfer releases the held earning; a cash job records the amount received and any balance the owner still owes. Then the request is closed. Only the assigned fixer can close his own job.
+     * Closes the request and records the work in the property\&#39;s history. CASH requires receivedAmount; TRANSFER rejects it. Only the assigned fixer can close his own job.
      * @endpoint post /jobs/{jobId}/complete
      * @param jobId 
      * @param completionRequest 
@@ -127,9 +131,9 @@ export class JobControllerService extends BaseService implements JobControllerSe
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public detail2(jobId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
-    public detail2(jobId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
-    public detail2(jobId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public detail2(jobId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<JobDetailResponse>;
+    public detail2(jobId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<JobDetailResponse>>;
+    public detail2(jobId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<JobDetailResponse>>;
     public detail2(jobId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (jobId === null || jobId === undefined) {
             throw new Error('Required parameter jobId was null or undefined when calling detail2.');
@@ -165,7 +169,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
         let localVarPath = `/jobs/${this.configuration.encodeParam({name: "jobId", value: jobId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<any>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<JobDetailResponse>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -187,9 +191,9 @@ export class JobControllerService extends BaseService implements JobControllerSe
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
-    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
-    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<Array<EvidenceResponse>>;
+    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<Array<EvidenceResponse>>>;
+    public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<Array<EvidenceResponse>>>;
     public evidence(jobId: string, evidenceRequest: EvidenceRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (jobId === null || jobId === undefined) {
             throw new Error('Required parameter jobId was null or undefined when calling evidence.');
@@ -237,7 +241,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
         let localVarPath = `/jobs/${this.configuration.encodeParam({name: "jobId", value: jobId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/evidence`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<any>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<Array<EvidenceResponse>>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: evidenceRequest,
@@ -259,9 +263,9 @@ export class JobControllerService extends BaseService implements JobControllerSe
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public forRequest2(requestId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
-    public forRequest2(requestId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
-    public forRequest2(requestId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public forRequest2(requestId: string, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<JobDetailResponse>;
+    public forRequest2(requestId: string, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<JobDetailResponse>>;
+    public forRequest2(requestId: string, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<JobDetailResponse>>;
     public forRequest2(requestId: string, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (requestId === null || requestId === undefined) {
             throw new Error('Required parameter requestId was null or undefined when calling forRequest2.');
@@ -297,7 +301,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
         let localVarPath = `/jobs/for-request/${this.configuration.encodeParam({name: "requestId", value: requestId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<any>('get', `${basePath}${localVarPath}`,
+        return this.httpClient.request<JobDetailResponse>('get', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 responseType: <any>responseType_,
@@ -374,9 +378,9 @@ export class JobControllerService extends BaseService implements JobControllerSe
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
-    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
-    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<JobResponse>;
+    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<JobResponse>>;
+    public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<JobResponse>>;
     public schedule(jobId: string, scheduleRequest: ScheduleRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (jobId === null || jobId === undefined) {
             throw new Error('Required parameter jobId was null or undefined when calling schedule.');
@@ -424,7 +428,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
         let localVarPath = `/jobs/${this.configuration.encodeParam({name: "jobId", value: jobId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/schedule`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<any>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<JobResponse>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: scheduleRequest,
@@ -447,9 +451,9 @@ export class JobControllerService extends BaseService implements JobControllerSe
      * @param reportProgress flag to report request and response progress.
      * @param options additional options
      */
-    public start(jobId: string, noteRequest: NoteRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any>;
-    public start(jobId: string, noteRequest: NoteRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<any>>;
-    public start(jobId: string, noteRequest: NoteRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<any>>;
+    public start(jobId: string, noteRequest: NoteRequest, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<JobResponse>;
+    public start(jobId: string, noteRequest: NoteRequest, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpResponse<JobResponse>>;
+    public start(jobId: string, noteRequest: NoteRequest, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<HttpEvent<JobResponse>>;
     public start(jobId: string, noteRequest: NoteRequest, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json', context?: HttpContext, transferCache?: boolean}): Observable<any> {
         if (jobId === null || jobId === undefined) {
             throw new Error('Required parameter jobId was null or undefined when calling start.');
@@ -497,7 +501,7 @@ export class JobControllerService extends BaseService implements JobControllerSe
 
         let localVarPath = `/jobs/${this.configuration.encodeParam({name: "jobId", value: jobId, in: "path", style: "simple", explode: false, dataType: "string", dataFormat: "uuid"})}/start`;
         const { basePath, withCredentials } = this.configuration;
-        return this.httpClient.request<any>('post', `${basePath}${localVarPath}`,
+        return this.httpClient.request<JobResponse>('post', `${basePath}${localVarPath}`,
             {
                 context: localVarHttpContext,
                 body: noteRequest,

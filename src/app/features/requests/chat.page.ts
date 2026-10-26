@@ -40,12 +40,18 @@ import { ErrorStateComponent, LoadingComponent } from '../../shared/ui/states.co
             <p class="text-muted">Aún no hay mensajes. Escribe para coordinar detalles del trabajo.</p>
           }
         </section>
-        <form class="composer" (ngSubmit)="send()">
-          <label for="message" class="visually-hidden">Mensaje</label>
-          <textarea id="message" class="textarea" rows="2" name="message" maxlength="2000" [(ngModel)]="draft"
-                    placeholder="Escribe un mensaje" (keydown.enter)="onEnter($event)"></textarea>
-          <button type="submit" class="btn btn-primary" [disabled]="sending() || !draft.trim()">Enviar</button>
-        </form>
+        @if (isClosed()) {
+          <div class="alert alert-info" role="status">
+            Esta solicitud está {{ request.value()?.status === 'COMPLETED' ? 'finalizada' : 'cancelada' }}. La conversación se conserva en modo de solo lectura.
+          </div>
+        } @else {
+          <form class="composer" (ngSubmit)="send()">
+            <label for="message" class="visually-hidden">Mensaje</label>
+            <textarea id="message" class="textarea" rows="2" name="message" maxlength="2000" [(ngModel)]="draft"
+                      placeholder="Escribe un mensaje" (keydown.enter)="onEnter($event)"></textarea>
+            <button type="submit" class="btn btn-primary" [disabled]="sending() || !draft.trim()">Enviar</button>
+          </form>
+        }
         @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
       }
     </div>
@@ -72,6 +78,12 @@ export class ChatPage implements OnInit {
 
   readonly request = rxResource({ params: () => this.requestId(), stream: ({ params }) => this.api.get(params) });
   readonly messages = rxResource({ params: () => this.requestId(), stream: ({ params }) => this.api.messages(params) });
+
+  readonly isClosed = computed(() => {
+    if (!this.request.hasValue()) return false;
+    const status = this.request.value().status;
+    return status === 'COMPLETED' || status === 'CANCELLED';
+  });
 
   draft = '';
   readonly sending = signal(false);
@@ -117,6 +129,7 @@ export class ChatPage implements OnInit {
   }
 
   send(): void {
+    if (this.isClosed() || this.sending()) return;
     const body = this.draft.trim();
     if (!body) return;
     this.sending.set(true);
@@ -129,6 +142,13 @@ export class ChatPage implements OnInit {
       },
       error: (failure) => {
         this.sending.set(false);
+        const errObj = failure?.error;
+        const code = typeof errObj === 'object' ? errObj?.code : undefined;
+        if (failure?.status === 409 || code === 'REQUEST_NOT_ASSIGNED') {
+          this.request.reload();
+          this.error.set('La solicitud fue cerrada o ya no tiene técnico asignado. La conversación pasó a modo de solo lectura.');
+          return;
+        }
         this.error.set(errorMessage(failure, 'No pudimos enviar el mensaje.'));
       }
     });
