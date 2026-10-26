@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { PayoutStatus } from './payout-status';
+import { PayoutEntry } from './payout-entry';
 
 
 export interface PayoutResponse { 
@@ -17,6 +18,9 @@ export interface PayoutResponse {
     status: PayoutStatus;
     requestedAt: string;
     transferredAt?: string | null;
+    operationKey?: string | null;
+    detailStatus: string;
+    earnings: Array<PayoutEntry>;
 }
 export namespace PayoutResponse {
 }

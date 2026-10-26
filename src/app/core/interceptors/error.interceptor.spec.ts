@@ -23,7 +23,7 @@ describe('errorInterceptor', () => {
     userStore = TestBed.inject(CurrentUserStore);
   });
 
-  it('debe limpiar CurrentUserStore y redirigir al login ante un error 401 Unauthorized', async () => {
+  it('debe limpiar CurrentUserStore, datos financieros de sesión y redirigir al login ante un error 401 Unauthorized', async () => {
     userStore.setProfile({
       id: 'uuid-1',
       email: 'test@fixup.com',
@@ -31,6 +31,9 @@ describe('errorInterceptor', () => {
       status: 'ACTIVE',
       roles: ['OWNER']
     });
+
+    sessionStorage.setItem('fixup_pending_attempt_pay-1', 'test-data');
+    sessionStorage.setItem('fixup_in_flight_payout_fixer-1', 'payout-data');
 
     const error401 = new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' });
     const req = new HttpRequest('GET', '/test');
@@ -41,10 +44,12 @@ describe('errorInterceptor', () => {
     ).rejects.toMatchObject({ status: 401 });
 
     expect(userStore.user()).toBeNull();
+    expect(sessionStorage.getItem('fixup_pending_attempt_pay-1')).toBeNull();
+    expect(sessionStorage.getItem('fixup_in_flight_payout_fixer-1')).toBeNull();
     expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login']);
   });
 
-  it('debe redirigir a /auth/access-denied ante un error 403 sin cerrar la sesión del usuario', async () => {
+  it('un 403 de una acción no cambia de pantalla ni cierra la sesión', async () => {
     userStore.setProfile({
       id: 'uuid-1',
       email: 'active@fixup.com',
@@ -66,7 +71,19 @@ describe('errorInterceptor', () => {
     ).rejects.toMatchObject({ status: 403 });
 
     expect(userStore.user()).not.toBeNull();
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/access-denied']);
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('un 409 no modifica el estado global de la sesión', async () => {
+    const error409 = new HttpErrorResponse({ status: 409, error: { code: 'FIXER_BUSY' } });
+    const nextFn = () => throwError(() => error409);
+
+    await expect(
+      firstValueFrom(TestBed.runInInjectionContext(() => errorInterceptor(new HttpRequest('POST', '/visits', {}), nextFn)))
+    ).rejects.toMatchObject({ status: 409 });
+
+    expect(userStore.error()).toBeNull();
+    expect(routerNavigateSpy).not.toHaveBeenCalled();
   });
 
   it('debe redirigir a /auth/account-restricted ante 403 si la cuenta está SUSPENDED o DISABLED', async () => {

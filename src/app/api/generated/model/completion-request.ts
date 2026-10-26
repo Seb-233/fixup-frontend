@@ -11,5 +11,6 @@
 
 export interface CompletionRequest { 
     receivedAmount?: string;
+    note?: string;
 }
 

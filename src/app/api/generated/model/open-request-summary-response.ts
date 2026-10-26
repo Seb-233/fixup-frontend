@@ -8,6 +8,7 @@
  * Do not edit the class manually.
  */
 import { Specialty } from './specialty';
+import { UrgencyLevel } from './urgency-level';
 import { PaymentMethod } from './payment-method';
 
 
@@ -17,6 +18,10 @@ export interface OpenRequestSummaryResponse {
     title: string;
     paymentMethod: PaymentMethod;
     createdAt: string;
+    propertyCity?: string | null;
+    urgencyLevel: UrgencyLevel;
+    slaDeadline?: string | null;
+    invited: boolean;
 }
 export namespace OpenRequestSummaryResponse {
 }

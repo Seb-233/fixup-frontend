@@ -1,40 +1,186 @@
-// FixUp Design Tokens
+// Tokens de Fix&Rent. La paleta transcribe la identidad del equipo (DESIGN.md): carbón como tinta,
+// blanco cálido como base, dorado como único acento y tierra para el sello. Cada par de texto se
+// verificó con la fórmula WCAG; los valores comentados son la razón de contraste resultante.
 
-// Color Palette
-$color-primary-dark: #2D2E31;
-$color-neutral-accent: #9A948D;
-$color-gold-accent: #CEAC78;
-$color-background-light: #F8F8F8;
-$color-deep-brown: #423D32;
-$color-earth-brown: #795548;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1100px;
+$breakpoint-wide: 1400px;
 
-// CSS Custom Properties (Tokens)
 :root {
-  --fixup-color-primary: #{$color-primary-dark};
-  --fixup-color-neutral: #{$color-neutral-accent};
-  --fixup-color-accent: #{$color-gold-accent};
-  --fixup-color-bg: #{$color-background-light};
-  --fixup-color-deep-brown: #{$color-deep-brown};
-  --fixup-color-earth-brown: #{$color-earth-brown};
+  color-scheme: light;
 
-  --fixup-font-heading: 'Comfortaa', cursive, sans-serif;
-  --fixup-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  // Superficies
+  --bg: #f8f8f8;
+  --surface: #ffffff;
+  --surface-2: #f1efeb;
+  --surface-ink: #2d2e31;
+  --border: #e3dfd8; // separador decorativo, nunca el único borde de un control
+  --border-control: #8c857c; // 3.65:1 sobre blanco, borde de campos y botones secundarios
 
-  --fixup-radius-sm: 4px;
-  --fixup-radius-md: 8px;
-  --fixup-radius-lg: 16px;
+  // Texto
+  --text: #2d2e31; // 13.58:1 sobre blanco
+  --text-muted: #5f5a54; // 6.82:1 sobre blanco, 5.94:1 sobre surface-2
+  --text-on-ink: #ffffff;
+  --text-on-ink-muted: #c9c3bb; // 7.76:1 sobre carbón
 
-  --fixup-shadow-sm: 0 1px 3px rgba(45, 46, 49, 0.1);
-  --fixup-shadow-md: 0 4px 6px -1px rgba(45, 46, 49, 0.1);
-  --fixup-shadow-lg: 0 10px 15px -3px rgba(45, 46, 49, 0.1);
+  // Marca
+  --accent: #ceac78; // dorado: solo como relleno con tinta encima (6.33:1) o sobre carbón
+  --accent-text: #7a5c2e; // dorado oscuro para texto sobre blanco (6.18:1)
+  --accent-soft: #f3ebdd; // fondo del acento; tinta encima 11.47:1
+  --earth: #795548; // sello Fix&Rent, blanco encima 6.55:1
+  --earth-soft: #e9dcc4;
 
-  --fixup-header-height: 60px;
-  --fixup-sidebar-width: 260px;
-  --fixup-bottom-nav-height: 64px;
+  // Acción primaria
+  --primary: #2d2e31;
+  --primary-hover: #1f2023;
+  --on-primary: #ffffff;
+
+  // Estados (apagados para no competir con el acento)
+  --success: #2f6b47;
+  --success-soft: #e7f1ea; // 5.48:1
+  --warning: #8a5a00;
+  --warning-soft: #fbf0da; // 5.24:1
+  --danger: #a33a2c;
+  --danger-soft: #f8e6e3; // 5.45:1
+  --info: #3d5a73;
+  --info-soft: #e6edf3; // 6.11:1
+
+  --focus-ring: #2d2e31;
+  --scrim: rgb(28 29 31 / 55%);
+
+  // Tipografía
+  --font-display: 'Comfortaa', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  --fs-2xl: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  --fs-3xl: clamp(1.875rem, 1.3rem + 2.4vw, 3rem);
+
+  // Espaciado (base 4 px)
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+
+  // Forma: radios pequeños en controles, medio en tarjetas, grande solo en fotografía
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+
+  // Elevación: solo para lo que flota sobre la página (menús, diálogos)
+  --shadow-overlay: 0 12px 32px rgb(28 29 31 / 18%), 0 2px 6px rgb(28 29 31 / 10%);
+
+  --sidebar-width: 248px;
+  --topbar-height: 60px;
+  --bottom-nav-height: 64px;
+  --content-max: 1180px;
+  --tap: 44px;
+  --duration: 150ms;
 }
 
-// Breakpoints
-$breakpoint-mobile-max: 767.98px;
-$breakpoint-tablet-min: 768px;
-$breakpoint-tablet-max: 1023.98px;
-$breakpoint-desktop-min: 1024px;
+@mixin dark-tokens {
+  color-scheme: dark;
+  --bg: #1b1c1e;
+  --surface: #242528;
+  --surface-2: #2d2e31;
+  --surface-ink: #131416;
+  --border: #3a3b3f;
+  --border-control: #8a847c; // 4.14:1 sobre surface
+  --text: #efede9; // 14.58:1 sobre bg
+  --text-muted: #b4aea6; // 6.97:1 sobre surface
+  --text-on-ink: #efede9;
+  --text-on-ink-muted: #b4aea6;
+  --accent: #ceac78; // 7.15:1 sobre surface
+  --accent-text: #ceac78;
+  --accent-soft: #3a3226;
+  --earth: #ad8169; // texto del sello encima: 4.97:1
+  --earth-soft: #3d3128;
+  --primary: #efede9;
+  --primary-hover: #ffffff;
+  --on-primary: #1b1c1e; // 14.58:1
+  --success: #7fb894;
+  --success-soft: #1f2b24; // 6.43:1
+  --warning: #e3b65e;
+  --warning-soft: #2e2716; // 7.84:1
+  --danger: #e8968a;
+  --danger-soft: #33201d; // 6.71:1
+  --info: #9dbbd3;
+  --info-soft: #1f2730; // 7.54:1
+  --focus-ring: #ceac78;
+  --scrim: rgb(0 0 0 / 65%);
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 50%), 0 2px 6px rgb(0 0 0 / 40%);
+}
+
+:root[data-theme='dark'] {
+  @include dark-tokens;
+}
+
+// Identidad por rol. Cada panel tiñe su marco (barra lateral, franja y pastilla) para que nadie
+// confunda dónde está: clientes en carbón y dorado, técnico en tierra, inmobiliaria en pizarra y
+// administración en ciruela. El dorado de la marca sigue siendo el acento de las acciones.
+// Contrastes: blanco sobre tinta >= 13.4:1, texto apagado sobre tinta >= 7.1:1, acento sobre
+// tinta >= 6.3:1, texto del rol sobre blanco >= 6.1:1 y sobre su fondo suave >= 5.2:1.
+:root,
+[data-role='OWNER'],
+[data-role='TENANT'] {
+  --role-ink: #2d2e31;
+  --role-accent: #ceac78;
+  --role-text: #7a5c2e;
+  --role-soft: #f3ebdd;
+}
+
+[data-role='FIXER'] {
+  --role-ink: #34261f;
+  --role-accent: #e2a467;
+  --role-text: #8a4b17;
+  --role-soft: #f8e7d6;
+}
+
+[data-role='REAL_ESTATE_MANAGER'] {
+  --role-ink: #1e2b38;
+  --role-accent: #8fb6d6;
+  --role-text: #2f5577;
+  --role-soft: #e3edf5;
+}
+
+[data-role='PLATFORM_ADMIN'] {
+  --role-ink: #2e1a24;
+  --role-accent: #e59aa8;
+  --role-text: #8a2f4a;
+  --role-soft: #f6e2e7;
+}
+
+:root[data-theme='dark'],
+:root[data-theme='dark'] [data-role='OWNER'],
+:root[data-theme='dark'] [data-role='TENANT'] {
+  --role-ink: #131416;
+  --role-text: #ceac78;
+  --role-soft: #3a3226;
+}
+
+:root[data-theme='dark'] [data-role='FIXER'] {
+  --role-ink: #2e1d12;
+  --role-text: #e2a467;
+  --role-soft: #3a2a1d;
+}
+
+:root[data-theme='dark'] [data-role='REAL_ESTATE_MANAGER'] {
+  --role-ink: #132435;
+  --role-accent: #9dbbd3;
+  --role-text: #9dbbd3;
+  --role-soft: #1f2a35;
+}
+
+:root[data-theme='dark'] [data-role='PLATFORM_ADMIN'] {
+  --role-ink: #2c1420;
+  --role-accent: #e9a3b1;
+  --role-text: #e9a3b1;
+  --role-soft: #3a2129;
+}

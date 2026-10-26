@@ -1,0 +1,144 @@
+@use '../../../styles/tokens' as *;
+
+.ideas {
+  display: grid;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.ideas-head p {
+  margin-top: var(--s-1);
+  max-width: 62ch;
+}
+
+// Filtros en una sola fila que se desplaza de lado en el móvil, como las categorías de un
+// marketplace; en escritorio caben y envuelven.
+.filters {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  padding-bottom: var(--s-1);
+  scrollbar-width: none;
+
+  @media (min-width: $breakpoint-tablet) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+
+.filter {
+  flex: none;
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--border-control);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-2);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+}
+
+// Rejilla de fotos cuadradas: dos columnas en el móvil, hasta cinco en pantallas anchas.
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-4) var(--s-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (min-width: $breakpoint-tablet) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+.card {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  app-photo {
+    margin-bottom: var(--s-2);
+    transition: opacity var(--duration) ease-out;
+  }
+
+  &:hover app-photo {
+    opacity: 0.88;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-radius: var(--r-md);
+  }
+}
+
+.card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+}
+
+.card-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.skeleton span {
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.sentinel {
+  display: grid;
+  justify-items: center;
+  min-height: 1px;
+}
+
+.author {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}

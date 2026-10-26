@@ -8,7 +8,6 @@
  * Do not edit the class manually.
  */
 import { UrgencyLevel } from './urgency-level';
-import { PaymentMethod } from './payment-method';
 
 
 export interface OpenRequest { 
@@ -17,9 +16,13 @@ export interface OpenRequest {
     description: string;
     mediaIds?: Array<string>;
     urgencyLevel?: UrgencyLevel;
-    paymentMethod: PaymentMethod;
+    paymentMethod?: OpenRequest.PaymentMethodEnum;
 }
 export namespace OpenRequest {
+    export const PaymentMethodEnum = {
+        Transfer: 'TRANSFER',
+    } as const;
+    export type PaymentMethodEnum = typeof PaymentMethodEnum[keyof typeof PaymentMethodEnum];
 }
 
 

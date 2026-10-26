@@ -7,6 +7,8 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { PropertyType } from './property-type';
+import { ListingType } from './listing-type';
 
 
 export interface PropertySearchResult { 
@@ -19,5 +21,16 @@ export interface PropertySearchResult {
     longitude: number;
     distanceKm: number;
     ownedByCurrentUser: boolean;
+    neighborhood?: string | null;
+    listingType?: ListingType;
+    propertyType?: PropertyType;
+    price?: number | null;
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    coverPhotoUrl?: string | null;
+    seal: boolean;
 }
+export namespace PropertySearchResult {
+}
+
 

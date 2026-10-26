@@ -69,4 +69,11 @@ describe('api.routes', () => {
   it('no debe confundir un origen que solo comienza igual', () => {
     expect(isFixUpApiUrl(`${environment.apiOrigin}.evil.example.com/auth/me`)).toBe(false);
   });
+
+  it('reconoce los endpoints de visitas, calificaciones y mantenimiento, con o sin parámetros', () => {
+    for (const ruta of ['/visits', '/visits?requestId=abc', '/visits/me', '/ratings', '/ratings/jobs/1', '/management/requests', '/payments/charges/me']) {
+      expect(isFixUpApiUrl(`${environment.apiOrigin}${ruta}`)).toBe(true);
+    }
+    expect(isFixUpApiUrl(`${environment.apiOrigin}/demo/token`)).toBe(false);
+  });
 });

@@ -7,11 +7,20 @@ import { AuthApiService } from '../../api/auth-api.service';
 import { AuthService } from './auth.service';
 import { CurrentUserStore } from './current-user.store';
 import { BootstrapResponse, RolesResponse, UserResponse } from './auth.types';
+import { DEMO_ACCOUNTS, DemoSession, DemoSessionState } from '../demo/demo-session';
+import { signal } from '@angular/core';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userStore: CurrentUserStore;
   let routerNavigateSpy: ReturnType<typeof vi.fn>;
+  const demoState = signal<DemoSessionState | null>(null);
+  const demoMock = {
+    current: demoState.asReadonly(),
+    enabled: true,
+    start: vi.fn(),
+    end: vi.fn(() => demoState.set(null))
+  };
   let authApiMock: {
     bootstrap: ReturnType<typeof vi.fn>;
     getMe: ReturnType<typeof vi.fn>;
@@ -54,9 +63,12 @@ describe('AuthService', () => {
         CurrentUserStore,
         { provide: Auth0Service, useValue: auth0Mock },
         { provide: AuthApiService, useValue: authApiMock },
-        { provide: Router, useValue: { navigate: routerNavigateSpy } }
+        { provide: Router, useValue: { navigate: routerNavigateSpy } },
+        { provide: DemoSession, useValue: demoMock }
       ]
     });
+    sessionStorage.clear();
+    demoState.set(null);
 
     service = TestBed.inject(AuthService);
     userStore = TestBed.inject(CurrentUserStore);
@@ -216,5 +228,33 @@ describe('AuthService', () => {
     expect(userStore.activeRole()).toBeNull();
     expect(userStore.roles()).toEqual([]);
     expect(auth0Mock.logout).toHaveBeenCalled();
+  });
+
+  it('el ingreso demo abre la sesión con el rol de la cuenta elegida aunque tenga varios', async () => {
+    const manager = DEMO_ACCOUNTS.find((account) => account.role === 'REAL_ESTATE_MANAGER')!;
+    const state: DemoSessionState = { token: 't', subject: manager.subject, name: manager.name, role: manager.role, expiresAt: Date.now() + 60000 };
+    demoMock.start.mockImplementation(() => {
+      demoState.set(state);
+      return of(state);
+    });
+    const profile: UserResponse = { id: 'uuid-m', email: 'contacto@cordillera.test', displayName: manager.name, status: 'ACTIVE', roles: ['OWNER', 'REAL_ESTATE_MANAGER'] };
+    authApiMock.bootstrap.mockReturnValue(of(profile));
+    authApiMock.getMe.mockReturnValue(of(profile));
+
+    const result = await new Promise((resolve) => service.loginAsDemo(manager).subscribe(resolve));
+
+    expect(result).toMatchObject({ id: 'uuid-m' });
+    expect(userStore.activeRole()).toBe('REAL_ESTATE_MANAGER');
+    expect(service.isDemo).toBe(true);
+    expect(auth0Mock.loginWithRedirect).not.toHaveBeenCalled();
+  });
+
+  it('cerrar una sesión demo no pasa por Auth0', () => {
+    demoState.set({ token: 't', subject: 'auth0|demo-owner', name: 'X', role: 'OWNER', expiresAt: Date.now() + 60000 });
+    routerNavigateSpy.mockReturnValue(Promise.resolve(true));
+    service.logout().subscribe();
+    expect(demoMock.end).toHaveBeenCalled();
+    expect(auth0Mock.logout).not.toHaveBeenCalled();
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login']);
   });
 });

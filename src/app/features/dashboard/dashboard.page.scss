@@ -1,0 +1,140 @@
+@use '../../../styles/tokens' as *;
+
+// Cifras en una franja continua, separadas por líneas: se leen como un renglón de contexto y no
+// compiten con la lista de pendientes, que es la decisión de esta pantalla.
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+
+  > div {
+    padding: var(--s-4) var(--s-4) var(--s-4) 0;
+  }
+
+  > div + div {
+    padding-left: var(--s-4);
+    border-left: 1px solid var(--border);
+  }
+
+  dt {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: var(--s-1) 0 0;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+    }
+  }
+
+  @media (max-width: #{$breakpoint-tablet - 1px}) {
+    > div + div {
+      padding-left: 0;
+      border-left: 0;
+      border-top: 1px solid var(--border);
+    }
+  }
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.quiet {
+  color: var(--text-muted);
+}
+
+.task-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+
+  &.tone-danger {
+    background: var(--danger);
+  }
+
+  &.tone-warning {
+    background: var(--warning);
+  }
+
+  &.tone-info {
+    background: var(--info);
+  }
+
+  &.tone-accent {
+    background: var(--accent);
+  }
+}
+
+.visit {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+}
+
+.visit-date {
+  display: grid;
+  place-items: center;
+  min-width: 56px;
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+// Inicio de clientes: los pendientes caben en una franja de mosaicos cortos para que el feed de
+// ideas, que es lo que se recorre, empiece en la primera pantalla.
+.glance {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2) var(--s-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  height: 100%;
+  min-height: var(--tap);
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--border-control);
+  }
+
+  > app-icon:last-child {
+    color: var(--text-muted);
+  }
+
+  .visit-date {
+    min-width: 48px;
+    padding: var(--s-1) var(--s-2);
+  }
+}
