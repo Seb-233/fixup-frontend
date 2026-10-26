@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { Observable, forkJoin, of } from 'rxjs';
+import { Observable, forkJoin, map, of } from 'rxjs';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { PeopleApi } from '../../data/people.api';
 import { ProjectsApi } from '../../data/projects.api';
 import { PropertiesApi } from '../../data/properties.api';
 import { RequestsApi } from '../../data/requests.api';
 import { orNull } from '../../data/safe';
+import { KnownPaymentsService } from '../../data/known-payments';
 import { WorkApi } from '../../data/work.api';
 import {
   BoardItem,
@@ -68,6 +69,7 @@ export class DashboardPage {
   private readonly work = inject(WorkApi);
   private readonly people = inject(PeopleApi);
   private readonly projects = inject(ProjectsApi);
+  private readonly knownPayments = inject(KnownPaymentsService);
 
   readonly role = this.user.activeRole;
   readonly roleNames = ROLE_NAME;
@@ -106,7 +108,22 @@ export class DashboardPage {
           sources.properties = orNull(this.properties.mine());
           sources.requests = orNull(this.requests.mine());
           sources.visits = orNull(this.work.myVisits());
-          sources.payments = orNull(this.work.myPayments());
+          sources.payments = orNull(
+            this.work.myPayments({ page: 0, size: 20 }).pipe(
+              map((res) => {
+                for (const p of res.items) {
+                  this.knownPayments.register({
+                    paymentId: p.paymentId,
+                    requestId: p.requestId,
+                    amount: p.amount,
+                    reference: p.reference,
+                    status: p.status
+                  });
+                }
+                return res.items;
+              })
+            )
+          );
           sources.debts = orNull(this.work.myDebts());
           sources.contracts = orNull(this.projects.expiringContracts(45));
           break;
@@ -166,7 +183,7 @@ export class DashboardPage {
 
     const pendingPayments = (d.payments ?? []).filter((p) => p.status !== 'APPROVED');
     if (pendingPayments.length) {
-      const total = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+      const total = pendingPayments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
       tasks.push({
         text: pendingPayments.length === 1 ? '1 pago pendiente' : `${pendingPayments.length} pagos pendientes`,
         detail: `${money(total)} por transferencia. El técnico empieza cuando el pago queda aprobado.`,

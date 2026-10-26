@@ -10,6 +10,7 @@ import { NotificationsStore } from '../notifications/notifications.store';
 import { nativeLogoutUrl } from './native-callback';
 import { NativeAuthService } from './native-auth.service';
 import { DemoAccount, DemoSession } from '../demo/demo-session';
+import { KnownPaymentsService } from '../../data/known-payments';
 
 // Servicio de autenticación que orquesta Auth0 y la sincronización con el backend
 @Injectable({
@@ -20,6 +21,7 @@ export class AuthService {
   private readonly authApi = inject(AuthApiService);
   private readonly userStore = inject(CurrentUserStore);
   private readonly notificationsStore = inject(NotificationsStore);
+  private readonly knownPayments = inject(KnownPaymentsService);
   private readonly router = inject(Router);
   private readonly native = inject(NativeAuthService);
   private readonly demo = inject(DemoSession);
@@ -150,6 +152,7 @@ export class AuthService {
   logout(): Observable<void> {
     this.userStore.clear();
     this.notificationsStore.resetForNewSession();
+    this.knownPayments.clearSessionFinancialData();
     if (this.demo.current()) {
       this.demo.end();
       this.demoSubject$.next(null);

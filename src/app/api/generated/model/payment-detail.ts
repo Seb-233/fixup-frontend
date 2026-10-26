@@ -9,6 +9,7 @@
  */
 import { PaymentPurpose } from './payment-purpose';
 import { PaymentMethod } from './payment-method';
+import { PaymentContext } from './payment-context';
 import { PaymentStatus } from './payment-status';
 
 
@@ -23,6 +24,8 @@ export interface PaymentDetail {
     createdAt: string;
     updatedAt: string;
     completedAt?: string | null;
+    reference?: string;
+    context?: PaymentContext;
 }
 export namespace PaymentDetail {
 }

@@ -132,6 +132,7 @@ export const routes: Routes = [
         data: { roles: ALL },
         loadComponent: () => import('./features/requests/chat.page').then((m) => m.ChatPage)
       },
+      { path: 'requests/:requestId/chat', redirectTo: 'requests/:requestId/messages' },
       { path: 'quotations/request/:requestId', redirectTo: 'requests/:requestId' },
       {
         path: 'quotations/me',

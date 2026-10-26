@@ -3,7 +3,7 @@
 
 export const environment = {
   production: false,
-  apiOrigin: 'http://localhost:8080',
+  apiOrigin: '',
   // Muestra el acceso con cuentas de demostración cuando el backend corre con el perfil demo
   // (GET /demo/token). Con cualquier otro perfil el endpoint no responde y el acceso no aparece.
   demoLogin: true,

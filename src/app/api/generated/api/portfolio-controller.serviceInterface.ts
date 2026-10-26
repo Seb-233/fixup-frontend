@@ -36,8 +36,8 @@ export interface PortfolioControllerServiceInterface {
     deletePiece(pieceId: string, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
-     * Browse the public pieces of every published portfolio
-     * Ideas feed for clients. Interleaves fixers (every first piece, then every second one) in a stable order. fixerUserIds narrows it to those fixers; size is capped at 48.
+     * Browse public pieces from published portfolios
+     * Ideas feed for active users. Results are stable by piece position and identifier; size is capped at 48 and fixerUserIds accepts at most 200 values.
      * @endpoint get /media/portfolio/feed
      * @param page 
      * @param size 

@@ -93,19 +93,9 @@ const URGENCY_HELP: Record<UrgencyLevel, string> = {
             <span class="hint text-sm text-muted">{{ urgencyHelp[urgency] }}</span>
           </fieldset>
 
-          @if (!isTenant()) {
-            <fieldset class="stack-sm">
-              <legend class="text-base">¿Cómo se paga el trabajo?</legend>
-              <div class="segmented">
-                @for (m of methods; track m.value) {
-                  <label><input type="radio" name="paymentMethod" [value]="m.value" [(ngModel)]="paymentMethod" />{{ m.label }}</label>
-                }
-              </div>
-              <span class="hint text-sm text-muted">{{ methodHelp[paymentMethod] }}</span>
-            </fieldset>
-          } @else {
-            <p class="hint text-sm text-muted">El propietario paga el arreglo por transferencia en la pasarela de Fix&amp;Rent.</p>
-          }
+          <p class="hint text-sm text-muted">
+            Pago 100 % digital: el servicio se paga por transferencia simulada al aprobar la cotización. El técnico inicia el trabajo cuando el pago queda aprobado.
+          </p>
           <div class="field">
             <span class="field-label">Fotos del daño</span>
             <app-photo-picker [max]="6" (changed)="files.set($event)" />
@@ -132,15 +122,6 @@ export class NewRequestPage implements OnInit {
 
   readonly isTenant = computed(() => this.user.activeRole() === 'TENANT');
   readonly urgencyHelp = URGENCY_HELP;
-  // FR-UC-05: lo acuerda quien paga al abrir la solicitud; un arrendatario no lo elige.
-  readonly methods: { value: PaymentMethod; label: string }[] = [
-    { value: 'TRANSFER', label: 'Transferencia' },
-    { value: 'CASH', label: 'Efectivo' }
-  ];
-  readonly methodHelp: Record<PaymentMethod, string> = {
-    TRANSFER: 'Pagas en la pasarela de prueba al elegir la cotización; el técnico empieza cuando el pago queda aprobado.',
-    CASH: 'Le pagas al técnico al terminar. Si queda un saldo, lo pagas antes de abrir otra solicitud.'
-  };
   readonly urgencies: { value: UrgencyLevel; label: string }[] = [
     { value: 'LOW', label: 'Baja' },
     { value: 'MEDIUM', label: 'Media' },
@@ -202,7 +183,7 @@ export class NewRequestPage implements OnInit {
             description: this.description.trim(),
             mediaIds,
             urgencyLevel: this.urgency,
-            paymentMethod: this.isTenant() ? undefined : this.paymentMethod
+            paymentMethod: 'TRANSFER'
           });
         })
       )

@@ -21,8 +21,6 @@ export interface EarningResponse {
     createdAt: string;
     releasedAt?: string | null;
     paidOutAt?: string | null;
-    fundedAt?: string | null;
-    jobCompletedAt?: string | null;
 }
 export namespace EarningResponse {
 }

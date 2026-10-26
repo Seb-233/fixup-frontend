@@ -23,7 +23,7 @@ describe('errorInterceptor', () => {
     userStore = TestBed.inject(CurrentUserStore);
   });
 
-  it('debe limpiar CurrentUserStore y redirigir al login ante un error 401 Unauthorized', async () => {
+  it('debe limpiar CurrentUserStore, datos financieros de sesión y redirigir al login ante un error 401 Unauthorized', async () => {
     userStore.setProfile({
       id: 'uuid-1',
       email: 'test@fixup.com',
@@ -31,6 +31,9 @@ describe('errorInterceptor', () => {
       status: 'ACTIVE',
       roles: ['OWNER']
     });
+
+    sessionStorage.setItem('fixup_pending_attempt_pay-1', 'test-data');
+    sessionStorage.setItem('fixup_in_flight_payout_fixer-1', 'payout-data');
 
     const error401 = new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' });
     const req = new HttpRequest('GET', '/test');
@@ -41,6 +44,8 @@ describe('errorInterceptor', () => {
     ).rejects.toMatchObject({ status: 401 });
 
     expect(userStore.user()).toBeNull();
+    expect(sessionStorage.getItem('fixup_pending_attempt_pay-1')).toBeNull();
+    expect(sessionStorage.getItem('fixup_in_flight_payout_fixer-1')).toBeNull();
     expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login']);
   });
 

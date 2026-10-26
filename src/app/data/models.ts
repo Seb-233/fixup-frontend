@@ -6,6 +6,7 @@ import type {
   JobStatus,
   RatingResponse,
   RepairRequestStatus,
+  SandboxPaymentInstrument,
   SlaState,
   Specialty,
   UrgencyLevel
@@ -24,12 +25,12 @@ export type {
   EarningResponse,
   EarningsResponse,
   ExpenseReport,
-  FeedPieceResponse,
   FixerVerificationDocumentType,
   GeocodingCandidate,
   IndicatorsResponse,
   JobResponse,
   JobStatus,
+  Line,
   ListingType,
   ManagerOption,
   MediaPurpose,
@@ -39,14 +40,16 @@ export type {
   OpenRequestSummaryResponse,
   OwnPortfolioResponse,
   OwnerDebtDetail,
+  PaymentAttemptResult,
+  PaymentContext,
   PaymentDetail,
   PaymentMethod,
+  PaymentPageResponse,
   PaymentPurpose,
-  PaymentSimulationOutcome,
   PaymentStatus,
+  PayoutEntry,
   PayoutResponse,
   PieceResponse,
-  PortfolioFeedResponse,
   ProjectResponse,
   ProjectSummaryResponse,
   PropertyChanges,
@@ -63,6 +66,7 @@ export type {
   RequirementRequest,
   ReviewResponse,
   Role,
+  SandboxPaymentInstrument,
   SlaBoardItemResponse,
   SlaState,
   Specialty,
@@ -162,4 +166,26 @@ export interface UserProfile {
   displayName: string | null;
   status: string;
   roles: string[];
+}
+
+export interface AttemptRequest {
+  reference: string;
+  amount: number | bigint | string;
+  instrument: SandboxPaymentInstrument;
+}
+
+export interface FeedPieceResponse {
+  id: string;
+  fixerUserId: string;
+  title: string;
+  description?: string | null;
+  readUrl: string;
+  readUrlExpiresAt: string;
+  createdAt?: string;
+}
+
+export interface PortfolioFeedResponse {
+  items: FeedPieceResponse[];
+  page: number;
+  hasMore: boolean;
 }

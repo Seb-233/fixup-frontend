@@ -14,6 +14,8 @@ import { Observable }                                        from 'rxjs';
 import { CompletionRequest } from '../model/models';
 import { ErrorResponse } from '../model/models';
 import { EvidenceRequest } from '../model/models';
+import { EvidenceResponse } from '../model/models';
+import { JobDetailResponse } from '../model/models';
 import { JobResponse } from '../model/models';
 import { NoteRequest } from '../model/models';
 import { ScheduleRequest } from '../model/models';
@@ -29,7 +31,7 @@ export interface JobControllerServiceInterface {
 
     /**
      * Close a finished job
-     * Records the work in the property\&#39;s history and settles the payment: a transfer releases the held earning; a cash job records the amount received and any balance the owner still owes. Then the request is closed. Only the assigned fixer can close his own job.
+     * Closes the request and records the work in the property\&#39;s history. CASH requires receivedAmount; TRANSFER rejects it. Only the assigned fixer can close his own job.
      * @endpoint post /jobs/{jobId}/complete
      * @param jobId 
      * @param completionRequest 
@@ -42,7 +44,7 @@ export interface JobControllerServiceInterface {
      * @endpoint get /jobs/{jobId}
      * @param jobId 
      */
-    detail2(jobId: string, extraHttpRequestParams?: any): Observable<{}>;
+    detail2(jobId: string, extraHttpRequestParams?: any): Observable<JobDetailResponse>;
 
     /**
      * Attach before, during or after photos to the job
@@ -51,7 +53,7 @@ export interface JobControllerServiceInterface {
      * @param jobId 
      * @param evidenceRequest 
      */
-    evidence(jobId: string, evidenceRequest: EvidenceRequest, extraHttpRequestParams?: any): Observable<{}>;
+    evidence(jobId: string, evidenceRequest: EvidenceRequest, extraHttpRequestParams?: any): Observable<Array<EvidenceResponse>>;
 
     /**
      * Read the job opened for a repair request (FR-UC-19)
@@ -59,7 +61,7 @@ export interface JobControllerServiceInterface {
      * @endpoint get /jobs/for-request/{requestId}
      * @param requestId 
      */
-    forRequest2(requestId: string, extraHttpRequestParams?: any): Observable<{}>;
+    forRequest2(requestId: string, extraHttpRequestParams?: any): Observable<JobDetailResponse>;
 
     /**
      * List the jobs assigned to the current fixer
@@ -75,7 +77,7 @@ export interface JobControllerServiceInterface {
      * @param jobId 
      * @param scheduleRequest 
      */
-    schedule(jobId: string, scheduleRequest: ScheduleRequest, extraHttpRequestParams?: any): Observable<{}>;
+    schedule(jobId: string, scheduleRequest: ScheduleRequest, extraHttpRequestParams?: any): Observable<JobResponse>;
 
     /**
      * Mark the job as in progress
@@ -84,6 +86,6 @@ export interface JobControllerServiceInterface {
      * @param jobId 
      * @param noteRequest 
      */
-    start(jobId: string, noteRequest: NoteRequest, extraHttpRequestParams?: any): Observable<{}>;
+    start(jobId: string, noteRequest: NoteRequest, extraHttpRequestParams?: any): Observable<JobResponse>;
 
 }

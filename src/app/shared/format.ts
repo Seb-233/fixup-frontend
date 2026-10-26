@@ -28,8 +28,8 @@ function keepTogether(text: string): string {
 }
 const MONTH = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' });
 
-export function money(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'Sin precio' : MONEY.format(value);
+export function money(value: number | bigint | null | undefined): string {
+  return value === null || value === undefined ? 'Sin precio' : MONEY.format(value as number | bigint);
 }
 
 export function num(value: number | null | undefined): string {
@@ -222,6 +222,12 @@ export const PAYMENT_METHOD: Record<string, string> = {
   CASH: 'Efectivo'
 };
 
+export const SANDBOX_PAYMENT_INSTRUMENT: Record<string, string> = {
+  SANDBOX_CARD: 'Tarjeta de crédito o débito (simulada)',
+  SANDBOX_PSE: 'PSE - Transferencia bancaria (simulada)',
+  SANDBOX_NEQUI: 'Nequi / Daviplata (simulada)'
+};
+
 export const PAYMENT_PURPOSE: Record<string, string> = {
   SERVICE: 'Pago del trabajo',
   OUTSTANDING_BALANCE: 'Saldo pendiente de un trabajo en efectivo'
@@ -339,7 +345,7 @@ const ERROR_CODES: Record<string, string> = {
   SELF_QUOTATION: 'No puedes cotizar una solicitud propia.',
   QUOTATION_ALREADY_DECIDED: 'Esa cotización ya fue decidida.',
   OWNER_HAS_OUTSTANDING_DEBT: 'Tienes un saldo pendiente de un trabajo en efectivo. Págalo en Pagos para abrir otra solicitud.',
-  PAYMENT_METHOD_REQUIRED: 'Elige si el trabajo se paga por transferencia o en efectivo.',
+  PAYMENT_METHOD_REQUIRED: 'El servicio debe pagarse mediante transferencia digital.',
   PAYMENT_ALREADY_APPROVED: 'Este pago ya está aprobado.',
   DEBT_ALREADY_PAID: 'Esta deuda ya está pagada.',
   INVALID_CASH_RECEIVED_AMOUNT: 'Escribe el efectivo recibido en pesos enteros, entre cero y el valor acordado.',
@@ -353,5 +359,57 @@ const ERROR_CODES: Record<string, string> = {
   NOT_READY_TO_PUBLISH: 'La remodelación debe estar terminada para publicar el aviso.',
   LISTING_ALREADY_PUBLISHED: 'El aviso de esta remodelación ya está publicado.',
   TARGET_RENT_REQUIRED: 'Indica el canon objetivo de la remodelación pre-arriendo.',
-  CONSENT_REQUIRED: 'Debes aceptar el tratamiento de datos personales.'
+  CONSENT_REQUIRED: 'Debes aceptar el tratamiento de datos personales.',
+  AMOUNT_NOT_INT64: 'El importe debe ser un número entero en pesos colombianos.',
+  AMOUNT_NOT_POSITIVE: 'El importe debe ser mayor a cero.',
+  AMOUNT_MISMATCH: 'El importe no coincide con el valor del pago pendiente.',
+  PAYMENT_NOT_PENDING: 'El pago no se encuentra pendiente.',
+  PAYMENT_NOT_FOUND: 'No se encontró la información del pago.',
+  INSTRUMENT_REQUIRED: 'Elige un medio de pago simulado.',
+  IDEMPOTENCY_CONFLICT: 'Conflicto de clave idempotente: se reutilizó una clave con datos distintos.',
+  INVALID_PERIOD: 'El periodo de consulta de gastos es inválido. La fecha inicial debe ser anterior o igual a la final.',
+  EXPENSE_CONTEXT_INCOMPLETE: 'El contexto del reporte de gastos está incompleto.',
+  ACCESS_DENIED: 'Acceso denegado: tu cuenta no tiene permiso para esta operación.',
+  REQUEST_NOT_ASSIGNED: 'La solicitud no se encuentra asignada.',
+  LEGACY_UNAVAILABLE: 'El desglose histórico de este cobro no se puede reconstruir.'
 };
+
+/**
+ * Error lanzado cuando el entorno no dispone de una fuente criptográficamente
+ * segura (CSPRNG) para operaciones financieras.
+ */
+export class CryptographicSourceUnavailableError extends Error {
+  constructor(message = 'No se dispone de una fuente criptográficamente segura para generar la clave de idempotencia.') {
+    super(message);
+    this.name = 'CryptographicSourceUnavailableError';
+  }
+}
+
+/**
+ * Genera un UUID versión 4 canónico (RFC 4122) respaldado estrictamente por una fuente
+ * criptográficamente segura (crypto.randomUUID o crypto.getRandomValues).
+ *
+ * No admite fallbacks deterministas o pseudoaleatorios (como Math.random) para operaciones financieras.
+ * Si el entorno carece de CSPRNG, lanza un error controlado de tipo CryptographicSourceUnavailableError.
+ */
+export function generateUuid(): string {
+  const c = typeof globalThis !== 'undefined' ? globalThis.crypto : (typeof crypto !== 'undefined' ? crypto : undefined);
+
+  if (c) {
+    if (typeof c.randomUUID === 'function') {
+      return c.randomUUID();
+    }
+    if (typeof c.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      c.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // Versión 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variante RFC 4122
+      const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+    }
+  }
+
+  throw new CryptographicSourceUnavailableError();
+}
+
+

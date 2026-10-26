@@ -10,7 +10,7 @@
 
 
 export interface Line { 
-    paymentId?: string;
+    chargeId?: string;
     propertyId?: string;
     propertyName?: string;
     requestId?: string;

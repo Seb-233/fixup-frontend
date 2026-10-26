@@ -35,7 +35,7 @@
   @if (report.isLoading() && !report.hasValue()) {
     <app-loading text="Sumando pagos…" />
   } @else if (report.error()) {
-    <app-error (retry)="report.reload()" />
+    <app-error title="Error en el reporte de gastos" [message]="reportErrorMessage()" (retry)="report.reload()" />
   } @else if (report.hasValue()) {
     @let r = report.value();
     @if (r.count) {
@@ -101,7 +101,7 @@
         <table class="table">
           <thead><tr><th scope="col">Fecha</th><th scope="col">Inmueble</th><th scope="col">Concepto</th><th scope="col" class="num">Valor</th></tr></thead>
           <tbody>
-            @for (line of r.lines; track line.paymentId) {
+            @for (line of r.lines; track (line.chargeId || line.requestId || $index)) {
               <tr>
                 <td data-label="Fecha">{{ line.paidAt | day }}</td>
                 <td data-label="Inmueble">{{ line.propertyName }}</td>
