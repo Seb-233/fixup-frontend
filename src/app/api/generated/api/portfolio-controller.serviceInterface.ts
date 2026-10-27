@@ -15,6 +15,7 @@ import { ErrorResponse } from '../model/models';
 import { OwnPortfolioResponse } from '../model/models';
 import { PieceRequest } from '../model/models';
 import { PieceResponse } from '../model/models';
+import { PortfolioFeedResponse } from '../model/models';
 import { PortfolioStatusResponse } from '../model/models';
 
 
@@ -33,6 +34,16 @@ export interface PortfolioControllerServiceInterface {
      * @param pieceId 
      */
     deletePiece(pieceId: string, extraHttpRequestParams?: any): Observable<{}>;
+
+    /**
+     * Browse public pieces from published portfolios
+     * Ideas feed for active users. Results are stable by piece position and identifier; size is capped at 48 and fixerUserIds accepts at most 200 values.
+     * @endpoint get /media/portfolio/feed
+     * @param page 
+     * @param size 
+     * @param fixerUserIds 
+     */
+    feed(page?: number, size?: number, fixerUserIds?: Array<string>, extraHttpRequestParams?: any): Observable<PortfolioFeedResponse>;
 
     /**
      * Take a piece out of the public portfolio
@@ -63,7 +74,7 @@ export interface PortfolioControllerServiceInterface {
      * @endpoint post /media/me/portfolio/pieces
      * @param pieceRequest 
      */
-    publish(pieceRequest: PieceRequest, extraHttpRequestParams?: any): Observable<PieceResponse>;
+    publish1(pieceRequest: PieceRequest, extraHttpRequestParams?: any): Observable<PieceResponse>;
 
     /**
      * Publish the fixer\&#39;s portfolio

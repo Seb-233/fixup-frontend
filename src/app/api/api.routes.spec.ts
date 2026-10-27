@@ -27,12 +27,28 @@ describe('api.routes', () => {
       '/payments/me/payouts',
       '/properties',
       '/properties/me',
-      '/properties/550e8400-e29b-41d4-a716-446655440000'
+      '/properties/550e8400-e29b-41d4-a716-446655440000',
+      '/locations/geocode?query=Carrera%207',
+      '/remodelings',
+      '/remodelings/me',
+      '/remodelings/550e8400-e29b-41d4-a716-446655440000'
     ];
 
     for (const ruta of protegidas) {
       expect(isFixUpApiUrl(`${environment.apiOrigin}${ruta}`)).toBe(true);
     }
+  });
+
+  it('debe comprobar que isFixUpApiUrl retorna true para /locations/geocode', () => {
+    expect(
+      isFixUpApiUrl(`${environment.apiOrigin}/locations/geocode?query=Bogota`)
+    ).toBe(true);
+  });
+
+  it('debe comprobar que isFixUpApiUrl retorna true para /remodelings/me', () => {
+    expect(
+      isFixUpApiUrl(`${environment.apiOrigin}/remodelings/me`)
+    ).toBe(true);
   });
 
   it('no debe adjuntar el token a un origen ajeno aunque la ruta coincida', () => {
@@ -52,5 +68,12 @@ describe('api.routes', () => {
 
   it('no debe confundir un origen que solo comienza igual', () => {
     expect(isFixUpApiUrl(`${environment.apiOrigin}.evil.example.com/auth/me`)).toBe(false);
+  });
+
+  it('reconoce los endpoints de visitas, calificaciones y mantenimiento, con o sin parámetros', () => {
+    for (const ruta of ['/visits', '/visits?requestId=abc', '/visits/me', '/ratings', '/ratings/jobs/1', '/management/requests', '/payments/charges/me']) {
+      expect(isFixUpApiUrl(`${environment.apiOrigin}${ruta}`)).toBe(true);
+    }
+    expect(isFixUpApiUrl(`${environment.apiOrigin}/demo/token`)).toBe(false);
   });
 });

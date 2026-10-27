@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { UrgencyLevel } from './urgency-level';
 
 
 export interface OpenRequest { 
@@ -14,5 +15,14 @@ export interface OpenRequest {
     title: string;
     description: string;
     mediaIds?: Array<string>;
+    urgencyLevel?: UrgencyLevel;
+    paymentMethod?: OpenRequest.PaymentMethodEnum;
 }
+export namespace OpenRequest {
+    export const PaymentMethodEnum = {
+        Transfer: 'TRANSFER',
+    } as const;
+    export type PaymentMethodEnum = typeof PaymentMethodEnum[keyof typeof PaymentMethodEnum];
+}
+
 

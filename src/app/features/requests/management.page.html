@@ -1,0 +1,105 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Mantenimiento</h1>
+      <p class="lede">Solicitudes de los inmuebles que administras, ordenadas por plazo. Invita técnicos cercanos a las que aún no tienen quién las atienda.</p>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-ghost" (click)="board.reload()"><app-icon name="refresh" />Actualizar</button>
+    </div>
+  </header>
+
+  @if (board.isLoading() && !board.hasValue()) {
+    <app-loading text="Cargando el tablero…" />
+  } @else if (board.error()) {
+    <app-error (retry)="board.reload()" />
+  } @else if (board.hasValue() && board.value().length) {
+    <div class="tabs" role="tablist" aria-label="Estado">
+      @for (tab of tabs; track tab.key) {
+        <button type="button" role="tab" [attr.aria-selected]="filter() === tab.key" (click)="filter.set(tab.key)">
+          {{ tab.label }} <span class="count">{{ count(tab.key) }}</span>
+        </button>
+      }
+    </div>
+
+    <ul class="board">
+      @for (item of visible(); track item.requestId) {
+        <li class="panel stack-sm">
+          <div class="item-head">
+            <div class="stack-sm grow">
+              <a [routerLink]="['/requests', item.requestId]" class="row-title link">{{ item.title }}</a>
+              <span class="row-meta">{{ item.specialty | label: specialty }} · {{ item.propertyName }}{{ item.propertyCity ? ', ' + item.propertyCity : '' }}</span>
+              <span class="row-meta">
+                Reportada {{ item.createdAt | ago }}{{ item.requestedByName ? ' por ' + item.requestedByName : '' }}
+                @if (item.assignedFixerName) { · técnico {{ item.assignedFixerName }} }
+              </span>
+            </div>
+            <div class="badges">
+              <app-status [map]="status" [value]="item.status" />
+              <app-status [map]="urgency" [value]="item.urgencyLevel" />
+            </div>
+          </div>
+          @if (item.slaDeadline && filter() !== 'CLOSED') {
+            <p class="text-sm" [class.late]="item.slaState === 'BREACHED'">
+              Plazo {{ item.slaDeadline | when }} ({{ item.slaDeadline | ago }}) · <app-status [map]="sla" [value]="item.slaState" />
+            </p>
+          }
+          @if (filter() === 'UNASSIGNED') {
+            <div>
+              <button type="button" class="btn btn-secondary" (click)="toggle(item.requestId)" [attr.aria-expanded]="expanded() === item.requestId">
+                <app-icon name="users" />{{ expanded() === item.requestId ? 'Ocultar técnicos' : 'Invitar técnicos' }}
+              </button>
+            </div>
+            @if (expanded() === item.requestId) {
+              <div class="panel panel-quiet stack">
+                @if (candidates.isLoading()) {
+                  <app-loading text="Buscando técnicos de la especialidad…" />
+                } @else if (candidates.error()) {
+                  <app-error (retry)="candidates.reload()" />
+                } @else if (candidates.hasValue() && candidates.value().length) {
+                  <p class="text-sm text-muted">Primero los de la misma ciudad, con menos trabajos activos y mejor calificados. Elige hasta cinco por envío.</p>
+                  <ul class="candidates list">
+                    @for (c of candidates.value(); track c.fixerUserId) {
+                      <li>
+                        <label class="candidate">
+                          <input type="checkbox" [disabled]="c.invited" [checked]="c.invited || selected[c.fixerUserId]" (change)="pick(c.fixerUserId, $any($event.target).checked)" />
+                          <span class="stack-sm grow">
+                            <span class="row-title">{{ c.displayName }}</span>
+                            <span class="row-meta">
+                              {{ c.city || 'Ciudad sin indicar' }}{{ c.sameCity ? ' · misma ciudad' : '' }} ·
+                              {{ c.openJobs }} {{ c.openJobs === 1 ? 'trabajo activo' : 'trabajos activos' }}
+                              @if (c.yearsExperience) { · {{ c.yearsExperience }} años de experiencia }
+                            </span>
+                          </span>
+                          <app-stars [average]="c.ratingAverage" [count]="c.ratingCount" />
+                          @if (c.invited) { <span class="chip chip-info">Invitado</span> }
+                        </label>
+                      </li>
+                    }
+                  </ul>
+                  <div class="field">
+                    <label [for]="'note-' + item.requestId">Mensaje para los técnicos</label>
+                    <input [id]="'note-' + item.requestId" class="input" maxlength="500" [(ngModel)]="note" name="note" placeholder="El arrendatario está en casa en las mañanas." />
+                  </div>
+                  @if (inviteError()) { <div class="alert alert-danger" role="alert">{{ inviteError() }}</div> }
+                  @if (inviteMessage()) { <div class="alert alert-success" role="status">{{ inviteMessage() }}</div> }
+                  <div>
+                    <button type="button" class="btn btn-primary" (click)="invite(item.requestId)" [disabled]="inviting() || selectedCount() === 0">
+                      Invitar {{ selectedCount() || '' }} {{ selectedCount() === 1 ? 'técnico' : 'técnicos' }}
+                    </button>
+                  </div>
+                } @else {
+                  <p class="text-muted">No hay técnicos verificados de esta especialidad disponibles para invitar.</p>
+                }
+              </div>
+            }
+          }
+        </li>
+      } @empty {
+        <li class="text-muted">Nada en este estado.</li>
+      }
+    </ul>
+  } @else {
+    <app-empty title="No hay solicitudes en tus inmuebles" text="Cuando un propietario o arrendatario reporte un daño en un inmueble que administras, aparecerá aquí." />
+  }
+</div>

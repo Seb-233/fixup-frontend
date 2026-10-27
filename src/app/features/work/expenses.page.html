@@ -1,0 +1,119 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Reporte de gastos</h1>
+      <p class="lede">Lo que pagaste en mantenimiento por inmueble, por mes y por especialidad. Solo cuenta pagos aprobados.</p>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" (click)="downloadCsv()" [disabled]="downloading()"><app-icon name="download" />{{ downloading() ? 'Generando…' : 'Descargar CSV' }}</button>
+    </div>
+  </header>
+
+  <form class="toolbar panel" (ngSubmit)="apply()">
+    <div class="field">
+      <label for="from">Desde</label>
+      <input id="from" type="date" class="input" name="from" [(ngModel)]="form.from" [max]="form.to" />
+    </div>
+    <div class="field">
+      <label for="to">Hasta</label>
+      <input id="to" type="date" class="input" name="to" [(ngModel)]="form.to" [min]="form.from" />
+    </div>
+    <div class="field">
+      <label for="property">Inmueble</label>
+      <select id="property" class="select" name="property" [(ngModel)]="form.propertyId">
+        <option value="">Todos</option>
+        @if (properties.hasValue()) {
+          @for (p of properties.value(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+        }
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Ver reporte</button>
+  </form>
+
+  @if (downloadError()) { <div class="alert alert-danger" role="alert">{{ downloadError() }}</div> }
+
+  @if (report.isLoading() && !report.hasValue()) {
+    <app-loading text="Sumando pagos…" />
+  } @else if (report.error()) {
+    <app-error title="Error en el reporte de gastos" [message]="reportErrorMessage()" (retry)="report.reload()" />
+  } @else if (report.hasValue()) {
+    @let r = report.value();
+    @if (r.count) {
+      <dl class="facts panel">
+        <div><dt>Total del periodo</dt><dd class="price">{{ r.total | money }}</dd></div>
+        <div><dt>Pagos</dt><dd>{{ r.count }}</dd></div>
+        <div>
+          <dt>Frente al periodo anterior</dt>
+          <dd>
+            @if (change(); as c) { {{ c.up ? 'Subió' : 'Bajó' }} {{ c.text }} <span class="text-sm text-muted">(antes {{ c.previous }})</span> }
+            @else { Sin datos del periodo anterior }
+          </dd>
+        </div>
+      </dl>
+
+      <div class="grid-2">
+        <section class="panel stack-sm" aria-labelledby="month-title">
+          <h2 id="month-title" class="text-lg">Por mes</h2>
+          <ul class="bars">
+            @for (m of months(); track m.label) {
+              <li>
+                <span class="bar-label">{{ m.label }}</span>
+                <span class="bar-track"><span class="bar" [style.width.%]="m.width"></span></span>
+                <span class="bar-value">{{ m.total | money }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+        <section class="panel stack-sm" aria-labelledby="spec-title">
+          <h2 id="spec-title" class="text-lg">Por especialidad</h2>
+          <ul class="bars">
+            @for (s of specialties(); track s.key) {
+              <li>
+                <span class="bar-label">{{ s.key | label: specialty }}</span>
+                <span class="bar-track"><span class="bar accent" [style.width.%]="s.share"></span></span>
+                <span class="bar-value">{{ s.total | money }} · {{ s.share }} %</span>
+              </li>
+            }
+          </ul>
+        </section>
+      </div>
+
+      @if ((r.byProperty ?? []).length > 1) {
+        <section class="panel stack-sm" aria-labelledby="prop-title">
+          <h2 id="prop-title" class="text-lg">Por inmueble</h2>
+          <table class="table">
+            <thead><tr><th scope="col">Inmueble</th><th scope="col" class="num">Pagos</th><th scope="col" class="num">Total</th></tr></thead>
+            <tbody>
+              @for (p of r.byProperty; track p.propertyId) {
+                <tr>
+                  <td data-label="Inmueble">{{ p.propertyName }}</td>
+                  <td data-label="Pagos" class="num">{{ p.count }}</td>
+                  <td data-label="Total" class="num">{{ p.total | money }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+
+      <section class="panel stack-sm" aria-labelledby="lines-title">
+        <h2 id="lines-title" class="text-lg">Detalle de pagos</h2>
+        <table class="table">
+          <thead><tr><th scope="col">Fecha</th><th scope="col">Inmueble</th><th scope="col">Concepto</th><th scope="col" class="num">Valor</th></tr></thead>
+          <tbody>
+            @for (line of r.lines; track (line.chargeId || line.requestId || $index)) {
+              <tr>
+                <td data-label="Fecha">{{ line.paidAt | day }}</td>
+                <td data-label="Inmueble">{{ line.propertyName }}</td>
+                <td data-label="Concepto"><a [routerLink]="['/requests', line.requestId]" class="link">{{ line.concept || (line.specialty | label: specialty) }}</a></td>
+                <td data-label="Valor" class="num">{{ line.amount | money }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    } @else {
+      <app-empty title="Sin pagos en este periodo" text="Prueba con un rango de fechas más amplio o con todos los inmuebles." />
+    }
+  }
+</div>

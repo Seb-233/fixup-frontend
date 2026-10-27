@@ -40,7 +40,7 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     const component = await rootRoute?.loadComponent?.();
     expect(component).toBeDefined();
     expect((component as { ɵcmp?: { selectors?: string[][] } }).ɵcmp?.selectors).toContainEqual([
-      'app-landing'
+      'app-landing-page'
     ]);
   });
 
@@ -68,14 +68,14 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(privateChildren.some((child) => child.path === 'auth/callback')).toBe(false);
   });
 
-  it('4. /properties carga la pantalla del owner de forma diferida', () => {
+  it('4. /properties carga de forma diferida la pantalla de propietarios e inmobiliarias', () => {
     const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
     const propertiesRoute = privateLayoutRoute?.children?.find((route) => route.path === 'properties');
 
     expect(propertiesRoute).toBeDefined();
     expect(propertiesRoute?.loadComponent).toBeDefined();
     expect(propertiesRoute?.component).toBeUndefined();
-    expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER']);
+    expect(propertiesRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
   });
 
   it('5. /dashboard sigue dentro del shell privado autenticado y exige un rol activo', () => {
@@ -84,7 +84,72 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
 
     expect(privateLayoutRoute?.canActivate).toBeDefined();
     expect(dashboardRoute?.loadComponent).toBeDefined();
-    expect(dashboardRoute?.canActivate).toContain(roleGuard);
+    // El guard de rol cubre a todas las rutas hijas del shell privado.
+    expect(privateLayoutRoute?.canActivateChild).toContain(roleGuard);
     expect(dashboardRoute?.data?.['roles']).toBeUndefined();
+  });
+
+  it('6. /remodelings y /remodelings/new exigen rol OWNER y cargan de forma diferida', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const listRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings');
+    const newRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings/new');
+
+    expect(listRoute).toBeDefined();
+    expect(listRoute?.loadComponent).toBeDefined();
+    expect(listRoute?.data?.['roles']).toEqual(['OWNER']);
+
+    expect(newRoute).toBeDefined();
+    expect(newRoute?.loadComponent).toBeDefined();
+    expect(newRoute?.data?.['roles']).toEqual(['OWNER']);
+  });
+
+  it('7. /remodelings/:projectId permite OWNER y PLATFORM_ADMIN para soporte de solo lectura', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const detailRoute = privateLayoutRoute?.children?.find((route) => route.path === 'remodelings/:projectId');
+
+    expect(detailRoute).toBeDefined();
+    expect(detailRoute?.loadComponent).toBeDefined();
+    expect(detailRoute?.data?.['roles']).toEqual(['OWNER', 'PLATFORM_ADMIN']);
+  });
+
+  it('8. los enlaces de notificaciones del backend tienen destino', () => {
+    const privateLayoutRoute = routes.find((route) => route.component && route.children);
+    const childPaths = privateLayoutRoute?.children?.map((route) => route.path) ?? [];
+    for (const path of [
+      'properties/:propertyId',
+      'visits/:visitId',
+      'management/requests',
+      'fixers/:fixerUserId/profile',
+      'quotations/request/:requestId',
+      'requests/:requestId/messages',
+      'jobs/me',
+      'payments/earnings',
+      'fixers/verification',
+      'contracts/:contractId'
+    ]) {
+      expect(childPaths).toContain(path);
+    }
+  });
+
+  it('9. /payments y /payments/:paymentId restringen acceso a roles pagadores (OWNER, REAL_ESTATE_MANAGER)', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const paymentsRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments');
+    const checkoutRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments/:paymentId');
+
+    expect(paymentsRoute).toBeDefined();
+    expect(paymentsRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
+    expect(checkoutRoute).toBeDefined();
+    expect(checkoutRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
+  });
+
+  it('10. /payments/earnings restringe a FIXER y /expenses a pagadores', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const earningsRoute = privateLayoutRoute?.children?.find((route) => route.path === 'payments/earnings');
+    const expensesRoute = privateLayoutRoute?.children?.find((route) => route.path === 'expenses');
+
+    expect(earningsRoute).toBeDefined();
+    expect(earningsRoute?.data?.['roles']).toEqual(['FIXER']);
+    expect(expensesRoute).toBeDefined();
+    expect(expensesRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
   });
 });

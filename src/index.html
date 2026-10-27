@@ -2,12 +2,21 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>FixUp</title>
+  <title>Fix&amp;Rent</title>
+  <meta name="description" content="Arriendos con el mantenimiento resuelto: inmuebles, solicitudes de reparación, técnicos verificados y pagos en un mismo lugar.">
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#2D2E31">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Aplica el tema antes de que Angular arranque para no mostrar un destello del tema equivocado.
+    try {
+      var stored = localStorage.getItem('fixrent.theme');
+      var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <app-root></app-root>

@@ -9,6 +9,9 @@
  */
 import { Specialty } from './specialty';
 import { PhotoResponse } from './photo-response';
+import { UrgencyLevel } from './urgency-level';
+import { PaymentMethod } from './payment-method';
+import { SlaState } from './sla-state';
 import { RepairRequestStatus } from './repair-request-status';
 
 
@@ -21,7 +24,21 @@ export interface RequestDetailResponse {
     photos: Array<PhotoResponse>;
     status: RepairRequestStatus;
     assignedFixerUserId?: string | null;
+    paymentMethod: PaymentMethod;
     createdAt: string;
+    urgencyLevel: UrgencyLevel;
+    slaDeadline?: string | null;
+    slaState: SlaState;
+    ownerUserId: string;
+    ownerName?: string | null;
+    requestedByUserId?: string | null;
+    requestedByName?: string | null;
+    managerUserId?: string | null;
+    assignedFixerName?: string | null;
+    propertyName?: string | null;
+    propertyAddress?: string | null;
+    propertyCity?: string | null;
+    completedAt?: string | null;
 }
 export namespace RequestDetailResponse {
 }

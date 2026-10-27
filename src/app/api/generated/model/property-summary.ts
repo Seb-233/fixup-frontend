@@ -7,13 +7,41 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { PropertyType } from './property-type';
+import { ListingType } from './listing-type';
 
 
 export interface PropertySummary { 
-    id?: string;
-    name?: string;
-    address?: string;
-    city?: string;
-    areaM2?: number;
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    areaM2: number;
+    status: PropertySummary.StatusEnum;
+    publishedAt?: string;
+    ownerUserId?: string;
+    managerUserId?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    listingType?: ListingType;
+    propertyType?: PropertyType;
+    price?: number | null;
+    adminFee?: number | null;
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    parkingSpots?: number | null;
+    stratum?: number | null;
+    neighborhood?: string | null;
+    description?: string | null;
+    photoMediaIds: Array<string>;
 }
+export namespace PropertySummary {
+    export const StatusEnum = {
+        Draft: 'DRAFT',
+        Published: 'PUBLISHED',
+        Archived: 'ARCHIVED',
+    } as const;
+    export type StatusEnum = typeof StatusEnum[keyof typeof StatusEnum];
+}
+
 
