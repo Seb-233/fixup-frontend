@@ -1,0 +1,56 @@
+@use '../../../styles/tokens' as *;
+@use '../../../styles/public-site';
+
+// Pantalla de ingreso con el mismo marco de la portada: encabezado con la marca, contenido en dos
+// columnas como la portada (texto y fotografía) y el mismo pie. En pantallas angostas la foto baja
+// debajo del formulario.
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+@include public-site.public-chrome;
+
+main {
+  flex: 1;
+}
+
+.access {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: var(--s-7);
+  align-items: start;
+  padding: var(--s-7) 0 var(--s-8);
+
+  @media (max-width: #{$breakpoint-desktop - 1px}) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+    padding: var(--s-4) 0 var(--s-7);
+  }
+}
+
+.form-inner {
+  width: 100%;
+  max-width: 520px;
+  display: grid;
+  gap: var(--s-5);
+
+  h1 {
+    font-size: var(--fs-3xl);
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: var(--fs-lg);
+    color: var(--text-muted);
+    max-width: 44ch;
+  }
+}
+
+.access-photo {
+  @media (max-width: #{$breakpoint-desktop - 1px}) {
+    max-width: 640px;
+  }
+}

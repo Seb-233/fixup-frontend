@@ -11,8 +11,16 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { AttemptRequest } from '../model/models';
+import { CashSettlementDetail } from '../model/models';
 import { EarningsResponse } from '../model/models';
 import { ErrorResponse } from '../model/models';
+import { OwnerDebtDetail } from '../model/models';
+import { PaymentAttemptResult } from '../model/models';
+import { PaymentDetail } from '../model/models';
+import { PaymentPageResponse } from '../model/models';
+import { PaymentPurpose } from '../model/models';
+import { PaymentStatus } from '../model/models';
 import { PayoutResponse } from '../model/models';
 
 
@@ -25,6 +33,31 @@ export interface PaymentControllerServiceInterface {
     configuration: Configuration;
 
     /**
+     * Pay the exact reference and amount through the sandbox
+     * Owner or current property manager. Idempotency-Key is a UUID scoped to the payment. Replay returns the original operation result; a different body or actor conflicts. The server controls the sandbox scenario. No real funds are processed.
+     * @endpoint post /payments/{paymentId}/attempts
+     * @param paymentId 
+     * @param idempotencyKey 
+     * @param attemptRequest 
+     */
+    attempt(paymentId: string, idempotencyKey: string, attemptRequest: AttemptRequest, extraHttpRequestParams?: any): Observable<PaymentAttemptResult>;
+
+    /**
+     * Read the authoritative cash settlement for a completed job
+     * 
+     * @endpoint get /payments/cash-settlements/jobs/{jobId}
+     * @param jobId 
+     */
+    cashSettlement(jobId: string, extraHttpRequestParams?: any): Observable<CashSettlementDetail>;
+
+    /**
+     * List the current owner\&#39;s outstanding debts
+     * 
+     * @endpoint get /payments/me/debts
+     */
+    debts(extraHttpRequestParams?: any): Observable<Array<OwnerDebtDetail>>;
+
+    /**
      * Read the current fixer\&#39;s balance, commissions and history
      * Amounts are whole Colombian pesos. The available balance is what can be transferred today; the held balance belongs to jobs that are not closed yet.
      * @endpoint get /payments/me/earnings
@@ -32,11 +65,48 @@ export interface PaymentControllerServiceInterface {
     earnings(extraHttpRequestParams?: any): Observable<EarningsResponse>;
 
     /**
-     * Request the transfer of the available balance
-     * Academic scope: the request is recorded, no banking API is called. Reading the balance and consuming it happen in the same transaction.
-     * @endpoint post /payments/me/payouts
+     * Read immutable attempts visible to authorized payment participants
+     * 
+     * @endpoint get /payments/{paymentId}/attempts
+     * @param paymentId 
      */
-    payout(extraHttpRequestParams?: any): Observable<PayoutResponse>;
+    history(paymentId: string, extraHttpRequestParams?: any): Observable<Array<PaymentAttemptResult>>;
+
+    /**
+     * Initiate or reuse a simulated transfer for an outstanding debt
+     * 
+     * @endpoint post /payments/debts/{debtId}/pay
+     * @param debtId 
+     */
+    initiateDebt(debtId: string, extraHttpRequestParams?: any): Observable<PaymentDetail>;
+
+    /**
+     * Read a simulated service or outstanding-balance payment
+     * The responsible owner, current property manager, beneficiary fixer and platform administrators can audit visible payments.
+     * @endpoint get /payments/{paymentId}
+     * @param paymentId 
+     */
+    payment(paymentId: string, extraHttpRequestParams?: any): Observable<PaymentDetail>;
+
+    /**
+     * Recover visible digital payments for the current payer
+     * Returns a bounded page of canonical payments owned by the caller or currently delegated to the caller as real-estate manager. Order is createdAt descending, then payment ID descending. Fixers use earnings endpoints instead.
+     * @endpoint get /payments/me
+     * @param requestId 
+     * @param status 
+     * @param purpose 
+     * @param page 
+     * @param size 
+     */
+    payments(requestId?: string, status?: PaymentStatus, purpose?: PaymentPurpose, page?: number, size?: number, extraHttpRequestParams?: any): Observable<PaymentPageResponse>;
+
+    /**
+     * Simulate the transfer of the available balance
+     * No banking API is called. The payout reaches TRANSFERRED and its earnings become PAID_OUT in one transaction. Requires UUID Idempotency-Key and no body. Repeating a key for the same fixer returns the original payout (201), without consuming later earnings.
+     * @endpoint post /payments/me/payouts
+     * @param idempotencyKey 
+     */
+    payout(idempotencyKey: string, extraHttpRequestParams?: any): Observable<PayoutResponse>;
 
     /**
      * List the transfer requests of the current fixer

@@ -11,6 +11,7 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { AcceptedQuotationResponse } from '../model/models';
 import { ErrorResponse } from '../model/models';
 import { QuotationRequest } from '../model/models';
 import { QuotationResponse } from '../model/models';
@@ -30,7 +31,7 @@ export interface QuotationControllerServiceInterface {
      * @endpoint post /quotations/{quotationId}/accept
      * @param quotationId 
      */
-    accept(quotationId: string, extraHttpRequestParams?: any): Observable<QuotationResponse>;
+    accept(quotationId: string, extraHttpRequestParams?: any): Observable<AcceptedQuotationResponse>;
 
     /**
      * Compare the quotations received for a repair request
@@ -38,14 +39,14 @@ export interface QuotationControllerServiceInterface {
      * @endpoint get /quotations/for-request/{requestId}
      * @param requestId 
      */
-    forRequest(requestId: string, extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
+    forRequest1(requestId: string, extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
 
     /**
      * List the quotations sent by the current fixer
      * 
      * @endpoint get /quotations/me
      */
-    mine1(extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
+    mine3(extraHttpRequestParams?: any): Observable<Array<QuotationResponse>>;
 
     /**
      * Explicitly reject a quotation

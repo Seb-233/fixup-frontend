@@ -85,14 +85,39 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
     req.flush({ roles: ['OWNER'] });
   });
 
-  it('14. ninguna petición externa ni servicio de terceros debe recibir el Bearer token', async () => {
-    const externalUrl = 'https://api.mapbox.com/geocoding/v5/mapbox.places/bogota.json';
-    http.get(externalUrl).subscribe();
+  it('debe adjuntar Authorization a /locations/geocode', async () => {
+    const targetUrl = apiUrl('/locations/geocode?query=Bogota');
+
+    http.get(targetUrl).subscribe();
     await Promise.resolve();
 
-    const req = httpMock.expectOne(externalUrl);
-    expect(req.request.headers.has('Authorization')).toBe(false);
-    req.flush({});
+    const req = httpMock.expectOne(targetUrl);
+
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.has('Authorization')).toBe(true);
+
+    const authHeaders = req.request.headers.getAll('Authorization');
+    expect(authHeaders?.length).toBe(1);
+    expect(authHeaders?.[0]).toBe('Bearer valid-auth0-test-token');
+
+    req.flush([]);
+  });
+
+  it('14. ninguna petición externa ni servicio de terceros debe recibir el Bearer token (Mapbox, OpenStreetMap, Nominatim)', async () => {
+    const externalUrls = [
+      'https://api.mapbox.com/geocoding/v5/mapbox.places/bogota.json',
+      'https://nominatim.openstreetmap.org/search?format=json&q=bogota',
+      'https://tile.openstreetmap.org/12/1234/2345.png'
+    ];
+
+    for (const url of externalUrls) {
+      http.get(url).subscribe();
+      await Promise.resolve();
+
+      const req = httpMock.expectOne(url);
+      expect(req.request.headers.has('Authorization')).toBe(false);
+      req.flush({});
+    }
   });
 
   it('14. no debe adjuntar tokens a rutas internas no autorizadas expresamente', async () => {
@@ -132,7 +157,9 @@ describe('authHttpInterceptorFn (Mecanismo Único de Token)', () => {
       { method: 'POST', path: '/quotations', body: { requestId: 'r1', price: 100 } },
       { method: 'GET', path: '/quotations/me' },
       { method: 'POST', path: '/quotations/quot-123/accept', body: {} },
-      { method: 'POST', path: '/quotations/quot-123/reject', body: {} }
+      { method: 'POST', path: '/quotations/quot-123/reject', body: {} },
+      { method: 'GET', path: '/remodelings/me' },
+      { method: 'POST', path: '/remodelings', body: { title: 'Remodelación' } }
     ];
 
     for (const op of operaciones) {

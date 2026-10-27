@@ -11,6 +11,9 @@
 
 export const JobStatus = {
     Assigned: 'ASSIGNED',
+    Scheduled: 'SCHEDULED',
+    InProgress: 'IN_PROGRESS',
+    SlaAtRisk: 'SLA_AT_RISK',
     Completed: 'COMPLETED',
 } as const;
 export type JobStatus = typeof JobStatus[keyof typeof JobStatus];

@@ -1,0 +1,134 @@
+<div class="page">
+  <a routerLink="/catalog" class="back-link"><app-icon name="chevron-left" [size]="16" />Catálogo</a>
+
+  @if (listing.isLoading() && !listing.hasValue()) {
+    <app-loading text="Cargando el aviso…" />
+  } @else if (listing.error()) {
+    <app-error title="No pudimos abrir este aviso" message="Puede que ya no esté publicado o que no tengas acceso." (retry)="listing.reload()" />
+  } @else if (listing.hasValue()) {
+    @let l = listing.value();
+    <header class="page-header">
+      <div>
+        <p class="text-muted text-sm">{{ l.propertyType | label: propertyType }} en {{ (l.listingType | label: listingType).toLowerCase() }}</p>
+        <h1>{{ l.name }}</h1>
+        <p class="lede">{{ l.neighborhood ? l.neighborhood + ', ' : '' }}{{ l.city }}</p>
+      </div>
+      @if (l.seal.granted) {
+        <span class="seal"><app-icon name="seal" [size]="16" />Sello Fix&amp;Rent</span>
+      }
+    </header>
+
+    <section class="gallery-block" aria-label="Fotos del inmueble">
+      <app-photo [src]="photo()?.url" [alt]="'Foto ' + (selected() + 1) + ' de ' + l.name" ratio="16 / 9" />
+      @if (l.photos.length > 1) {
+        <ul class="thumbs">
+          @for (p of l.photos; track p.mediaId; let i = $index) {
+            <li>
+              <button type="button" class="thumb" [class.current]="i === selected()" (click)="selected.set(i)"
+                      [attr.aria-label]="'Ver foto ' + (i + 1)" [attr.aria-pressed]="i === selected()">
+                <app-photo [src]="p.url" alt="" />
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <div class="split">
+      <div class="stack">
+        @if (l.description) {
+          <section class="stack-sm">
+            <h2>Descripción</h2>
+            <p class="description">{{ l.description }}</p>
+          </section>
+        }
+
+        <section class="panel">
+          <dl class="facts">
+            <div><dt>Área</dt><dd>{{ l.areaM2 }} m²</dd></div>
+            @if ((l.bedrooms ?? null) !== null) { <div><dt>Habitaciones</dt><dd>{{ l.bedrooms }}</dd></div> }
+            @if ((l.bathrooms ?? null) !== null) { <div><dt>Baños</dt><dd>{{ l.bathrooms }}</dd></div> }
+            @if ((l.parkingSpots ?? null) !== null) { <div><dt>Parqueaderos</dt><dd>{{ l.parkingSpots }}</dd></div> }
+            @if ((l.stratum ?? null) !== null) { <div><dt>Estrato</dt><dd>{{ l.stratum }}</dd></div> }
+            @if (l.adminFee) { <div><dt>Administración</dt><dd>{{ l.adminFee | money }}</dd></div> }
+            @if (l.publishedAt) { <div><dt>Publicado</dt><dd>{{ l.publishedAt | day }}</dd></div> }
+          </dl>
+        </section>
+
+        <section class="stack-sm" aria-labelledby="history-title">
+          <h2 id="history-title">Historial de mantenimiento</h2>
+          @if (l.workHistory.length) {
+            <p class="text-sm text-muted">Trabajos terminados por técnicos de Fix&amp;Rent en este inmueble.</p>
+            <ol class="timeline">
+              @for (work of l.workHistory; track work.jobId) {
+                <li class="done">
+                  <div class="spread">
+                    <strong>{{ work.title }}</strong>
+                    <span class="text-sm text-muted">{{ work.completedAt | day }}</span>
+                  </div>
+                  <p class="text-sm text-muted">
+                    {{ work.specialty | label: specialty }} ·
+                    <a [routerLink]="['/fixers', work.fixerUserId]" class="link">{{ work.fixerDisplayName || 'Técnico' }}</a>
+                    @if (work.rating) {
+                      · calificación {{ work.rating }} de 5
+                    }
+                  </p>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="text-muted">Este inmueble aún no tiene trabajos registrados en la plataforma.</p>
+          }
+        </section>
+
+        @if (point().length) {
+          <section class="stack-sm" aria-labelledby="location-title">
+            <h2 id="location-title">Ubicación</h2>
+            <p class="text-sm text-muted">{{ l.address }}, {{ l.city }}</p>
+            <app-map [points]="point()" [zoom]="15" label="Ubicación del inmueble" height="320px" />
+          </section>
+        }
+      </div>
+
+      <aside class="stack sticky-aside">
+        <div class="panel stack-sm">
+          <p class="price big">
+            {{ l.price | money }}
+            @if (l.listingType === 'RENT') {
+              <small>/ mes</small>
+            }
+          </p>
+          @if (l.adminFee) {
+            <p class="text-sm text-muted">Más {{ l.adminFee | money }} de administración</p>
+          }
+          @if (l.ownerDisplayName) {
+            <p class="text-sm">Publica <strong>{{ l.ownerDisplayName }}</strong></p>
+          }
+          @if (l.ownedByCurrentUser) {
+            <div class="cluster">
+              <a [routerLink]="['/properties', l.id, 'edit']" class="btn btn-secondary"><app-icon name="edit" />Editar aviso</a>
+              <a routerLink="/requests/new" [queryParams]="{ propertyId: l.id }" class="btn btn-ghost">Reportar un daño</a>
+            </div>
+          }
+        </div>
+
+        <div class="panel stack-sm" [class.panel-quiet]="!l.seal.granted">
+          <h3 class="cluster"><app-icon name="seal" />{{ l.seal.granted ? 'Tiene sello Fix&Rent' : 'Sin sello Fix&Rent' }}</h3>
+          @if (l.seal.granted) {
+            <p class="text-sm">
+              {{ l.seal.recentCompletedWorks }} {{ l.seal.recentCompletedWorks === 1 ? 'trabajo terminado' : 'trabajos terminados' }} en los últimos 24 meses,
+              el último el {{ l.seal.lastWorkAt | day }}.
+            </p>
+            @if (l.seal.averageRating) {
+              <app-stars [average]="l.seal.averageRating" />
+            }
+          } @else {
+            <p class="text-sm text-muted">
+              El sello se otorga solo, con al menos un trabajo terminado en 24 meses y calificación promedio de 4 o más.
+            </p>
+          }
+        </div>
+      </aside>
+    </div>
+  }
+</div>

@@ -11,8 +11,18 @@ import { HttpHeaders }                                       from '@angular/comm
 
 import { Observable }                                        from 'rxjs';
 
+import { BulkImportResult } from '../model/models';
+import { BulkValidationResult } from '../model/models';
+import { CatalogPage } from '../model/models';
+import { ListingType } from '../model/models';
+import { ManagerAssignment } from '../model/models';
+import { ManagerOption } from '../model/models';
 import { NewProperty } from '../model/models';
+import { PropertyChanges } from '../model/models';
+import { PropertySearchResult } from '../model/models';
 import { PropertySummary } from '../model/models';
+import { PropertyType } from '../model/models';
+import { PublicListingView } from '../model/models';
 
 
 import { Configuration }                                     from '../configuration';
@@ -26,10 +36,54 @@ export interface PropertyControllerServiceInterface {
     /**
      * 
      * 
+     * @endpoint post /properties/bulk/import
+     * @param file 
+     */
+    bulkImport(file: Blob, extraHttpRequestParams?: any): Observable<BulkImportResult>;
+
+    /**
+     * 
+     * 
+     * @endpoint post /properties/bulk/validate
+     * @param file 
+     */
+    bulkValidate(file: Blob, extraHttpRequestParams?: any): Observable<BulkValidationResult>;
+
+    /**
+     * Browse published properties with filters (FR-UC-06, FR-UC-07)
+     * 
+     * @endpoint get /properties/catalog
+     * @param city 
+     * @param listingType 
+     * @param propertyType 
+     * @param minPrice 
+     * @param maxPrice 
+     * @param minBedrooms 
+     * @param stratum 
+     * @param sealOnly 
+     * @param q 
+     * @param sort 
+     * @param page 
+     * @param size 
+     */
+    catalog(city?: string, listingType?: ListingType, propertyType?: PropertyType, minPrice?: number, maxPrice?: number, minBedrooms?: number, stratum?: number, sealOnly?: boolean, q?: string, sort?: 'NEWEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'AREA_DESC', page?: number, size?: number, extraHttpRequestParams?: any): Observable<CatalogPage>;
+
+    /**
+     * 
+     * 
      * @endpoint post /properties
      * @param newProperty 
      */
-    create(newProperty: NewProperty, extraHttpRequestParams?: any): Observable<PropertySummary>;
+    create1(newProperty: NewProperty, extraHttpRequestParams?: any): Observable<PropertySummary>;
+
+    /**
+     * Delegate the property to a real estate manager, or revoke it with null (FR-UC-11)
+     * 
+     * @endpoint put /properties/{propertyId}/manager
+     * @param propertyId 
+     * @param managerAssignment 
+     */
+    delegate(propertyId: string, managerAssignment: ManagerAssignment, extraHttpRequestParams?: any): Observable<PropertySummary>;
 
     /**
      * 
@@ -45,5 +99,56 @@ export interface PropertyControllerServiceInterface {
      * @endpoint get /properties/me
      */
     listOwn(extraHttpRequestParams?: any): Observable<Array<PropertySummary>>;
+
+    /**
+     * Public listing with photos, Fix&amp;Rent seal and work history (FR-UC-02, FR-UC-07)
+     * 
+     * @endpoint get /properties/{propertyId}/listing
+     * @param propertyId 
+     */
+    listing(propertyId: string, extraHttpRequestParams?: any): Observable<PublicListingView>;
+
+    /**
+     * Active real estate managers an owner can delegate to (FR-UC-11)
+     * 
+     * @endpoint get /properties/managers
+     */
+    managers(extraHttpRequestParams?: any): Observable<Array<ManagerOption>>;
+
+    /**
+     * Publish a draft or withdrawn property in the free catalog (FR-UC-02)
+     * 
+     * @endpoint post /properties/{propertyId}/publish
+     * @param propertyId 
+     */
+    publish(propertyId: string, extraHttpRequestParams?: any): Observable<PropertySummary>;
+
+    /**
+     * Search published properties by geographic radius
+     * 
+     * @endpoint get /properties/search
+     * @param latitude 
+     * @param longitude 
+     * @param radiusKm 
+     * @param ownershipScope Ownership filter. TENANT and PLATFORM_ADMIN may only use ALL
+     */
+    search(latitude: string, longitude: string, radiusKm: string, ownershipScope?: 'ALL' | 'MINE' | 'OTHERS', extraHttpRequestParams?: any): Observable<Array<PropertySearchResult>>;
+
+    /**
+     * Withdraw a published property from the catalog without deleting it (FR-UC-02)
+     * 
+     * @endpoint post /properties/{propertyId}/unpublish
+     * @param propertyId 
+     */
+    unpublish(propertyId: string, extraHttpRequestParams?: any): Observable<PropertySummary>;
+
+    /**
+     * Edit a property and its listing (FR-UC-02)
+     * Only the owner, the delegated real estate manager or a platform admin may edit. photoMediaIds replaces the gallery in the given order.
+     * @endpoint put /properties/{propertyId}
+     * @param propertyId 
+     * @param propertyChanges 
+     */
+    update(propertyId: string, propertyChanges: PropertyChanges, extraHttpRequestParams?: any): Observable<PropertySummary>;
 
 }

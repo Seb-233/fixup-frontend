@@ -16,14 +16,16 @@ export const INITIAL_ROLE_OPTIONS: readonly SelectableRole[] = [
   'FIXER'
 ] as const;
 
-export interface InitialRoleDetail {
-  role: SelectableRole;
+export interface RoleDetail {
+  role: Role;
   name: string;
   tag: string;
   description: string;
 }
 
-export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
+export type InitialRoleDetail = RoleDetail & { role: SelectableRole };
+
+export const ALL_ROLE_DETAILS: readonly RoleDetail[] = [
   {
     role: 'OWNER',
     name: 'Propietario',
@@ -41,8 +43,25 @@ export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = [
     name: 'Técnico / Fixer',
     tag: 'Servicios',
     description: 'Técnico que registra su perfil, cotiza solicitudes y ejecuta trabajos.'
+  },
+  {
+    role: 'REAL_ESTATE_MANAGER',
+    name: 'Administrador Inmobiliaria',
+    tag: 'Gestión',
+    description: 'Administra el portafolio de propiedades, carga masiva y contratos de una inmobiliaria.'
+  },
+  {
+    role: 'PLATFORM_ADMIN',
+    name: 'Administrador Plataforma',
+    tag: 'Soporte',
+    description: 'Supervisa el panel SLA, revisa técnicos, importa propiedades y audita toda la plataforma FixUp.'
   }
 ] as const;
+
+export const INITIAL_ROLE_DETAILS: readonly InitialRoleDetail[] = ALL_ROLE_DETAILS.filter(
+  (detail): detail is InitialRoleDetail =>
+    INITIAL_ROLE_OPTIONS.includes(detail.role as SelectableRole)
+);
 
 // Estados posibles de la cuenta (incluye PENDING para perfiles en verificación como FIXER)
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED' | 'PENDING';

@@ -1,0 +1,80 @@
+<header class="site-header">
+  <a routerLink="/" class="brand-mark">Fix<span>&amp;</span>Rent</a>
+  <a routerLink="/auth/login" class="btn btn-primary">Ingresar</a>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Arriendos con el mantenimiento resuelto</h1>
+      <p class="lede">
+        Fix&amp;Rent junta en un mismo lugar el inmueble, a quien lo arrienda y a los técnicos que lo mantienen. Un daño
+        reportado hoy tiene cotizaciones, fecha de visita, fotos del arreglo y pago, todo en el historial de la casa.
+      </p>
+      <div class="cluster">
+        <a routerLink="/auth/login" class="btn btn-primary">Ingresar o crear cuenta</a>
+        <a routerLink="/" fragment="flujo" class="link">Cómo se atiende un daño</a>
+      </div>
+    </div>
+    <figure class="hero-photo">
+      <img src="landing/medellin-el-poblado.jpg" alt="Edificios de apartamentos de El Poblado, Medellín, de noche" width="1024" height="683" />
+      <figcaption>El Poblado, Medellín. Foto: willy gil, CC BY 2.0.</figcaption>
+    </figure>
+  </section>
+
+  <section class="roles" aria-labelledby="roles-title">
+    <h2 id="roles-title">Cuatro formas de usarlo</h2>
+    <dl class="role-list">
+      @for (row of roles; track row.role) {
+        <div class="role-row">
+          <dt>{{ row.role }}</dt>
+          <dd>
+            <ul>
+              @for (item of row.does; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </dd>
+        </div>
+      }
+    </dl>
+  </section>
+
+  <section class="flow" id="flujo" aria-labelledby="flujo-title">
+    <div class="flow-head">
+      <h2 id="flujo-title">Del reporte al pago</h2>
+      <p class="text-muted">Así avanza una solicitud de reparación. Cada paso deja registro y avisa a la otra parte.</p>
+    </div>
+    <ol class="steps">
+      @for (step of steps; track step.title; let i = $index) {
+        <li>
+          <span class="step-number">{{ i + 1 }}</span>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.text }}</p>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <section class="seal-section" aria-labelledby="sello-title">
+    <figure class="seal-photo">
+      <img src="landing/reparacion-plomeria.jpg" alt="Técnica revisando la tubería bajo un lavaplatos" width="1024" height="683" loading="lazy" />
+      <figcaption>Foto: TWP Inc., CC BY 2.0.</figcaption>
+    </figure>
+    <div class="stack">
+      <span class="seal"><app-icon name="seal" [size]="18" /> Sello Fix&amp;Rent</span>
+      <h2 id="sello-title">Un inmueble con mantenimiento demostrable</h2>
+      <p>
+        El sello aparece en el aviso cuando el inmueble tuvo al menos un trabajo terminado por un técnico de la plataforma
+        en los últimos 24 meses y, si esos trabajos fueron calificados, con un promedio de 4 o más. Nadie lo asigna a mano:
+        sale del historial de obras que cualquiera puede revisar en el aviso.
+      </p>
+      <div><a routerLink="/auth/login" class="btn btn-secondary">Ver el catálogo</a></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <span class="brand-mark small">Fix<span>&amp;</span>Rent</span>
+  <span class="text-sm">Proyecto académico de arquitectura de software. Los pagos funcionan en modo de prueba.</span>
+</footer>

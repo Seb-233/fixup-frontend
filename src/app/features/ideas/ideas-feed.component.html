@@ -1,0 +1,101 @@
+<section class="ideas" aria-labelledby="ideas-title">
+  <div class="ideas-head">
+    <div>
+      <h2 id="ideas-title">Ideas para tu casa</h2>
+      <p class="text-muted">Obras terminadas por técnicos verificados. Toca una foto para ver quién la hizo y pedir algo parecido.</p>
+    </div>
+  </div>
+
+  <div class="filters" role="group" aria-label="Filtrar ideas por especialidad">
+    <button type="button" class="filter" [attr.aria-pressed]="!specialty()" (click)="specialty.set('')">Todas</button>
+    @for (option of specialties; track option) {
+      <button type="button" class="filter" [attr.aria-pressed]="specialty() === option" (click)="choose(option)">
+        {{ option | label: specialtyNames }}
+      </button>
+    }
+  </div>
+
+  @if (items().length) {
+    <ul class="feed" aria-live="polite">
+      @for (piece of items(); track piece.id) {
+        @let fixer = fixerOf(piece);
+        <li>
+          <button type="button" class="card" (click)="selected.set(piece)">
+            <app-photo [src]="piece.readUrl" [alt]="piece.title" ratio="1 / 1" />
+            <span class="card-title">{{ piece.title }}</span>
+            <span class="card-meta">{{ fixer?.displayName || 'Técnico verificado' }}{{ fixer?.city ? ' · ' + fixer?.city : '' }}</span>
+            @if (fixer?.ratingAverage) {
+              <app-stars [average]="fixer?.ratingAverage" />
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (!loading() && !failed()) {
+    <div class="state">
+      <app-icon name="image" [size]="28" />
+      <p>
+        {{ emptyText() }}
+      </p>
+      @if (specialty()) {
+        <button type="button" class="btn btn-secondary" (click)="specialty.set('')">Ver todas las ideas</button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <ul class="feed" aria-hidden="true">
+      @for (n of [1, 2, 3, 4]; track n) {
+        <li class="skeleton"><span></span></li>
+      }
+    </ul>
+    <p class="visually-hidden" role="status">Cargando ideas…</p>
+  }
+
+  @if (failed()) {
+    <div class="alert alert-danger load-error" role="alert">
+      <span>No pudimos cargar más ideas.</span>
+      <button type="button" class="btn btn-secondary" (click)="loadMore()">Reintentar</button>
+    </div>
+  }
+
+  <div #sentinel class="sentinel">
+    @if (hasMore() && !loading() && !failed() && items().length) {
+      <button type="button" class="btn btn-secondary" (click)="loadMore()">Cargar más ideas</button>
+    } @else if (!hasMore() && items().length) {
+      <p class="text-muted text-sm">Viste todas las ideas{{ specialty() ? ' de esta especialidad' : '' }}.</p>
+    }
+  </div>
+</section>
+
+<app-dialog [heading]="selected()?.title ?? ''" [open]="!!selected()" (closed)="selected.set(null)">
+  @if (selected(); as piece) {
+    <app-photo [src]="piece.readUrl" [alt]="piece.title" ratio="4 / 3" />
+    @if (piece.description) {
+      <p>{{ piece.description }}</p>
+    }
+    <div class="author">
+      <span class="avatar" aria-hidden="true">{{ initials(selectedFixer()?.displayName || 'Técnico') }}</span>
+      <div class="stack-sm grow">
+        <strong>{{ selectedFixer()?.displayName || 'Técnico verificado' }}</strong>
+        <span class="text-sm text-muted">
+          {{ selectedFixer()?.city || 'Ciudad sin indicar' }}{{ selectedFixer()?.yearsExperience ? ' · ' + selectedFixer()?.yearsExperience + ' años de experiencia' : '' }}
+        </span>
+        <app-stars [average]="selectedFixer()?.ratingAverage" [count]="selectedFixer()?.ratingCount" />
+        @if (selectedFixer()?.specialties?.length) {
+          <div class="cluster">
+            @for (s of selectedFixer()!.specialties; track s) {
+              <span class="chip">{{ s | label: specialtyNames }}</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+    <div class="cluster">
+      <a [routerLink]="requestLink()" [queryParams]="{ title: piece.title }" class="btn btn-primary">
+        <app-icon name="wrench" />Pedir algo parecido
+      </a>
+      <a [routerLink]="['/fixers', piece.fixerUserId]" class="btn btn-secondary">Ver perfil y más trabajos</a>
+    </div>
+  }
+</app-dialog>
