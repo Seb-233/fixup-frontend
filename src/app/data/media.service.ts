@@ -1,6 +1,6 @@
-import { HttpBackend, HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpBackend, HttpClient, HttpEvent, HttpEventType, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, concatMap, from, map, switchMap, toArray } from 'rxjs';
+import { Observable, concatMap, filter, from, map, switchMap, tap, toArray } from 'rxjs';
 import { Api } from './http';
 import { MediaPurpose, UploadTicketDto } from './models';
 
@@ -20,18 +20,19 @@ export function rejectFile(file: File): string | null {
 
 // Sube fotos sin que el binario pase por el backend: 1) pide un ticket firmado, 2) hace PUT directo
 // al almacenamiento de objetos y 3) confirma, momento en el que el backend revisa tamaño, tipo y
-// firma del archivo. Devuelve el mediaId ya confirmado, listo para adjuntar.
+// firma del archivo. Devuelve el mediaId ya confirmado, listo para adjuntar. Si se pasa onProgress,
+// recibe el porcentaje (0 a 100) del PUT a medida que el navegador envía el binario.
 @Injectable({ providedIn: 'root' })
 export class MediaService {
   private readonly api = inject(Api);
   // Sin interceptores: la URL firmada no es del backend y no debe llevar el token de la sesión.
   private readonly bare = new HttpClient(inject(HttpBackend));
 
-  upload(file: File, purpose: MediaPurpose): Observable<string> {
+  upload(file: File, purpose: MediaPurpose, onProgress?: (percent: number) => void): Observable<string> {
     return this.api
       .post<UploadTicketDto>('/media/uploads', { purpose, contentType: file.type, sizeBytes: file.size })
       .pipe(
-        switchMap((ticket) => this.put(ticket, file).pipe(map(() => ticket.mediaId))),
+        switchMap((ticket) => this.put(ticket, file, onProgress).pipe(map(() => ticket.mediaId))),
         switchMap((mediaId) =>
           this.api.post<{ mediaId: string }>(`/media/uploads/${mediaId}/confirm`).pipe(map((confirmed) => confirmed.mediaId))
         )
@@ -46,10 +47,20 @@ export class MediaService {
     );
   }
 
-  private put(ticket: UploadTicketDto, file: File): Observable<unknown> {
+  private put(ticket: UploadTicketDto, file: File, onProgress?: (percent: number) => void): Observable<unknown> {
     let headers = new HttpHeaders();
     for (const [key, value] of Object.entries(ticket.headers ?? {})) headers = headers.set(key, value);
     if (!headers.has('Content-Type')) headers = headers.set('Content-Type', file.type);
-    return this.bare.request(ticket.method || 'PUT', ticket.uploadUrl, { body: file, headers, responseType: 'text' });
+    return this.bare
+      .request(ticket.method || 'PUT', ticket.uploadUrl, { body: file, headers, responseType: 'text', observe: 'events', reportProgress: true })
+      .pipe(
+        tap((event: HttpEvent<string>) => {
+          if (event.type === HttpEventType.UploadProgress && onProgress) {
+            const total = event.total || file.size;
+            onProgress(total ? Math.min(100, Math.round((event.loaded / total) * 100)) : 0);
+          }
+        }),
+        filter((event) => event.type === HttpEventType.Response)
+      );
   }
 }

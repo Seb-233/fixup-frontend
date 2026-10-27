@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ProjectsApi } from '../../data/projects.api';
@@ -34,7 +34,17 @@ const SUGGESTED = ['Chapinero', 'Usaquén', 'El Poblado', 'Laureles', 'Bocagrand
       @if (indicators.isLoading()) {
         <app-loading text="Consultando la fuente de mercado…" />
       } @else if (indicators.error()) {
-        <app-error message="La fuente de indicadores no respondió. Inténtalo en unos minutos." (retry)="indicators.reload()" />
+        @switch (errorStatus()) {
+          @case (400) {
+            <app-error title="Zona no válida" message="Escribe el nombre de un barrio o zona, de hasta 64 caracteres, y vuelve a consultar." [retryable]="false" />
+          }
+          @case (503) {
+            <app-error title="Fuente de mercado no disponible" message="El proveedor de indicadores no respondió y aún no hay un valor guardado para esta zona. Inténtalo en unos minutos." (retry)="indicators.reload()" />
+          }
+          @default {
+            <app-error message="La fuente de indicadores no respondió. Inténtalo en unos minutos." (retry)="indicators.reload()" />
+          }
+        }
       } @else if (indicators.hasValue()) {
         @let i = indicators.value();
         @if (i.synthetic) {
@@ -68,6 +78,8 @@ export class MarketPage {
   zoneInput = '';
   private readonly zone = signal<string | null>(null);
   readonly indicators = rxResource({ params: () => this.zone() ?? undefined, stream: ({ params }) => this.api.marketIndicators(params) });
+  /** 400: la zona no pasó la validación del backend. 503: la fuente falló y no hay último valor conocido. */
+  readonly errorStatus = computed(() => (this.indicators.error() as { status?: number } | undefined)?.status ?? null);
 
   search(): void {
     const zone = this.zoneInput.trim();
