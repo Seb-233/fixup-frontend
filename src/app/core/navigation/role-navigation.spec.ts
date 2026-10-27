@@ -21,6 +21,19 @@ describe('Navegación por rol', () => {
     expect(paths(role)).toContain('/catalog');
   });
 
+  it.each(['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const)('%s llega a los indicadores de mercado (FR-UC-15)', (role) => {
+    expect(paths(role)).toContain('/analytics/market-indicators');
+  });
+
+  it('Mercado queda en Explorar para la inmobiliaria y en Consulta para el administrador', () => {
+    const groupOf = (role: Role) =>
+      getNavigationGroupsForRole(role).find((section) =>
+        section.items.some((entry) => entry.path === '/analytics/market-indicators')
+      )?.label;
+    expect(groupOf('REAL_ESTATE_MANAGER')).toBe('Explorar');
+    expect(groupOf('PLATFORM_ADMIN')).toBe('Consulta');
+  });
+
   it('solo el propietario ve Remodelaciones (FR-UC-01)', () => {
     expect(paths('OWNER')).toContain('/remodelings');
     for (const role of ['FIXER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const) {
