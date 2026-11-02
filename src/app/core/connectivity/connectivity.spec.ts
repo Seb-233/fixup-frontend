@@ -28,7 +28,29 @@ describe('conectividad', () => {
   it('distingue una caída de la red de una respuesta del backend', () => {
     expect(isConnectionError(down)).toBe(true);
     expect(isConnectionError(new HttpErrorResponse({ status: 503 }))).toBe(true);
+    expect(isConnectionError(new HttpErrorResponse({ status: 503, error: '<html>Service Unavailable</html>' }))).toBe(true);
     expect(isConnectionError(new HttpErrorResponse({ status: 409 }))).toBe(false);
+  });
+
+  it('un 503 con el cuerpo de error de la API es una respuesta y no reintenta ni marca caída', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    const unavailable = new HttpErrorResponse({
+      status: 503,
+      url: `${environment.apiOrigin}/analytics/zones/chapinero/market-indicators`,
+      error: { status: 503, code: 'INDICATORS_UNAVAILABLE', message: 'Market indicators are unavailable', path: '/analytics/zones/chapinero/market-indicators' }
+    });
+    expect(isConnectionError(unavailable)).toBe(false);
+
+    let calls = 0;
+    const next = () => defer(() => (calls++, throwError(() => unavailable)));
+    await expect(run(new HttpRequest('GET', unavailable.url!), next)).rejects.toBe(unavailable);
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(calls).toBe(1);
+    expect(connectivity.state()).toBe('online');
+    expect(connectivity.reconnections()).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('reintenta una lectura que no llegó y no marca caída si el segundo intento contesta', async () => {
