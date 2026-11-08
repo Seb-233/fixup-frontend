@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../environments/environment';
@@ -32,6 +32,25 @@ describe('MediaService', () => {
 
     backend.expectOne(`${environment.apiOrigin}/media/uploads/m-1/confirm`).flush({ mediaId: 'm-1', status: 'READY' });
     expect(mediaId).toBe('m-1');
+  });
+
+  it('informa el porcentaje enviado del binario mientras sube', () => {
+    const file = new File([new Uint8Array(200)], 'obra.jpg', { type: 'image/jpeg' });
+    const seen: number[] = [];
+    let mediaId: string | undefined;
+    service.upload(file, 'FIXER_PORTFOLIO', (percent) => seen.push(percent)).subscribe((id) => (mediaId = id));
+
+    backend.expectOne(`${environment.apiOrigin}/media/uploads`)
+      .flush({ mediaId: 'm-2', method: 'PUT', uploadUrl: 'http://storage.test/bucket/m-2', headers: {}, expiresAt: '' });
+    const put = backend.expectOne('http://storage.test/bucket/m-2');
+    expect(put.request.reportProgress).toBe(true);
+    put.event({ type: HttpEventType.UploadProgress, loaded: 50, total: 200 });
+    put.event({ type: HttpEventType.UploadProgress, loaded: 200, total: 200 });
+    put.flush('');
+    expect(seen).toEqual([25, 100]);
+
+    backend.expectOne(`${environment.apiOrigin}/media/uploads/m-2/confirm`).flush({ mediaId: 'm-2', status: 'READY' });
+    expect(mediaId).toBe('m-2');
   });
 
   it('rechaza en el navegador lo que el backend no acepta', () => {

@@ -94,6 +94,12 @@ const MAX_PIECES = 20;
                 <label for="description">Descripción</label>
                 <textarea id="description" class="textarea" rows="3" name="description" maxlength="1000" [(ngModel)]="description"></textarea>
               </div>
+              @if (progress() !== null) {
+                <div class="stack-sm upload-progress">
+                  <progress max="100" [value]="progress()" aria-label="Progreso de la subida de la foto"></progress>
+                  <span class="text-xs text-muted" aria-live="polite">Subiendo foto: {{ progress() }} %</span>
+                </div>
+              }
               <button type="submit" class="btn btn-primary" [disabled]="busy() || !file() || !title.trim() || p.pieces.length >= maxPieces">
                 {{ busy() ? step() : 'Agregar al portafolio' }}
               </button>
@@ -108,6 +114,7 @@ const MAX_PIECES = 20;
     .pieces { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
     .piece { display: grid; gap: var(--s-3); align-content: start; padding: var(--s-3); }
     .hidden-piece app-photo { opacity: 0.55; }
+    .upload-progress progress { width: 100%; height: 8px; accent-color: var(--primary); }
   `
 })
 export class PortfolioPage {
@@ -128,6 +135,8 @@ export class PortfolioPage {
   description = '';
   readonly busy = signal(false);
   readonly step = signal('');
+  /** Porcentaje del binario ya enviado al almacenamiento; null cuando no hay subida en curso. */
+  readonly progress = signal<number | null>(null);
   readonly message = signal<string | null>(null);
   readonly messageIsError = signal(false);
 
@@ -137,12 +146,22 @@ export class PortfolioPage {
     this.busy.set(true);
     this.step.set('Subiendo foto…');
     this.message.set(null);
+    this.progress.set(0);
+    let uploaded = false;
     this.media
-      .upload(file, 'FIXER_PORTFOLIO')
-      .pipe(switchMap((mediaId) => this.api.addPiece(mediaId, this.title.trim(), this.description.trim() || undefined)))
+      .upload(file, 'FIXER_PORTFOLIO', (percent) => this.progress.set(percent))
+      .pipe(
+        switchMap((mediaId) => {
+          uploaded = true;
+          this.progress.set(null);
+          this.step.set('Guardando pieza…');
+          return this.api.addPiece(mediaId, this.title.trim(), this.description.trim() || undefined);
+        })
+      )
       .subscribe({
         next: () => {
           this.busy.set(false);
+          this.progress.set(null);
           this.title = '';
           this.description = '';
           this.file.set(null);
@@ -150,7 +169,10 @@ export class PortfolioPage {
           this.ok('Pieza agregada.');
           this.portfolio.reload();
         },
-        error: (failure) => this.fail(failure, 'No pudimos agregar la pieza.')
+        error: (failure) => {
+          this.progress.set(null);
+          this.fail(failure, uploaded ? 'No pudimos agregar la pieza.' : 'La foto no se pudo subir. Revisa tu conexión e inténtalo de nuevo.');
+        }
       });
   }
 

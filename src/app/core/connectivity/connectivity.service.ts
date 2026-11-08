@@ -8,8 +8,15 @@ export type ConnectionState = 'online' | 'offline';
 // VPN caídos (0) y un intermediario que no encuentra la API (502, 503, 504).
 const UNREACHABLE = new Set([0, 502, 503, 504]);
 
+// La API también responde 503 a propósito (Mercado sin dato guardado, geocodificador caído) y lo
+// hace con su cuerpo de error { status, code, message, path }. Ese 503 no es una caída: si se
+// contara como tal, el sondeo de salud "reconectaría" y la pantalla se recargaría sin fin.
+function isApiErrorBody(body: unknown): boolean {
+  return typeof body === 'object' && body !== null && typeof (body as { code?: unknown }).code === 'string';
+}
+
 export function isConnectionError(error: unknown): boolean {
-  if (error instanceof HttpErrorResponse) return UNREACHABLE.has(error.status);
+  if (error instanceof HttpErrorResponse) return UNREACHABLE.has(error.status) && !isApiErrorBody(error.error);
   // El SDK de Auth0 falla con su propio error al renovar el token sin red.
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
