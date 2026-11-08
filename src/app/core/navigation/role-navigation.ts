@@ -96,7 +96,12 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
       item('/administration/properties/bulk-upload', 'Carga masiva', 'upload')
     ),
     group('Dinero', item('/payments', 'Pagos', 'card'), item('/expenses', 'Gastos', 'chart')),
-    group('Explorar', item('/catalog', 'Catálogo', 'search'), item('/fixers', 'Técnicos', 'users'))
+    group(
+      'Explorar',
+      item('/catalog', 'Catálogo', 'search'),
+      item('/fixers', 'Técnicos', 'users'),
+      item('/analytics/market-indicators', 'Mercado', 'map')
+    )
   ],
   PLATFORM_ADMIN: [
     group(null, HOME),
@@ -110,7 +115,12 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
       item('/administration/properties/bulk-upload', 'Carga masiva', 'upload', true, 'Carga'),
       item('/contracts', 'Contratos', 'file')
     ),
-    group('Consulta', item('/catalog', 'Catálogo', 'search'), item('/fixers', 'Técnicos', 'users'))
+    group(
+      'Consulta',
+      item('/catalog', 'Catálogo', 'search'),
+      item('/fixers', 'Técnicos', 'users'),
+      item('/analytics/market-indicators', 'Mercado', 'map')
+    )
   ]
 };
 
