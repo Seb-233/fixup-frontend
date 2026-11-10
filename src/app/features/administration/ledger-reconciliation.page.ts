@@ -35,7 +35,7 @@ import { ErrorStateComponent, LoadingComponent } from '../../shared/ui/states.co
           <app-icon [name]="r.consistent ? 'check' : 'alert'" />
           <div>
             <strong>{{ r.consistent ? 'El libro cuadra' : 'Hay diferencias en el libro' }}</strong>
-            <span class="text-sm">Revisado {{ r.checkedAt | when }}.</span>
+            <span class="text-sm">Revisado: {{ r.checkedAt | when }}</span>
           </div>
         </div>
 
