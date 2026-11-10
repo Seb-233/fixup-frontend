@@ -11,6 +11,7 @@ import {
   FixerReviews,
   JobDetail,
   JobResponse,
+  LedgerReconciliation,
   OwnerDebtDetail,
   PaymentAttemptResult,
   PaymentDetail,
@@ -194,6 +195,13 @@ export class WorkApi {
   earnings(): Observable<EarningsResponse> {
     return this.api.getText('/payments/me/earnings').pipe(
       map(text => losslessParse<EarningsResponse>(text))
+    );
+  }
+
+  /** Solo PLATFORM_ADMIN. Cada llamada corre una conciliación nueva en el backend. */
+  ledgerReconciliation(): Observable<LedgerReconciliation> {
+    return this.api.getText('/administration/payments/reconciliation').pipe(
+      map(text => losslessParse<LedgerReconciliation>(text))
     );
   }
 

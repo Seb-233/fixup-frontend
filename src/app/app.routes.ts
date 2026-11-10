@@ -276,6 +276,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/administration/wompi-transactions.page').then((m) => m.WompiTransactionsPage)
       },
       {
+        path: 'administration/payments/reconciliation',
+        title: 'Conciliación de pagos',
+        data: { roles: ['PLATFORM_ADMIN'] },
+        loadComponent: () => import('./features/administration/ledger-reconciliation.page').then((m) => m.LedgerReconciliationPage)
+      },
+      {
         path: 'administration/sla-board',
         title: 'Plazos de atención',
         data: { roles: ['PLATFORM_ADMIN'] },

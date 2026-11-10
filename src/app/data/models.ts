@@ -253,3 +253,31 @@ export interface PortfolioFeedResponse {
   page: number;
   hasMore: boolean;
 }
+
+/** Safety (SAF-01): conciliación del libro de pagos. Los montos son pesos enteros. */
+export interface LedgerTotals {
+  collected: number | bigint;
+  earningsGross: number | bigint;
+  commission: number | bigint;
+  net: number | bigint;
+  heldNet: number | bigint;
+  availableNet: number | bigint;
+  paidOutNet: number | bigint;
+  payouts: number | bigint;
+  outstandingDebts: number | bigint;
+}
+
+export interface LedgerFinding {
+  code: string;
+  description: string;
+  count: number;
+  sample: string[];
+}
+
+export interface LedgerReconciliation {
+  checkedAt: string;
+  consistent: boolean;
+  balanced: boolean;
+  totals: LedgerTotals;
+  findings: LedgerFinding[];
+}
