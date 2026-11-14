@@ -108,7 +108,8 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
     group(
       'Supervisión',
       item('/administration/sla-board', 'Plazos', 'clock', true),
-      item('/administration/fixer-review', 'Verificaciones', 'shield', true, 'Revisión')
+      item('/administration/fixer-review', 'Verificaciones', 'shield', true, 'Revisión'),
+      item('/administration/wompi-transactions', 'Transacciones Wompi', 'card', false, 'Wompi')
     ),
     group(
       'Datos',
