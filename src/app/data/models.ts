@@ -4,6 +4,8 @@
 import type {
   JobResponse,
   JobStatus,
+  PaymentAttemptResult,
+  PaymentStatus,
   RatingResponse,
   RepairRequestStatus,
   SandboxPaymentInstrument,
@@ -172,6 +174,65 @@ export interface AttemptRequest {
   reference: string;
   amount: number | bigint | string;
   instrument: SandboxPaymentInstrument;
+}
+
+// INT-01: pasarela Wompi. El cliente generado las declara con todos los campos opcionales; aquí
+// se fijan los que el backend siempre envía.
+export interface WompiStatus {
+  enabled: boolean;
+  environment?: 'sandbox' | 'production' | null;
+}
+
+export interface WompiCheckoutSession {
+  paymentId: string;
+  reference: string;
+  amountInCents: number | bigint;
+  currency: string;
+  environment: 'sandbox' | 'production';
+  checkoutUrl: string;
+}
+
+export type WompiTransactionStatus = 'PENDING' | 'APPROVED' | 'DECLINED' | 'VOIDED' | 'ERROR';
+
+export interface WompiTransactionResult {
+  transactionId: string;
+  transactionStatus: WompiTransactionStatus;
+  paymentStatus: PaymentStatus;
+  paymentMethodType?: string | null;
+  statusMessage?: string | null;
+  attempt?: PaymentAttemptResult | null;
+}
+
+export type WompiReconciliation = 'RECORDED' | 'NOT_RECORDED' | 'PENDING' | 'DUPLICATE' | 'AMOUNT_MISMATCH' | 'FOREIGN';
+
+// Transacción del comercio en Wompi cruzada con el pago de FixUp (vista de administración).
+export interface WompiTransactionView {
+  transactionId: string;
+  reference: string;
+  amountInCents: number;
+  currency: string;
+  status: WompiTransactionStatus;
+  paymentMethodType?: string | null;
+  statusMessage?: string | null;
+  createdAt?: string | null;
+  finalizedAt?: string | null;
+  paymentId?: string | null;
+  paymentReference?: string | null;
+  paymentPurpose?: string | null;
+  paymentStatus?: PaymentStatus | null;
+  recordedStatus?: PaymentStatus | null;
+  reconciliation: WompiReconciliation;
+}
+
+export interface WompiTransactionList {
+  environment: 'sandbox' | 'production';
+  from: string;
+  until: string;
+  status: WompiTransactionStatus | 'ALL';
+  page: number;
+  pageSize: number;
+  totalResults: number;
+  items: WompiTransactionView[];
 }
 
 export interface FeedPieceResponse {

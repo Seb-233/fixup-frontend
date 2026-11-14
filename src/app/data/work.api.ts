@@ -20,7 +20,11 @@ import {
   PayoutResponse,
   RatingResponse,
   VisitKind,
-  VisitResponse
+  VisitResponse,
+  WompiCheckoutSession,
+  WompiStatus,
+  WompiTransactionList,
+  WompiTransactionResult
 } from './models';
 
 export interface RatingInput {
@@ -145,6 +149,28 @@ export class WorkApi {
     }).pipe(
       map(text => losslessParse<PaymentAttemptResult>(text))
     );
+  }
+
+  // INT-01: pasarela Wompi (Web Checkout). El backend firma el checkout y verifica el resultado.
+  // JSON normal (no lossless): los montos en centavos de Wompi caben en un number, y así el error
+  // llega como objeto con su code.
+  wompiStatus(): Observable<WompiStatus> {
+    return this.api.get<WompiStatus>('/payments/wompi');
+  }
+
+  wompiCheckout(paymentId: string, returnUrl: string): Observable<WompiCheckoutSession> {
+    return this.api.post<WompiCheckoutSession>(`/payments/${paymentId}/wompi/checkout`, { returnUrl });
+  }
+
+  wompiConfirm(paymentId: string, transactionId: string): Observable<WompiTransactionResult> {
+    return this.api.post<WompiTransactionResult>(
+      `/payments/${paymentId}/wompi/transactions/${encodeURIComponent(transactionId)}`, null);
+  }
+
+  // Solo administración: transacciones del comercio leídas de Wompi con la llave privada.
+  wompiTransactions(filter: { from?: string; until?: string; status?: string; page?: number; size?: number }):
+      Observable<WompiTransactionList> {
+    return this.api.get<WompiTransactionList>('/payments/wompi/transactions', filter);
   }
 
   myDebts(): Observable<OwnerDebtDetail[]> {
