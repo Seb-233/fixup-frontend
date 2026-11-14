@@ -46,7 +46,23 @@ describe('errorInterceptor', () => {
     expect(userStore.user()).toBeNull();
     expect(sessionStorage.getItem('fixup_pending_attempt_pay-1')).toBeNull();
     expect(sessionStorage.getItem('fixup_in_flight_payout_fixer-1')).toBeNull();
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login'], undefined);
+  });
+
+  it('ante un 401 conserva la ruta actual con su query para volver tras ingresar (retorno de Wompi)', async () => {
+    const original = window.location.pathname + window.location.search;
+    history.replaceState(null, '', '/payments/pay-1?id=12077206-1-2');
+    try {
+      const nextFn = () => throwError(() => new HttpErrorResponse({ status: 401 }));
+      await expect(
+        firstValueFrom(TestBed.runInInjectionContext(() => errorInterceptor(new HttpRequest('POST', '/auth/bootstrap', {}), nextFn)))
+      ).rejects.toMatchObject({ status: 401 });
+      expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login'], {
+        queryParams: { returnUrl: '/payments/pay-1?id=12077206-1-2' }
+      });
+    } finally {
+      history.replaceState(null, '', original);
+    }
   });
 
   it('un 403 de una acción no cambia de pantalla ni cierra la sesión', async () => {

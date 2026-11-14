@@ -225,7 +225,48 @@ export const PAYMENT_METHOD: Record<string, string> = {
 export const SANDBOX_PAYMENT_INSTRUMENT: Record<string, string> = {
   SANDBOX_CARD: 'Tarjeta de crédito o débito (simulada)',
   SANDBOX_PSE: 'PSE - Transferencia bancaria (simulada)',
-  SANDBOX_NEQUI: 'Nequi / Daviplata (simulada)'
+  SANDBOX_NEQUI: 'Nequi / Daviplata (simulada)',
+  WOMPI: 'Wompi (tarjeta, PSE o Nequi)'
+};
+
+// INT-01: estado de una transacción en Wompi y cómo quedó en FixUp (vista de administración).
+export const WOMPI_TRANSACTION_STATUS: Record<string, Label> = {
+  APPROVED: label('Aprobada', 'success'),
+  PENDING: label('Pendiente', 'warning'),
+  DECLINED: label('Rechazada', 'danger'),
+  VOIDED: label('Anulada', 'neutral'),
+  ERROR: label('Error', 'danger')
+};
+
+export const WOMPI_RECONCILIATION: Record<string, Label> = {
+  RECORDED: label('Registrada', 'success'),
+  NOT_RECORDED: label('Sin registrar', 'warning'),
+  PENDING: label('En espera', 'info'),
+  DUPLICATE: label('Cobro doble', 'danger'),
+  AMOUNT_MISMATCH: label('Monto distinto', 'danger'),
+  FOREIGN: label('Ajena a FixUp', 'neutral')
+};
+
+export const WOMPI_RECONCILIATION_HINT: Record<string, string> = {
+  RECORDED: 'FixUp registró este resultado en el pago.',
+  NOT_RECORDED: 'Wompi la resolvió, pero FixUp no la registró: el pagador no volvió del checkout y no llegó el webhook.',
+  PENDING: 'Wompi todavía no la resuelve.',
+  DUPLICATE: 'El pago ya estaba aprobado por otra transacción. Reembolsa esta desde el panel de Wompi.',
+  AMOUNT_MISMATCH: 'La referencia es de FixUp, pero el monto o la moneda no coinciden con el checkout.',
+  FOREIGN: 'La referencia no salió de un checkout de FixUp (otra tienda o pruebas manuales en el comercio).'
+};
+
+export const WOMPI_PAYMENT_METHOD: Record<string, string> = {
+  CARD: 'Tarjeta',
+  NEQUI: 'Nequi',
+  PSE: 'PSE',
+  DAVIPLATA: 'Daviplata',
+  BANCOLOMBIA_TRANSFER: 'Botón Bancolombia',
+  BANCOLOMBIA_QR: 'QR Bancolombia',
+  BANCOLOMBIA_COLLECT: 'Corresponsal Bancolombia',
+  BANCOLOMBIA_BNPL: 'Compra y paga después',
+  SU_PLUS: 'SU+ Pay',
+  CARD_POS: 'Datáfono'
 };
 
 export const PAYMENT_PURPOSE: Record<string, string> = {
@@ -329,6 +370,16 @@ export function errorMessage(error: unknown, fallback = 'No se pudo completar la
 // Los códigos que el backend devuelve en {code}. Solo los que el usuario puede corregir llevan
 // instrucción; el resto cae al mensaje del servidor.
 const ERROR_CODES: Record<string, string> = {
+  WOMPI_NOT_CONFIGURED: 'Wompi no está configurado en este servidor. Usa la pasarela simulada.',
+  WOMPI_CREDENTIALS_REJECTED: 'Wompi rechazó las llaves del servidor. Hay que volver a configurarlas.',
+  PAYMENT_GATEWAY_UNAVAILABLE: 'Wompi no respondió. El pago no cambió; vuelve a verificar en un momento.',
+  WOMPI_TRANSACTION_NOT_FOUND: 'Wompi no reconoce esa transacción.',
+  WOMPI_REFERENCE_UNKNOWN: 'Esa transacción de Wompi no corresponde a un pago de Fix&Rent.',
+  WOMPI_PAYMENT_MISMATCH: 'Esa transacción de Wompi es de otro pago.',
+  WOMPI_AMOUNT_MISMATCH: 'El monto pagado en Wompi no coincide con el valor del pago.',
+  RETURN_ORIGIN_NOT_ALLOWED: 'Este sitio no está autorizado como retorno de Wompi (WOMPI_RETURN_ORIGINS).',
+  INVALID_TRANSACTION_FILTER: 'Revisa el filtro: la fecha inicial no puede ser posterior a la final y el rango es de máximo un año.',
+  WOMPI_RETURN_URL_LOCAL: 'Wompi no acepta volver a localhost ni a una IP. Abre FixUp en http://fixup.localhost:<puerto> o en su dirección pública.',
   FIXER_BUSY: 'El técnico ya tiene una visita confirmada a esa hora. Propón otra.',
   FIXER_NOT_QUOTED: 'El diagnóstico se agenda con un técnico que ya cotizó la solicitud abierta.',
   FIXER_NOT_ASSIGNED: 'La visita de ejecución es con el técnico asignado.',

@@ -1,5 +1,5 @@
 import { HttpErrorResponse, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { DOCUMENT, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { CurrentUserStore } from '../auth/current-user.store';
@@ -16,6 +16,7 @@ export const errorInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, n
   const userStore = inject(CurrentUserStore);
   const demo = inject(DemoSession);
   const knownPayments = inject(KnownPaymentsService);
+  const document = inject(DOCUMENT);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -23,7 +24,11 @@ export const errorInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, n
         demo.end();
         userStore.clear();
         knownPayments.clearSessionFinancialData();
-        router.navigate(['/auth/login']);
+        // Conserva la ruta (con su query) para volver tras ingresar: al regresar de Wompi trae el
+        // ?id= de la transacción y, si la sesión venció mientras se pagaba, no se debe perder.
+        const here = document.location.pathname + document.location.search;
+        const keep = here.startsWith('/') && !here.startsWith('//') && here !== '/' && !here.startsWith('/auth');
+        router.navigate(['/auth/login'], keep ? { queryParams: { returnUrl: here } } : undefined);
       } else if (error.status === 403) {
         const restricted =
           RESTRICTED_CODES.has(error.error?.code) ||

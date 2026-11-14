@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { KnownPaymentsService } from '../../data/known-payments';
-import { PaymentAttemptResult, PaymentDetail, SandboxPaymentInstrument } from '../../data/models';
+import { PaymentAttemptResult, PaymentDetail, SandboxPaymentInstrument, WompiStatus } from '../../data/models';
 import { WorkApi } from '../../data/work.api';
 import {
   PAYMENT_METHOD,
@@ -25,8 +26,13 @@ interface PendingAttemptPayload {
   startedAt: string;
 }
 
-// Pago 100 % digital en pasarela simulada (FR-UC-05.4).
-// Procesa intentos mediante POST /payments/{paymentId}/attempts con Idempotency-Key y refresco por GET.
+// Pago 100 % digital (FR-UC-05.4) con dos pasarelas:
+// - Wompi (INT-01), cuando el backend tiene las llaves: el pagador paga en el checkout alojado de Wompi,
+//   vuelve a /payments/{paymentId}?id=<transacción> y el backend verifica la transacción con Wompi.
+// - La pasarela simulada: POST /payments/{paymentId}/attempts con Idempotency-Key y refresco por GET.
+const WOMPI_POLL_MS = 3000;
+const WOMPI_MAX_POLLS = 10;
+
 @Component({
   selector: 'app-payment-panel',
   imports: [FormsModule, IconComponent, StatusComponent, MoneyPipe, WhenPipe, LabelPipe],
@@ -47,8 +53,34 @@ interface PendingAttemptPayload {
 
       <div class="alert alert-info text-sm" role="status">
         <app-icon name="info" />
-        <span>Pasarela académica de prueba: simulación digital sin dinero real ni solicitud de claves bancarias.</span>
+        @if (wompi()?.enabled) {
+          <span>
+            Pagos con Wompi{{ wompi()?.environment === 'sandbox' ? ' en ambiente de pruebas (sandbox): no se mueve dinero real' : '' }}.
+            Tus datos de pago los recibe Wompi, nunca FixUp.
+          </span>
+        } @else {
+          <span>Pasarela académica de prueba: simulación digital sin dinero real ni solicitud de claves bancarias.</span>
+        }
       </div>
+
+      @if (wompiChecking()) {
+        <div class="alert alert-info text-sm" role="status" aria-live="polite">
+          <app-icon name="refresh" />
+          <span>Verificando el pago con Wompi…</span>
+        </div>
+      } @else if (wompiRetryId()) {
+        @if (wompiPendingId(); as pendingId) {
+          <div class="alert alert-warning text-sm" role="status">
+            <app-icon name="clock" />
+            <span>Wompi todavía no confirma la transacción {{ pendingId }}. Puede tardar unos minutos con PSE o Nequi.</span>
+          </div>
+        }
+        <div class="cluster">
+          <button type="button" class="btn btn-secondary" (click)="verifyWompi()">
+            <app-icon name="refresh" />Verificar de nuevo
+          </button>
+        </div>
+      }
 
       @switch (payment().status) {
         @case ('APPROVED') {
@@ -69,6 +101,10 @@ interface PendingAttemptPayload {
         }
       }
 
+      @if (!open() && error() && !wompiChecking()) {
+        <div class="alert alert-danger" role="alert">{{ error() }}</div>
+      }
+
       @if (lastAttempt(); as att) {
         <div class="panel panel-quiet stack-sm text-sm">
           <div class="spread">
@@ -84,12 +120,24 @@ interface PendingAttemptPayload {
         </div>
       }
 
-      @if (canPay() && payment().status !== 'APPROVED') {
+      @if (canPay() && payment().status !== 'APPROVED' && !wompiChecking()) {
         @if (!open()) {
-          <button type="button" class="btn btn-primary" (click)="open.set(true)">
+          <button type="button" class="btn btn-primary" (click)="startPayment()">
             <app-icon name="card" />Pagar {{ payment().amount | money }}
           </button>
         } @else {
+          @if (wompi()?.enabled) {
+            <div class="panel panel-quiet stack-sm">
+              <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="payWithWompi()">
+                <app-icon name="external" />{{ redirecting() ? 'Abriendo Wompi…' : 'Pagar con Wompi' }}
+              </button>
+              <p class="text-xs text-muted">
+                Te llevamos a la página segura de Wompi para pagar {{ payment().amount | money }} con tarjeta, PSE o Nequi.
+                Al terminar vuelves aquí y FixUp verifica el resultado directamente con Wompi.
+              </p>
+            </div>
+            <p class="text-sm text-muted">También puedes usar la pasarela simulada:</p>
+          }
           <form class="stack" (ngSubmit)="pay(false)">
             @if (hasPendingRetry()) {
               <div class="alert alert-warning text-sm" role="status">
@@ -160,13 +208,144 @@ export class PaymentPanelComponent {
   readonly lastAttempt = signal<PaymentAttemptResult | null>(null);
   readonly hasPendingRetry = signal<boolean>(false);
 
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private readonly router = inject(Router, { optional: true });
+  readonly wompi = signal<WompiStatus | null>(null);
+  readonly redirecting = signal(false);
+  readonly wompiChecking = signal(false);
+  readonly wompiPendingId = signal<string | null>(null);
+  readonly wompiRetryId = signal<string | null>(null);
+  private wompiReturnHandled = false;
+  private wompiStatusRequested = false;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     effect(() => {
       const p = this.payment();
       if (p) {
         this.checkPendingAttempt(p.paymentId);
+        if (this.canPay() && p.status !== 'APPROVED') {
+          untracked(() => this.loadWompiStatus());
+        }
       }
     });
+    // Wompi devuelve al pagador a /payments/{paymentId}?id=<transacción>.
+    effect(() => {
+      const p = this.payment();
+      const transactionId = this.route?.snapshot.queryParamMap.get('id');
+      if (!p || !transactionId || this.wompiReturnHandled) {
+        return;
+      }
+      this.wompiReturnHandled = true;
+      untracked(() => {
+        this.loadWompiStatus();
+        this.confirmWompi(p.paymentId, transactionId, 0);
+      });
+    });
+    inject(DestroyRef).onDestroy(() => this.stopPolling());
+  }
+
+  startPayment(): void {
+    this.open.set(true);
+    this.loadWompiStatus();
+  }
+
+  payWithWompi(): void {
+    if (this.busy()) {
+      return;
+    }
+    const current = this.payment();
+    this.busy.set(true);
+    this.redirecting.set(true);
+    this.error.set(null);
+    const returnUrl = new URL(`payments/${current.paymentId}`, document.baseURI).toString();
+    this.api.wompiCheckout(current.paymentId, returnUrl).subscribe({
+      next: (session) => this.redirect(session.checkoutUrl),
+      error: (failure) => {
+        this.busy.set(false);
+        this.redirecting.set(false);
+        this.error.set(errorMessage(failure, 'No pudimos abrir el checkout de Wompi.'));
+      }
+    });
+  }
+
+  verifyWompi(): void {
+    const transactionId = this.wompiRetryId();
+    if (transactionId) {
+      this.confirmWompi(this.payment().paymentId, transactionId, 0);
+    }
+  }
+
+  /** Separado para poder reemplazarlo en las pruebas: navegar fuera de la SPA. */
+  redirect(url: string): void {
+    window.location.assign(url);
+  }
+
+  private loadWompiStatus(): void {
+    if (this.wompiStatusRequested) {
+      return;
+    }
+    this.wompiStatusRequested = true;
+    this.api.wompiStatus().subscribe({
+      next: (status) => this.wompi.set(status),
+      error: () => this.wompi.set({ enabled: false })
+    });
+  }
+
+  private confirmWompi(paymentId: string, transactionId: string, round: number): void {
+    this.stopPolling();
+    this.wompiChecking.set(true);
+    this.error.set(null);
+    this.api.wompiConfirm(paymentId, transactionId).subscribe({
+      next: (result) => {
+        if (result.attempt) {
+          this.lastAttempt.set(result.attempt);
+        }
+        if (result.transactionStatus === 'PENDING') {
+          this.wompiPendingId.set(transactionId);
+          this.wompiRetryId.set(transactionId);
+          if (round + 1 < WOMPI_MAX_POLLS) {
+            this.pollTimer = setTimeout(() => this.confirmWompi(paymentId, transactionId, round + 1), WOMPI_POLL_MS);
+          } else {
+            this.wompiChecking.set(false);
+          }
+          return;
+        }
+        this.wompiPendingId.set(null);
+        this.wompiRetryId.set(null);
+        this.wompiChecking.set(false);
+        if (result.paymentStatus !== 'APPROVED') {
+          const reason = result.attempt?.failureReason ?? 'Wompi no aprobó la transacción. Puedes intentar de nuevo.';
+          this.lastFailure.set(reason);
+        }
+        this.clearReturnParam();
+        this.refreshPayment(paymentId);
+      },
+      error: (failure) => {
+        this.wompiChecking.set(false);
+        this.wompiPendingId.set(null);
+        this.wompiRetryId.set(transactionId);
+        this.error.set(errorMessage(failure, 'No pudimos verificar el pago con Wompi.'));
+      }
+    });
+  }
+
+  private clearReturnParam(): void {
+    if (this.router && this.route) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { id: null, env: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 
   private sessionKey(paymentId: string): string {

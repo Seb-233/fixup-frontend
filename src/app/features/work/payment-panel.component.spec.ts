@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { PaymentDetail } from '../../data/models';
@@ -44,6 +45,8 @@ describe('PaymentPanelComponent digital', () => {
   });
 
   afterEach(() => {
+    // El panel consulta si Wompi está configurado; estas pruebas cubren la pasarela simulada.
+    backend.match(`${environment.apiOrigin}/payments/wompi`).forEach((req) => req.flush({ enabled: false }));
     backend.verify();
     sessionStorage.clear();
     localStorage.clear();
@@ -244,3 +247,137 @@ describe('PaymentPanelComponent digital', () => {
   });
 });
 
+
+describe('PaymentPanelComponent con Wompi (INT-01)', () => {
+  let backend: HttpTestingController;
+
+  const configure = (transactionId: string | null) => {
+    sessionStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [PaymentPanelComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap(transactionId ? { id: transactionId } : {}) } }
+        }
+      ]
+    });
+    backend = TestBed.inject(HttpTestingController);
+    TestBed.inject(CurrentUserStore).setProfile({
+      id: 'owner-1', email: 'owner@fixup.com', displayName: 'Owner User', status: 'ACTIVE', roles: ['OWNER']
+    });
+  };
+
+  const render = () => {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('payment', payment());
+    fixture.componentRef.setInput('canPay', true);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    backend.verify();
+  });
+
+  it('abre el checkout firmado de Wompi con la URL de retorno del pago', () => {
+    configure(null);
+    const fixture = render();
+    const redirect = vi.spyOn(fixture.componentInstance, 'redirect').mockImplementation(() => undefined);
+
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`)
+      .flush({ enabled: true, environment: 'sandbox' });
+    fixture.detectChanges();
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find((b) => b.textContent?.includes('Pagar con Wompi'));
+    expect(button).toBeTruthy();
+
+    button!.click();
+    const checkout = backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/checkout`);
+    expect(checkout.request.method).toBe('POST');
+    expect(checkout.request.body.returnUrl).toBe(new URL('payments/pay-1', document.baseURI).toString());
+    checkout.flush({
+      paymentId: 'pay-1', reference: 'FIX-PAY-001-ABCD1234', amountInCents: 18500000, currency: 'COP',
+      environment: 'sandbox', checkoutUrl: 'https://checkout.wompi.co/p/?reference=FIX-PAY-001-ABCD1234'
+    });
+
+    expect(redirect).toHaveBeenCalledWith('https://checkout.wompi.co/p/?reference=FIX-PAY-001-ABCD1234');
+  });
+
+  it('sin llaves en el backend solo ofrece la pasarela simulada', () => {
+    configure(null);
+    const fixture = render();
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: false });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Pagar con Wompi');
+    expect(fixture.nativeElement.textContent).toContain('Confirmar pago simulado');
+  });
+
+  it('al volver de Wompi verifica la transacción, espera si está pendiente y refresca el pago', async () => {
+    vi.useFakeTimers();
+    configure('1234-1610641025-49201');
+    let paid: PaymentDetail | undefined;
+    const fixture = render();
+    fixture.componentInstance.paid.subscribe((p) => (paid = p));
+
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    const confirmUrl = `${environment.apiOrigin}/payments/pay-1/wompi/transactions/1234-1610641025-49201`;
+    backend.expectOne(confirmUrl).flush({
+      transactionId: '1234-1610641025-49201', transactionStatus: 'PENDING', paymentStatus: 'PENDING'
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Verificando el pago con Wompi');
+
+    await vi.advanceTimersByTimeAsync(3000);
+    backend.expectOne(confirmUrl).flush({
+      transactionId: '1234-1610641025-49201', transactionStatus: 'APPROVED', paymentStatus: 'APPROVED',
+      attempt: { attemptId: 'att-w', paymentId: 'pay-1', status: 'APPROVED', instrument: 'WOMPI',
+        gatewayTransactionId: '1234-1610641025-49201' }
+    });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`)
+      .flush(JSON.stringify(payment({ status: 'APPROVED', completedAt: new Date().toISOString() })));
+
+    expect(paid?.status).toBe('APPROVED');
+    expect(fixture.componentInstance.lastAttempt()?.instrument).toBe('WOMPI');
+    expect(fixture.componentInstance.wompiChecking()).toBe(false);
+  });
+
+  it('si Wompi no responde muestra el error y permite verificar de nuevo', () => {
+    configure('7-1-X');
+    const fixture = render();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/7-1-X`)
+      .flush({ status: 503, code: 'PAYMENT_GATEWAY_UNAVAILABLE' }, { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Wompi no respondió');
+    expect(text).not.toContain('todavía no confirma');
+
+    fixture.componentInstance.verifyWompi();
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/7-1-X`).flush({
+      transactionId: '7-1-X', transactionStatus: 'APPROVED', paymentStatus: 'APPROVED'
+    });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`).flush(JSON.stringify(payment({ status: 'APPROVED' })));
+    expect(fixture.componentInstance.wompiRetryId()).toBeNull();
+  });
+
+  it('muestra el motivo cuando Wompi rechaza la transacción', () => {
+    configure('9-1-DECLINED');
+    const fixture = render();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/9-1-DECLINED`).flush({
+      transactionId: '9-1-DECLINED', transactionStatus: 'DECLINED', paymentStatus: 'DECLINED',
+      attempt: { attemptId: 'att-d', paymentId: 'pay-1', status: 'DECLINED', instrument: 'WOMPI',
+        failureReason: 'Wompi rechazó la transacción: Fondos insuficientes' }
+    });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`).flush(JSON.stringify(payment({ status: 'DECLINED' })));
+    fixture.componentRef.setInput('payment', payment({ status: 'DECLINED' }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Wompi rechazó la transacción: Fondos insuficientes');
+  });
+});
