@@ -1,0 +1,1063 @@
+{
+  "fecha": "2026-11-14T15:36:15.880Z",
+  "roles": {
+    "OWNER": {
+      "menu": [
+        {
+          "href": "/dashboard",
+          "label": "Inicio",
+          "finalUrl": "/dashboard",
+          "h1": "Hola, Carolina",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 366,
+          "ok": true
+        },
+        {
+          "href": "/properties",
+          "label": "Inmuebles",
+          "finalUrl": "/properties",
+          "h1": "Mis inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 333,
+          "ok": true
+        },
+        {
+          "href": "/contracts",
+          "label": "Contratos",
+          "finalUrl": "/contracts",
+          "h1": "Contratos de arriendo",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 329,
+          "ok": true
+        },
+        {
+          "href": "/remodelings",
+          "label": "Remodelaciones",
+          "finalUrl": "/remodelings",
+          "h1": "Remodelaciones",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 347,
+          "ok": true
+        },
+        {
+          "href": "/requests",
+          "label": "Solicitudes",
+          "finalUrl": "/requests",
+          "h1": "Solicitudes de reparación",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/visits",
+          "label": "Agenda",
+          "finalUrl": "/visits",
+          "h1": "Agenda de visitas",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/fixers",
+          "label": "Técnicos",
+          "finalUrl": "/fixers",
+          "h1": "Técnicos verificados",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 333,
+          "ok": true
+        },
+        {
+          "href": "/payments",
+          "label": "Pagos",
+          "finalUrl": "/payments",
+          "h1": "Pagos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/expenses",
+          "label": "Gastos",
+          "finalUrl": "/expenses",
+          "h1": "Reporte de gastos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 333,
+          "ok": true
+        },
+        {
+          "href": "/catalog",
+          "label": "Catálogo",
+          "finalUrl": "/catalog",
+          "h1": "Catálogo de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/analytics/market-indicators",
+          "label": "Mercado",
+          "finalUrl": "/analytics/market-indicators",
+          "h1": "Indicadores de mercado",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 333,
+          "ok": true
+        }
+      ],
+      "rutasAjenas": [
+        {
+          "href": "/administration/sla-board",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/requests/inbox",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/jobs/me",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        }
+      ],
+      "rutaInexistente": {
+        "destino": "/dashboard",
+        "ok": true
+      },
+      "enlaceViejoNotificacion": {
+        "origen": "/visits/:id",
+        "destino": "/visits",
+        "ok": true
+      },
+      "fallasServidor": [
+        {
+          "status": 500,
+          "pagina": "/properties",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        },
+        {
+          "status": 503,
+          "pagina": "/properties",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        }
+      ],
+      "barraMovilAlCargar": [
+        {
+          "href": "/dashboard",
+          "texto": "Inicio",
+          "truncado": false
+        },
+        {
+          "href": "/properties",
+          "texto": "Inmuebles",
+          "truncado": false
+        },
+        {
+          "href": "/requests",
+          "texto": "Solicitudes",
+          "truncado": false
+        },
+        {
+          "href": "/visits",
+          "texto": "Agenda",
+          "truncado": false
+        }
+      ],
+      "barraMovil": {
+        "accesos": [
+          {
+            "href": "/dashboard",
+            "texto": "Inicio",
+            "truncado": false
+          },
+          {
+            "href": "/properties",
+            "texto": "Inmuebles",
+            "truncado": false
+          },
+          {
+            "href": "/requests",
+            "texto": "Solicitudes",
+            "truncado": false
+          },
+          {
+            "href": "/visits",
+            "texto": "Agenda",
+            "truncado": false
+          }
+        ],
+        "ok": true
+      }
+    },
+    "TENANT": {
+      "menu": [
+        {
+          "href": "/dashboard",
+          "label": "Inicio",
+          "finalUrl": "/dashboard",
+          "h1": "Hola, Andrés",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 343,
+          "ok": true
+        },
+        {
+          "href": "/contracts",
+          "label": "Mi contrato",
+          "finalUrl": "/contracts",
+          "h1": "Mi contrato",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 337,
+          "ok": true
+        },
+        {
+          "href": "/requests",
+          "label": "Solicitudes",
+          "finalUrl": "/requests",
+          "h1": "Solicitudes de reparación",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 325,
+          "ok": true
+        },
+        {
+          "href": "/visits",
+          "label": "Agenda",
+          "finalUrl": "/visits",
+          "h1": "Agenda de visitas",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 328,
+          "ok": true
+        },
+        {
+          "href": "/catalog",
+          "label": "Catálogo",
+          "finalUrl": "/catalog",
+          "h1": "Catálogo de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 332,
+          "ok": true
+        },
+        {
+          "href": "/fixers",
+          "label": "Técnicos",
+          "finalUrl": "/fixers",
+          "h1": "Técnicos verificados",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 329,
+          "ok": true
+        },
+        {
+          "href": "/analytics/market-indicators",
+          "label": "Mercado",
+          "finalUrl": "/analytics/market-indicators",
+          "h1": "Indicadores de mercado",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        }
+      ],
+      "rutasAjenas": [
+        {
+          "href": "/properties",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/payments",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/management",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        }
+      ],
+      "rutaInexistente": {
+        "destino": "/dashboard",
+        "ok": true
+      },
+      "enlaceViejoNotificacion": {
+        "origen": "/visits/:id",
+        "destino": "/visits",
+        "ok": true
+      },
+      "fallasServidor": [
+        {
+          "status": 500,
+          "pagina": "/contracts",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        },
+        {
+          "status": 503,
+          "pagina": "/contracts",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        }
+      ],
+      "barraMovilAlCargar": [
+        {
+          "href": "/dashboard",
+          "texto": "Inicio",
+          "truncado": false
+        },
+        {
+          "href": "/contracts",
+          "texto": "Contrato",
+          "truncado": false
+        },
+        {
+          "href": "/requests",
+          "texto": "Solicitudes",
+          "truncado": false
+        },
+        {
+          "href": "/catalog",
+          "texto": "Catálogo",
+          "truncado": false
+        }
+      ],
+      "barraMovil": {
+        "accesos": [
+          {
+            "href": "/dashboard",
+            "texto": "Inicio",
+            "truncado": false
+          },
+          {
+            "href": "/contracts",
+            "texto": "Contrato",
+            "truncado": false
+          },
+          {
+            "href": "/requests",
+            "texto": "Solicitudes",
+            "truncado": false
+          },
+          {
+            "href": "/catalog",
+            "texto": "Catálogo",
+            "truncado": false
+          }
+        ],
+        "ok": true
+      }
+    },
+    "FIXER": {
+      "menu": [
+        {
+          "href": "/dashboard",
+          "label": "Inicio",
+          "finalUrl": "/dashboard",
+          "h1": "Hola, Jhon",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 325,
+          "ok": true
+        },
+        {
+          "href": "/requests/inbox",
+          "label": "Disponibles",
+          "finalUrl": "/requests/inbox",
+          "h1": "Solicitudes disponibles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 330,
+          "ok": true
+        },
+        {
+          "href": "/quotations/me",
+          "label": "Cotizaciones",
+          "finalUrl": "/quotations/me",
+          "h1": "Mis cotizaciones",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 330,
+          "ok": true
+        },
+        {
+          "href": "/jobs/me",
+          "label": "Trabajos",
+          "finalUrl": "/jobs/me",
+          "h1": "Mis trabajos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 338,
+          "ok": true
+        },
+        {
+          "href": "/visits",
+          "label": "Agenda",
+          "finalUrl": "/visits",
+          "h1": "Agenda de visitas",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 339,
+          "ok": true
+        },
+        {
+          "href": "/payments/earnings",
+          "label": "Ingresos",
+          "finalUrl": "/payments/earnings",
+          "h1": "Mis ingresos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 339,
+          "ok": true
+        },
+        {
+          "href": "/fixers/portfolio",
+          "label": "Portafolio",
+          "finalUrl": "/fixers/portfolio",
+          "h1": "Mi portafolio",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 334,
+          "ok": true
+        },
+        {
+          "href": "/fixers/verification",
+          "label": "Verificación",
+          "finalUrl": "/fixers/verification",
+          "h1": "Verificación",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 350,
+          "ok": true
+        }
+      ],
+      "rutasAjenas": [
+        {
+          "href": "/properties",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/administration/fixer-review",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/expenses",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        }
+      ],
+      "rutaInexistente": {
+        "destino": "/dashboard",
+        "ok": true
+      },
+      "enlaceViejoNotificacion": {
+        "origen": "/visits/:id",
+        "destino": "/visits",
+        "ok": true
+      },
+      "fallasServidor": [
+        {
+          "status": 500,
+          "pagina": "/requests/inbox",
+          "alertas": [
+            "No pudimos cargar esta información\nFalla simulada\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 3,
+          "llamadas4sDespues": 3,
+          "sinCiclo": true,
+          "ok": true
+        },
+        {
+          "status": 503,
+          "pagina": "/requests/inbox",
+          "alertas": [
+            "No pudimos cargar esta información\nFalla simulada\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 3,
+          "llamadas4sDespues": 3,
+          "sinCiclo": true,
+          "ok": true
+        }
+      ],
+      "barraMovilAlCargar": [
+        {
+          "href": "/dashboard",
+          "texto": "Inicio",
+          "truncado": false
+        },
+        {
+          "href": "/requests/inbox",
+          "texto": "Disponibles",
+          "truncado": true
+        },
+        {
+          "href": "/jobs/me",
+          "texto": "Trabajos",
+          "truncado": false
+        },
+        {
+          "href": "/visits",
+          "texto": "Agenda",
+          "truncado": false
+        }
+      ],
+      "barraMovil": {
+        "accesos": [
+          {
+            "href": "/dashboard",
+            "texto": "Inicio",
+            "truncado": false
+          },
+          {
+            "href": "/requests/inbox",
+            "texto": "Disponibles",
+            "truncado": true
+          },
+          {
+            "href": "/jobs/me",
+            "texto": "Trabajos",
+            "truncado": false
+          },
+          {
+            "href": "/visits",
+            "texto": "Agenda",
+            "truncado": false
+          }
+        ],
+        "ok": false
+      }
+    },
+    "REAL_ESTATE_MANAGER": {
+      "menu": [
+        {
+          "href": "/dashboard",
+          "label": "Inicio",
+          "finalUrl": "/dashboard",
+          "h1": "Hola, Inmobiliaria",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 344,
+          "ok": true
+        },
+        {
+          "href": "/management",
+          "label": "Mantenimiento",
+          "finalUrl": "/management",
+          "h1": "Mantenimiento",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 334,
+          "ok": true
+        },
+        {
+          "href": "/requests",
+          "label": "Solicitudes",
+          "finalUrl": "/requests",
+          "h1": "Solicitudes de reparación",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 406,
+          "ok": true
+        },
+        {
+          "href": "/visits",
+          "label": "Agenda",
+          "finalUrl": "/visits",
+          "h1": "Agenda de visitas",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 366,
+          "ok": true
+        },
+        {
+          "href": "/properties",
+          "label": "Inmuebles",
+          "finalUrl": "/properties",
+          "h1": "Inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 351,
+          "ok": true
+        },
+        {
+          "href": "/contracts",
+          "label": "Contratos",
+          "finalUrl": "/contracts",
+          "h1": "Contratos de arriendo",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 330,
+          "ok": true
+        },
+        {
+          "href": "/administration/properties/bulk-upload",
+          "label": "Carga masiva",
+          "finalUrl": "/administration/properties/bulk-upload",
+          "h1": "Carga masiva de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 332,
+          "ok": true
+        },
+        {
+          "href": "/payments",
+          "label": "Pagos",
+          "finalUrl": "/payments",
+          "h1": "Pagos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 328,
+          "ok": true
+        },
+        {
+          "href": "/expenses",
+          "label": "Gastos",
+          "finalUrl": "/expenses",
+          "h1": "Reporte de gastos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/catalog",
+          "label": "Catálogo",
+          "finalUrl": "/catalog",
+          "h1": "Catálogo de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 332,
+          "ok": true
+        },
+        {
+          "href": "/fixers",
+          "label": "Técnicos",
+          "finalUrl": "/fixers",
+          "h1": "Técnicos verificados",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 338,
+          "ok": true
+        },
+        {
+          "href": "/analytics/market-indicators",
+          "label": "Mercado",
+          "finalUrl": "/analytics/market-indicators",
+          "h1": "Indicadores de mercado",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 344,
+          "ok": true
+        }
+      ],
+      "rutasAjenas": [
+        {
+          "href": "/administration/sla-board",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/jobs/me",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/fixers/portfolio",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        }
+      ],
+      "rutaInexistente": {
+        "destino": "/dashboard",
+        "ok": true
+      },
+      "enlaceViejoNotificacion": {
+        "origen": "/visits/:id",
+        "destino": "/visits",
+        "ok": true
+      },
+      "fallasServidor": [
+        {
+          "status": 500,
+          "pagina": "/management",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        },
+        {
+          "status": 503,
+          "pagina": "/management",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        }
+      ],
+      "barraMovilAlCargar": [
+        {
+          "href": "/dashboard",
+          "texto": "Inicio",
+          "truncado": false
+        },
+        {
+          "href": "/management",
+          "texto": "Tablero",
+          "truncado": false
+        },
+        {
+          "href": "/requests",
+          "texto": "Solicitudes",
+          "truncado": false
+        },
+        {
+          "href": "/properties",
+          "texto": "Inmuebles",
+          "truncado": false
+        }
+      ],
+      "barraMovil": {
+        "accesos": [
+          {
+            "href": "/dashboard",
+            "texto": "Inicio",
+            "truncado": false
+          },
+          {
+            "href": "/management",
+            "texto": "Tablero",
+            "truncado": false
+          },
+          {
+            "href": "/requests",
+            "texto": "Solicitudes",
+            "truncado": false
+          },
+          {
+            "href": "/properties",
+            "texto": "Inmuebles",
+            "truncado": false
+          }
+        ],
+        "ok": true
+      }
+    },
+    "PLATFORM_ADMIN": {
+      "menu": [
+        {
+          "href": "/dashboard",
+          "label": "Inicio",
+          "finalUrl": "/dashboard",
+          "h1": "Hola, Soporte",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 325,
+          "ok": true
+        },
+        {
+          "href": "/administration/sla-board",
+          "label": "Plazos",
+          "finalUrl": "/administration/sla-board",
+          "h1": "Plazos de atención",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 338,
+          "ok": true
+        },
+        {
+          "href": "/administration/fixer-review",
+          "label": "Verificaciones",
+          "finalUrl": "/administration/fixer-review",
+          "h1": "Verificación de técnicos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 355,
+          "ok": true
+        },
+        {
+          "href": "/administration/payments/reconciliation",
+          "label": "Conciliación de pagos",
+          "finalUrl": "/administration/payments/reconciliation",
+          "h1": "Conciliación de pagos",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 366,
+          "ok": true
+        },
+        {
+          "href": "/administration/properties/bulk-upload",
+          "label": "Carga masiva",
+          "finalUrl": "/administration/properties/bulk-upload",
+          "h1": "Carga masiva de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 343,
+          "ok": true
+        },
+        {
+          "href": "/contracts",
+          "label": "Contratos",
+          "finalUrl": "/contracts",
+          "h1": "Contratos de arriendo",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/catalog",
+          "label": "Catálogo",
+          "finalUrl": "/catalog",
+          "h1": "Catálogo de inmuebles",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 331,
+          "ok": true
+        },
+        {
+          "href": "/fixers",
+          "label": "Técnicos",
+          "finalUrl": "/fixers",
+          "h1": "Técnicos verificados",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 339,
+          "ok": true
+        },
+        {
+          "href": "/analytics/market-indicators",
+          "label": "Mercado",
+          "finalUrl": "/analytics/market-indicators",
+          "h1": "Indicadores de mercado",
+          "alerts": [],
+          "apiErrors": [],
+          "consoleErrors": [],
+          "ms": 334,
+          "ok": true
+        }
+      ],
+      "rutasAjenas": [
+        {
+          "href": "/requests/new",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/payments/earnings",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        },
+        {
+          "href": "/properties/new",
+          "finalUrl": "/auth/access-denied",
+          "apiErrors": [],
+          "ok": true
+        }
+      ],
+      "rutaInexistente": {
+        "destino": "/dashboard",
+        "ok": true
+      },
+      "enlaceViejoNotificacion": {
+        "origen": "/visits/:id",
+        "destino": "/auth/access-denied",
+        "ok": true
+      },
+      "fallasServidor": [
+        {
+          "status": 500,
+          "pagina": "/administration/sla-board",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        },
+        {
+          "status": 503,
+          "pagina": "/administration/sla-board",
+          "alertas": [
+            "No pudimos cargar esta información\nRevisa tu conexión e inténtalo de nuevo.\nReintentar"
+          ],
+          "botonReintentar": true,
+          "recupera": true,
+          "llamadasAlCargar": 1,
+          "llamadas4sDespues": 1,
+          "sinCiclo": true,
+          "ok": true
+        }
+      ],
+      "barraMovilAlCargar": [
+        {
+          "href": "/dashboard",
+          "texto": "Inicio",
+          "truncado": false
+        },
+        {
+          "href": "/administration/sla-board",
+          "texto": "Plazos",
+          "truncado": false
+        },
+        {
+          "href": "/administration/fixer-review",
+          "texto": "Revisión",
+          "truncado": false
+        },
+        {
+          "href": "/administration/properties/bulk-upload",
+          "texto": "Carga",
+          "truncado": false
+        }
+      ],
+      "barraMovil": {
+        "accesos": [
+          {
+            "href": "/dashboard",
+            "texto": "Inicio",
+            "truncado": false
+          },
+          {
+            "href": "/administration/sla-board",
+            "texto": "Plazos",
+            "truncado": false
+          },
+          {
+            "href": "/administration/fixer-review",
+            "texto": "Revisión",
+            "truncado": false
+          },
+          {
+            "href": "/administration/properties/bulk-upload",
+            "texto": "Carga",
+            "truncado": false
+          }
+        ],
+        "ok": true
+      }
+    }
+  },
+  "nota": "OWNER tomado de la segunda corrida (en la primera, el clic en Catálogo no alcanzó a navegar; no se repitió)."
+}
