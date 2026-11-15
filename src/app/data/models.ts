@@ -174,6 +174,20 @@ export interface AttemptRequest {
   instrument: SandboxPaymentInstrument;
 }
 
+export type AuditedResourceType = 'REPAIR_REQUEST' | 'REPAIR_PAYMENT' | 'RENTAL_CONTRACT' | 'JOB';
+
+export interface StatusChangeEntry {
+  id: string;
+  resourceType: AuditedResourceType;
+  resourceId: string;
+  previousStatus: string | null;
+  newStatus: string;
+  changedByUserId: string | null;
+  changedBySubject: string;
+  changedByDisplayName: string;
+  changedAt: string;
+}
+
 export interface FeedPieceResponse {
   id: string;
   fixerUserId: string;

@@ -257,6 +257,20 @@ export const CONTRACT_STATUS: Record<string, Label> = {
   RENEWED: label('Renovado', 'info')
 };
 
+export const AUDITED_RESOURCE_TYPE: Record<string, string> = {
+  REPAIR_REQUEST: 'Solicitud',
+  REPAIR_PAYMENT: 'Pago',
+  RENTAL_CONTRACT: 'Contrato',
+  JOB: 'Trabajo'
+};
+
+export const AUDIT_STATUS_BY_RESOURCE: Record<string, Record<string, Label>> = {
+  REPAIR_REQUEST: REQUEST_STATUS,
+  REPAIR_PAYMENT: PAYMENT_STATUS,
+  RENTAL_CONTRACT: CONTRACT_STATUS,
+  JOB: JOB_STATUS
+};
+
 export const PROPERTY_STATUS: Record<string, Label> = {
   DRAFT: label('Sin publicar'),
   PUBLISHED: label('Publicado', 'success'),
@@ -411,5 +425,4 @@ export function generateUuid(): string {
 
   throw new CryptographicSourceUnavailableError();
 }
-
 
