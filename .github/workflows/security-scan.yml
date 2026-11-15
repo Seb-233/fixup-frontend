@@ -1,0 +1,82 @@
+name: Security Scan (ZAP baseline)
+
+# SEC-04: construye el frontend, levanta el contenedor con nginx y ejecuta OWASP ZAP baseline (solo pasivo).
+# Corre en un runner alojado por GitHub (ubuntu-latest). NO usa el runner self-hosted de produccion
+# y no toca ninguna infraestructura de Fix&Rent.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "nginx/**"
+      - "Dockerfile"
+      - ".github/workflows/security-scan.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap-baseline:
+    name: Build frontend + ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -t fixup-frontend-scan .
+
+      - name: Start container and wait until it answers
+        run: |
+          docker run -d --name fixup-frontend-scan -p 8081:80 fixup-frontend-scan
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:8081; then exit 0; fi
+            sleep 2
+          done
+          docker logs fixup-frontend-scan
+          exit 1
+
+      - name: Response headers
+        run: |
+          mkdir -p zap-out
+          curl -sI http://localhost:8081 | tee zap-out/headers.txt
+
+      - name: ZAP baseline (passive)
+        run: |
+          chmod 777 zap-out
+          docker run --rm --network host -v "$PWD/zap-out:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://localhost:8081 -r report.html -J report.json -w report.md -I
+
+      - name: Summary and gate (fails on High alerts)
+        if: always()
+        run: |
+          if [ ! -f zap-out/report.json ]; then
+            echo "ZAP did not produce a report" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          {
+            echo "### ZAP baseline (passive) - frontend"
+            echo "| Risk | Alert types |"
+            echo "|---|---|"
+            for r in 3:High 2:Medium 1:Low 0:Informational; do
+              code=${r%%:*}; name=${r##*:}
+              n=$(jq "[.site[].alerts[] | select(.riskcode==\"$code\")] | length" zap-out/report.json)
+              echo "| $name | $n |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+          HIGH=$(jq '[.site[].alerts[] | select(.riskcode=="3")] | length' zap-out/report.json)
+          if [ "$HIGH" != "0" ]; then
+            echo "High alerts found: $HIGH"
+            exit 1
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: zap-out/
