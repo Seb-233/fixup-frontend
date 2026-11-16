@@ -142,15 +142,27 @@ if ($Grabar) {
 }
 
 Write-Host "Corriendo $Pruebas con etiqueta $Etiqueta, navegador a la vista." -ForegroundColor Cyan
-npx playwright test $Pruebas --grep $Etiqueta --headed
+# --trace on en vez del 'retain-on-failure' de la configuración: aquí interesa la traza de las
+# corridas que SÍ pasan, que es lo que se muestra. Con el valor por omisión, una corrida en verde
+# no deja ninguna y el visor queda sin nada que abrir.
+npx playwright test $Pruebas --grep $Etiqueta --headed --trace on
 $codigo = $LASTEXITCODE
 
 # ──────────────────────────────────────────────────────────── 5. qué mostrar después
 Paso '5. Qué abrir ahora'
 Write-Host '  Informe con capturas y pasos de cada prueba:'
 Write-Host '      npx playwright show-report' -ForegroundColor White
+
+# La ruta de la traza se imprime completa, no como plantilla: en una sustentación no se está para
+# adivinar nombres de carpeta con acentos y recortes.
+$traza = Get-ChildItem -Path (Join-Path $raiz 'test-results') -Filter 'trace.zip' -Recurse -ErrorAction SilentlyContinue |
+         Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Write-Host '  Visor de trazas, reproduce la corrida cuadro por cuadro con el DOM de cada momento:'
-Write-Host '      npx playwright show-trace test-results\<carpeta>\trace.zip' -ForegroundColor White
+if ($traza) {
+  Write-Host "      npx playwright show-trace `"$($traza.FullName)`"" -ForegroundColor White
+} else {
+  Write-Host '      (no se generó ninguna traza en esta corrida)' -ForegroundColor DarkGray
+}
 if ($Grabar) {
   Write-Host '  Videos de la corrida:'
   Write-Host '      test-results\<carpeta>\video.webm' -ForegroundColor White
