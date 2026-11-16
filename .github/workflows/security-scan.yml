@@ -80,3 +80,4 @@ jobs:
         with:
           name: zap-baseline-report
           path: zap-out/
+# corrida final SEC-04 con headers aplicados
