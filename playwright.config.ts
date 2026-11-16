@@ -11,11 +11,12 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
     channel: 'chrome',
     headless: true,
     viewport: { width: 1280, height: 720 },
-    trace: 'on-first-retry',
+    // Sin reintentos, 'on-first-retry' nunca guardaría nada: se conserva la traza de cada fallo.
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },
   projects: [

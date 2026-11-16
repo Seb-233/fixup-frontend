@@ -1,0 +1,152 @@
+name: E2E demo (navegación por rol)
+
+# Corre la suite de navegación y errores por rol contra un ambiente efímero y aislado:
+# backend con perfil demo y semilla sintética, PostgreSQL y almacenamiento S3 creados en el
+# propio runner. No usa secretos ni alcanza datos reales o de producción.
+on:
+  pull_request:
+    paths:
+      - "e2e/**"
+      - "playwright.config.ts"
+      - ".github/workflows/e2e-demo.yml"
+  workflow_dispatch:
+    inputs:
+      backend_ref:
+        description: "Rama o commit del backend"
+        default: "develop"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-demo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  navegacion-por-rol:
+    name: Navegación y errores por rol
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      database:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: fixup
+          POSTGRES_USER: fixup
+          POSTGRES_PASSWORD: e2e-solo-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixup -d fixup"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      E2E_DEMO: "1"
+      E2E_BASE_URL: http://localhost:4200
+      NAV_OUT: ${{ github.workspace }}/test-results/navegacion-por-rol
+
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: Seb-233/fixup-backend
+          ref: ${{ inputs.backend_ref || 'develop' }}
+          path: backend
+          persist-credentials: false
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Start S3 storage (SeaweedFS)
+        run: |
+          mkdir -p "$RUNNER_TEMP/s3"
+          cat > "$RUNNER_TEMP/s3/s3.json" <<'JSON'
+          {"identities":[{"name":"e2e","credentials":[{"accessKey":"e2e","secretKey":"e2e-solo-ci"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
+          JSON
+          docker run -d --name e2e-s3 -p 9000:8333 \
+            -v "$RUNNER_TEMP/s3/s3.json:/etc/seaweedfs/s3.json:ro" \
+            chrislusf/seaweedfs:latest server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/ || true)
+            [ "$code" = "403" ] && exit 0
+            sleep 2
+          done
+          echo "::error::El almacenamiento S3 no respondió"; docker logs e2e-s3 | tail -50; exit 1
+
+      - name: Build backend
+        working-directory: backend
+        run: ./mvnw -B -q -DskipTests package
+
+      - name: Start backend (perfil demo)
+        working-directory: backend
+        env:
+          SPRING_PROFILES_ACTIVE: demo
+          DATABASE_URL: jdbc:postgresql://localhost:5432/fixup
+          DATABASE_USERNAME: fixup
+          DATABASE_PASSWORD: e2e-solo-ci
+          FIXUP_SEED_ENABLED: "true"
+          FIXUP_GEOCODING_ENABLED: "false"
+          CORS_ALLOWED_ORIGINS: http://localhost:4200
+          FIXUP_STORAGE_ENDPOINT: http://localhost:9000
+          FIXUP_STORAGE_ACCESS_KEY: e2e
+          FIXUP_STORAGE_SECRET_KEY: e2e-solo-ci
+        run: |
+          nohup java -jar target/fixup-backend-*.jar --fixup.storage.auto-create-bucket=true > "$RUNNER_TEMP/backend.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/actuator/health && exit 0
+            sleep 3
+          done
+          echo "::error::El backend no arrancó"; tail -100 "$RUNNER_TEMP/backend.log"; exit 1
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Start frontend (ng serve con proxy a la API)
+        run: |
+          nohup npx ng serve --port 4200 > "$RUNNER_TEMP/frontend.log" 2>&1 &
+          for i in $(seq 1 90); do
+            curl -sf -o /dev/null http://localhost:4200/ && exit 0
+            sleep 3
+          done
+          echo "::error::El frontend no arrancó"; tail -100 "$RUNNER_TEMP/frontend.log"; exit 1
+
+      - name: Smoke (@smoke)
+        run: npx playwright test e2e/web/navegacion-por-rol.spec.ts --grep @smoke
+
+      - name: Suite completa (@completo)
+        run: npx playwright test e2e/web/navegacion-por-rol.spec.ts --grep @completo
+
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p test-results/logs
+          cp "$RUNNER_TEMP"/backend.log "$RUNNER_TEMP"/frontend.log test-results/logs/ 2>/dev/null || true
+          docker logs e2e-s3 > test-results/logs/s3.log 2>&1 || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-navegacion-por-rol
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
