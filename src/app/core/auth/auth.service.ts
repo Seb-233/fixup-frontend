@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { safeReturnUrl } from './return-url';
 import { Router } from '@angular/router';
 import { AuthService as Auth0Service, User } from '@auth0/auth0-angular';
 import { BehaviorSubject, Observable, catchError, combineLatest, distinctUntilChanged, filter, from, map, of, shareReplay, switchMap, take, tap, throwError } from 'rxjs';
@@ -112,10 +113,7 @@ export class AuthService {
   // Redirige al login de Auth0 preservando un target interno validado.
   // En Android la ventana se abre en el navegador del sistema (FR-UC-21).
   loginWithRedirect(targetUrl?: string): Observable<void> {
-    const safeTarget =
-      targetUrl && targetUrl.startsWith('/') && !targetUrl.startsWith('//')
-        ? targetUrl
-        : '/dashboard';
+    const safeTarget = safeReturnUrl(targetUrl) ?? '/dashboard';
 
     return this.auth0.loginWithRedirect({
       appState: { target: safeTarget },

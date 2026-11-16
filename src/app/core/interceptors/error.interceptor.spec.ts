@@ -65,6 +65,40 @@ describe('errorInterceptor', () => {
     }
   });
 
+  // Los orígenes ajenos ("//evil", "/\\evil") no se pueden poner en la barra de jsdom: los cubre
+  // return-url.spec, que es la función que usa el interceptor.
+  it.each(['/auth/login?returnUrl=/payments/1', '/'])(
+    'ante un 401 en %s no propaga un returnUrl en bucle',
+    async (path) => {
+      const original = window.location.pathname + window.location.search;
+      history.replaceState(null, '', path);
+      try {
+        await expect(
+          firstValueFrom(TestBed.runInInjectionContext(() => errorInterceptor(new HttpRequest('GET', '/x'), () => throwError(() => new HttpErrorResponse({ status: 401 })))))
+        ).rejects.toMatchObject({ status: 401 });
+        expect(routerNavigateSpy).toHaveBeenCalledWith(['/auth/login'], undefined);
+      } finally {
+        history.replaceState(null, '', original);
+      }
+    }
+  );
+
+  it('dos 401 seguidos (sesión vencida con varias peticiones) llevan al mismo returnUrl', async () => {
+    const original = window.location.pathname + window.location.search;
+    history.replaceState(null, '', '/payments/pay-1?id=12077206-1-2');
+    try {
+      for (let i = 0; i < 2; i++) {
+        await expect(
+          firstValueFrom(TestBed.runInInjectionContext(() => errorInterceptor(new HttpRequest('GET', '/x'), () => throwError(() => new HttpErrorResponse({ status: 401 })))))
+        ).rejects.toMatchObject({ status: 401 });
+      }
+      expect(routerNavigateSpy).toHaveBeenCalledTimes(2);
+      expect(routerNavigateSpy.mock.calls.every((c) => c[1]?.queryParams?.returnUrl === '/payments/pay-1?id=12077206-1-2')).toBe(true);
+    } finally {
+      history.replaceState(null, '', original);
+    }
+  });
+
   it('un 403 de una acción no cambia de pantalla ni cierra la sesión', async () => {
     userStore.setProfile({
       id: 'uuid-1',

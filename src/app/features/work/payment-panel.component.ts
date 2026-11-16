@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
@@ -32,6 +33,8 @@ interface PendingAttemptPayload {
 // - La pasarela simulada: POST /payments/{paymentId}/attempts con Idempotency-Key y refresco por GET.
 const WOMPI_POLL_MS = 3000;
 const WOMPI_MAX_POLLS = 10;
+// Mismo formato que acepta el backend; cualquier otra cosa en ?id= no se envía.
+const WOMPI_TRANSACTION_ID = /^[A-Za-z0-9-]{1,64}$/;
 
 @Component({
   selector: 'app-payment-panel',
@@ -55,7 +58,7 @@ const WOMPI_MAX_POLLS = 10;
         <app-icon name="info" />
         @if (wompi()?.enabled) {
           <span>
-            Pagos con Wompi{{ wompi()?.environment === 'sandbox' ? ' en ambiente de pruebas (sandbox): no se mueve dinero real' : '' }}.
+            Pagos con Wompi en ambiente de pruebas (sandbox): no se mueve dinero real.
             Tus datos de pago los recibe Wompi, nunca FixUp.
           </span>
         } @else {
@@ -218,6 +221,11 @@ export class PaymentPanelComponent {
   private wompiReturnHandled = false;
   private wompiStatusRequested = false;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  // Una sola confirmación a la vez; al salir de la página no queda nada pendiente (ni respuestas
+  // tardías que cambien el estado ni sondeos nuevos).
+  private confirmInFlight = false;
+  private destroyed = false;
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     effect(() => {
@@ -238,11 +246,19 @@ export class PaymentPanelComponent {
       }
       this.wompiReturnHandled = true;
       untracked(() => {
+        if (!WOMPI_TRANSACTION_ID.test(transactionId)) {
+          this.error.set('El enlace de regreso de Wompi no es válido. Si pagaste, la transacción aparecerá al verificar de nuevo desde Wompi.');
+          this.clearReturnParam();
+          return;
+        }
         this.loadWompiStatus();
         this.confirmWompi(p.paymentId, transactionId, 0);
       });
     });
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.stopPolling();
+    });
   }
 
   startPayment(): void {
@@ -259,7 +275,7 @@ export class PaymentPanelComponent {
     this.redirecting.set(true);
     this.error.set(null);
     const returnUrl = new URL(`payments/${current.paymentId}`, document.baseURI).toString();
-    this.api.wompiCheckout(current.paymentId, returnUrl).subscribe({
+    this.api.wompiCheckout(current.paymentId, returnUrl).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (session) => this.redirect(session.checkoutUrl),
       error: (failure) => {
         this.busy.set(false);
@@ -271,7 +287,7 @@ export class PaymentPanelComponent {
 
   verifyWompi(): void {
     const transactionId = this.wompiRetryId();
-    if (transactionId) {
+    if (transactionId && !this.confirmInFlight) {
       this.confirmWompi(this.payment().paymentId, transactionId, 0);
     }
   }
@@ -286,25 +302,32 @@ export class PaymentPanelComponent {
       return;
     }
     this.wompiStatusRequested = true;
-    this.api.wompiStatus().subscribe({
-      next: (status) => this.wompi.set(status),
+    this.api.wompiStatus().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      // Solo sandbox: si el backend informara otro ambiente, la opción no se ofrece.
+      next: (status) => this.wompi.set(status.enabled && status.environment === 'sandbox' ? status : { enabled: false }),
       error: () => this.wompi.set({ enabled: false })
     });
   }
 
   private confirmWompi(paymentId: string, transactionId: string, round: number): void {
     this.stopPolling();
+    if (this.destroyed || this.confirmInFlight) {
+      return;
+    }
+    this.confirmInFlight = true;
     this.wompiChecking.set(true);
     this.error.set(null);
-    this.api.wompiConfirm(paymentId, transactionId).subscribe({
+    // La verdad del pago la da la API (que consulta a Wompi): aquí solo se muestra lo que responde.
+    this.api.wompiConfirm(paymentId, transactionId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (result) => {
+        this.confirmInFlight = false;
         if (result.attempt) {
           this.lastAttempt.set(result.attempt);
         }
         if (result.transactionStatus === 'PENDING') {
           this.wompiPendingId.set(transactionId);
           this.wompiRetryId.set(transactionId);
-          if (round + 1 < WOMPI_MAX_POLLS) {
+          if (round + 1 < WOMPI_MAX_POLLS && !this.destroyed) {
             this.pollTimer = setTimeout(() => this.confirmWompi(paymentId, transactionId, round + 1), WOMPI_POLL_MS);
           } else {
             this.wompiChecking.set(false);
@@ -322,6 +345,7 @@ export class PaymentPanelComponent {
         this.refreshPayment(paymentId);
       },
       error: (failure) => {
+        this.confirmInFlight = false;
         this.wompiChecking.set(false);
         this.wompiPendingId.set(null);
         this.wompiRetryId.set(transactionId);

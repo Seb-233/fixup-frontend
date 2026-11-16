@@ -366,6 +366,77 @@ describe('PaymentPanelComponent con Wompi (INT-01)', () => {
     expect(fixture.componentInstance.wompiRetryId()).toBeNull();
   });
 
+
+  it('si el backend no informa el sandbox no ofrece Wompi (ningún flujo puede iniciar un pago real)', () => {
+    configure(null);
+    const fixture = render();
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'production' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.wompi()?.enabled).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Pagar con Wompi');
+    expect(fixture.nativeElement.textContent).toContain('Confirmar pago simulado');
+  });
+
+  it('un ?id= alterado no se envía al backend y se limpia de la URL', () => {
+    configure('../../admin"><script>');
+    const fixture = render();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('El enlace de regreso de Wompi no es válido');
+    backend.expectNone((r) => r.url.includes('/wompi/transactions/'));
+    backend.match(`${environment.apiOrigin}/payments/wompi`).forEach((r) => r.flush({ enabled: true, environment: 'sandbox' }));
+  });
+
+  it('el mismo regreso se verifica una sola vez aunque el pago se vuelva a pintar', () => {
+    configure('5-1-ONCE');
+    const fixture = render();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    const confirm = backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/5-1-ONCE`);
+    fixture.componentRef.setInput('payment', payment({ amount: 185000 }));
+    fixture.detectChanges();
+    fixture.componentInstance.verifyWompi();
+    backend.expectNone(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/5-1-ONCE`);
+    confirm.flush({ transactionId: '5-1-ONCE', transactionStatus: 'APPROVED', paymentStatus: 'APPROVED' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`).flush(JSON.stringify(payment({ status: 'APPROVED' })));
+  });
+
+  it('con PENDING persistente deja de consultar a los 10 intentos y ofrece verificar de nuevo', async () => {
+    vi.useFakeTimers();
+    configure('6-1-SLOW');
+    const fixture = render();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    const url = `${environment.apiOrigin}/payments/pay-1/wompi/transactions/6-1-SLOW`;
+    for (let round = 0; round < 10; round++) {
+      backend.expectOne(url).flush({ transactionId: '6-1-SLOW', transactionStatus: 'PENDING', paymentStatus: 'PENDING' });
+      await vi.advanceTimersByTimeAsync(3000);
+    }
+    backend.expectNone(url);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.wompiChecking()).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Wompi todavía no confirma la transacción 6-1-SLOW');
+    expect(fixture.nativeElement.textContent).toContain('Verificar de nuevo');
+
+    fixture.componentInstance.verifyWompi();
+    backend.expectOne(url).flush({ transactionId: '6-1-SLOW', transactionStatus: 'APPROVED', paymentStatus: 'APPROVED' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`).flush(JSON.stringify(payment({ status: 'APPROVED' })));
+  });
+
+  it('al salir de la página corta el sondeo y descarta la respuesta tardía', async () => {
+    vi.useFakeTimers();
+    configure('8-1-LEAVE');
+    const fixture = render();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    const url = `${environment.apiOrigin}/payments/pay-1/wompi/transactions/8-1-LEAVE`;
+    backend.expectOne(url).flush({ transactionId: '8-1-LEAVE', transactionStatus: 'PENDING', paymentStatus: 'PENDING' });
+    await vi.advanceTimersByTimeAsync(3000);
+    const late = backend.expectOne(url);
+
+    fixture.destroy();
+    expect(late.cancelled).toBe(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    backend.expectNone(url);
+  });
+
   it('muestra el motivo cuando Wompi rechaza la transacción', () => {
     configure('9-1-DECLINED');
     const fixture = render();

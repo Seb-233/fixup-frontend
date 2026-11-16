@@ -1,4 +1,5 @@
 import { HttpBackend, HttpClient } from '@angular/common/http';
+import { safeReturnUrl } from '../../core/auth/return-url';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -128,7 +129,7 @@ export class LoginPage implements OnInit {
   }
 
   login(): void {
-    const target = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';
+    const target = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')) ?? '/dashboard';
     this.auth.loginWithRedirect(target).subscribe();
   }
 
@@ -142,8 +143,7 @@ export class LoginPage implements OnInit {
           this.error.set('El servidor no pudo abrir la sesión de demostración. Revisa que el backend esté en marcha.');
           return;
         }
-        const target = this.route.snapshot.queryParamMap.get('returnUrl');
-        this.router.navigateByUrl(target && target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard');
+        this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')) ?? '/dashboard');
       },
       error: () => {
         this.busy.set(null);
