@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { KnownPaymentsService } from '../../data/known-payments';
-import { PaymentAttemptResult, PaymentDetail, SandboxPaymentInstrument, WompiStatus } from '../../data/models';
+import { PaymentAttemptResult, PaymentDetail, SandboxPaymentInstrument, WOMPI_SANDBOX, WompiCheckoutSession, WompiStatus } from '../../data/models';
 import { WorkApi } from '../../data/work.api';
 import {
   PAYMENT_METHOD,
@@ -35,6 +35,22 @@ const WOMPI_POLL_MS = 3000;
 const WOMPI_MAX_POLLS = 10;
 // Mismo formato que acepta el backend; cualquier otra cosa en ?id= no se envía.
 const WOMPI_TRANSACTION_ID = /^[A-Za-z0-9-]{1,64}$/;
+const WOMPI_CHECKOUT_ORIGIN = 'https://checkout.wompi.co';
+const WOMPI_TEST_KEY_PREFIX = 'pub_test_';
+
+/**
+ * Solo se navega a un checkout de pruebas: ambiente sandbox, la página de Wompi y una llave pública
+ * de pruebas. Con cualquier otra cosa el navegador no sale de FixUp, así el backend se equivoque.
+ */
+export function isSandboxCheckout(session: WompiCheckoutSession): boolean {
+  if (session.environment !== WOMPI_SANDBOX) return false;
+  try {
+    const url = new URL(session.checkoutUrl);
+    return url.origin === WOMPI_CHECKOUT_ORIGIN && (url.searchParams.get('public-key') ?? '').startsWith(WOMPI_TEST_KEY_PREFIX);
+  } catch {
+    return false;
+  }
+}
 
 @Component({
   selector: 'app-payment-panel',
@@ -267,7 +283,8 @@ export class PaymentPanelComponent {
   }
 
   payWithWompi(): void {
-    if (this.busy()) {
+    // Sin el sandbox confirmado por el backend no se pide ningún checkout, aunque alguien llame aquí.
+    if (this.busy() || !this.wompi()?.enabled) {
       return;
     }
     const current = this.payment();
@@ -276,7 +293,15 @@ export class PaymentPanelComponent {
     this.error.set(null);
     const returnUrl = new URL(`payments/${current.paymentId}`, document.baseURI).toString();
     this.api.wompiCheckout(current.paymentId, returnUrl).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (session) => this.redirect(session.checkoutUrl),
+      next: (session) => {
+        if (isSandboxCheckout(session)) {
+          this.redirect(session.checkoutUrl);
+          return;
+        }
+        this.busy.set(false);
+        this.redirecting.set(false);
+        this.error.set('El servidor no devolvió un checkout de pruebas de Wompi, así que no se abrió ningún pago. Usa la pasarela simulada.');
+      },
       error: (failure) => {
         this.busy.set(false);
         this.redirecting.set(false);
@@ -304,7 +329,7 @@ export class PaymentPanelComponent {
     this.wompiStatusRequested = true;
     this.api.wompiStatus().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       // Solo sandbox: si el backend informara otro ambiente, la opción no se ofrece.
-      next: (status) => this.wompi.set(status.enabled && status.environment === 'sandbox' ? status : { enabled: false }),
+      next: (status) => this.wompi.set(status.enabled && status.environment === WOMPI_SANDBOX ? status : { enabled: false }),
       error: () => this.wompi.set({ enabled: false })
     });
   }

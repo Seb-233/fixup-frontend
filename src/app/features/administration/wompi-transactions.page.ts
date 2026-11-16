@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { WompiTransactionView } from '../../data/models';
+import { map } from 'rxjs';
+import { WOMPI_SANDBOX, WompiTransactionView } from '../../data/models';
 import { WorkApi } from '../../data/work.api';
 import {
   PAYMENT_PURPOSE,
@@ -17,6 +18,9 @@ import { IconComponent } from '../../shared/ui/icon.component';
 import { LabelPipe, WhenPipe } from '../../shared/ui/pipes';
 import { EmptyStateComponent, LoadingComponent } from '../../shared/ui/states.component';
 import { StatusComponent } from '../../shared/ui/status.component';
+
+/** El backend informó un ambiente de Wompi distinto del de pruebas. */
+class UnsupportedWompiEnvironment extends Error {}
 
 interface Filter {
   from: string;
@@ -183,16 +187,33 @@ export class WompiTransactionsPage {
   readonly list = rxResource({
     params: () => this.filter(),
     stream: ({ params }) =>
-      this.api.wompiTransactions({
-        from: params.from || undefined,
-        until: params.until || undefined,
-        status: params.status,
-        page: params.page,
-        size: PAGE_SIZE
-      })
+      this.api
+        .wompiTransactions({
+          from: params.from || undefined,
+          until: params.until || undefined,
+          status: params.status,
+          page: params.page,
+          size: PAGE_SIZE
+        })
+        .pipe(
+          map((list) => {
+            // Solo sandbox: una lista de otro ambiente no se muestra.
+            if (list.environment !== WOMPI_SANDBOX) throw new UnsupportedWompiEnvironment();
+            return list;
+          })
+        )
   });
 
-  readonly failure = computed(() => errorMessage(this.list.error(), 'Wompi no respondió. Intenta de nuevo en un momento.'));
+  readonly failure = computed(() => {
+    const error = this.list.error();
+    if (error instanceof UnsupportedWompiEnvironment || error?.cause instanceof UnsupportedWompiEnvironment) {
+      return 'El servidor respondió con un ambiente de Wompi que no es el de pruebas, así que no se muestran sus transacciones.';
+    }
+    const status = (error as { status?: number } | undefined)?.status ?? (error?.cause as { status?: number } | undefined)?.status;
+    if (status === 401) return 'Tu sesión terminó. Vuelve a ingresar para ver las transacciones.';
+    if (status === 403) return 'Solo la administración de la plataforma puede ver las transacciones de Wompi.';
+    return errorMessage(error, 'Wompi no respondió. Intenta de nuevo en un momento.');
+  });
 
   readonly approved = computed(() => {
     const items = this.list.hasValue() ? this.list.value().items.filter((tx) => tx.status === 'APPROVED') : [];

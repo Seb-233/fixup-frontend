@@ -127,4 +127,37 @@ describe('WompiTransactionsPage (INT-01)', () => {
     expect(page.failure()).not.toContain('WOMPI_NOT_CONFIGURED');
     expect(page.failure().length).toBeGreaterThan(10);
   });
+
+  it.each([
+    [401, 'Tu sesión terminó'],
+    [403, 'Solo la administración de la plataforma']
+  ])('con un %i no muestra transacciones y dice por qué', async (status, message) => {
+    next = () => throwError(() => new HttpErrorResponse({ status, error: { code: 'FORBIDDEN' } }));
+    await render();
+    expect(text()).toContain(message);
+    expect((fixture.nativeElement as HTMLElement).querySelector('table')).toBeNull();
+  });
+
+  it('una lista que no viene del sandbox no se muestra', async () => {
+    next = () => of({ ...list([tx({})]), environment: 'production' });
+    await render();
+    expect(text()).toContain('no es el de pruebas');
+    expect(text()).not.toContain('12077206-1-1');
+    expect((fixture.nativeElement as HTMLElement).querySelector('table')).toBeNull();
+  });
+
+  it('si falla después de haber mostrado una lista, la lista anterior deja de verse', async () => {
+    next = () => of(list([tx({})]));
+    await render();
+    expect(text()).toContain('12077206-1-1');
+
+    next = () => throwError(() => new HttpErrorResponse({ status: 503, error: { code: 'PAYMENT_GATEWAY_UNAVAILABLE' } }));
+    page.go(2);
+    TestBed.tick();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(text()).not.toContain('12077206-1-1');
+    expect(text()).toContain('Reintentar');
+  });
 });

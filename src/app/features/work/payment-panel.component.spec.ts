@@ -250,6 +250,7 @@ describe('PaymentPanelComponent digital', () => {
 
 describe('PaymentPanelComponent con Wompi (INT-01)', () => {
   let backend: HttpTestingController;
+  const SANDBOX_CHECKOUT = 'https://checkout.wompi.co/p/?public-key=pub_test_abc123&currency=COP&amount-in-cents=18500000&reference=FIX-PAY-001-ABCD1234';
 
   const configure = (transactionId: string | null) => {
     sessionStorage.clear();
@@ -302,10 +303,10 @@ describe('PaymentPanelComponent con Wompi (INT-01)', () => {
     expect(checkout.request.body.returnUrl).toBe(new URL('payments/pay-1', document.baseURI).toString());
     checkout.flush({
       paymentId: 'pay-1', reference: 'FIX-PAY-001-ABCD1234', amountInCents: 18500000, currency: 'COP',
-      environment: 'sandbox', checkoutUrl: 'https://checkout.wompi.co/p/?reference=FIX-PAY-001-ABCD1234'
+      environment: 'sandbox', checkoutUrl: SANDBOX_CHECKOUT
     });
 
-    expect(redirect).toHaveBeenCalledWith('https://checkout.wompi.co/p/?reference=FIX-PAY-001-ABCD1234');
+    expect(redirect).toHaveBeenCalledWith(SANDBOX_CHECKOUT);
   });
 
   it('sin llaves en el backend solo ofrece la pasarela simulada', () => {
@@ -376,6 +377,111 @@ describe('PaymentPanelComponent con Wompi (INT-01)', () => {
     expect(fixture.componentInstance.wompi()?.enabled).toBe(false);
     expect(fixture.nativeElement.textContent).not.toContain('Pagar con Wompi');
     expect(fixture.nativeElement.textContent).toContain('Confirmar pago simulado');
+  });
+
+  it.each([
+    ['production', { enabled: true, environment: 'production' }],
+    ['un ambiente desconocido', { enabled: true, environment: 'staging' }],
+    ['sin ambiente', { enabled: true }],
+    ['apagado', { enabled: false, environment: 'sandbox' }]
+  ])('con Wompi %s no aparece «Pagar con Wompi» ni se puede ejecutar', (_name, status) => {
+    configure(null);
+    const fixture = render();
+    const redirect = vi.spyOn(fixture.componentInstance, 'redirect').mockImplementation(() => undefined);
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush(status);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Pagar con Wompi');
+
+    // Aunque algo llame al método directamente, no sale ninguna petición de checkout.
+    fixture.componentInstance.payWithWompi();
+    backend.expectNone(`${environment.apiOrigin}/payments/pay-1/wompi/checkout`);
+    expect(redirect).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Confirmar pago simulado');
+  });
+
+  it.each([
+    ['dice ser de producción', { environment: 'production', checkoutUrl: SANDBOX_CHECKOUT }],
+    ['trae una llave pública de producción', { environment: 'sandbox', checkoutUrl: 'https://checkout.wompi.co/p/?public-key=pub_prod_abc123&reference=X' }],
+    ['no trae llave pública', { environment: 'sandbox', checkoutUrl: 'https://checkout.wompi.co/p/?reference=X' }],
+    ['apunta a otro sitio', { environment: 'sandbox', checkoutUrl: 'https://checkout.wompi.co.evil.example/p/?public-key=pub_test_abc123' }],
+    ['no es una URL', { environment: 'sandbox', checkoutUrl: 'javascript:alert(1)' }]
+  ])('si el checkout que devuelve el backend %s, el navegador no sale de FixUp', (_name, session) => {
+    configure(null);
+    const fixture = render();
+    const redirect = vi.spyOn(fixture.componentInstance, 'redirect').mockImplementation(() => undefined);
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+
+    fixture.componentInstance.payWithWompi();
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/checkout`).flush({
+      paymentId: 'pay-1', reference: 'FIX-PAY-001-ABCD1234', amountInCents: 18500000, currency: 'COP', ...session
+    });
+    fixture.detectChanges();
+
+    expect(redirect).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('no se abrió ningún pago');
+    expect(fixture.componentInstance.busy()).toBe(false);
+  });
+
+  it.each([
+    [503, 'PAYMENT_GATEWAY_UNAVAILABLE'],
+    [409, 'PAYMENT_ALREADY_APPROVED'],
+    [403, 'FORBIDDEN']
+  ])('si abrir el checkout responde %i no navega, lo explica y deja reintentar', (status, code) => {
+    configure(null);
+    const fixture = render();
+    const redirect = vi.spyOn(fixture.componentInstance, 'redirect').mockImplementation(() => undefined);
+    fixture.componentInstance.startPayment();
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+
+    fixture.componentInstance.payWithWompi();
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/checkout`)
+      .flush({ status, code }, { status, statusText: 'Error' });
+    fixture.detectChanges();
+
+    expect(redirect).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.error()).toBeTruthy();
+    expect(fixture.componentInstance.busy()).toBe(false);
+  });
+
+  it.each([
+    [403, 'FORBIDDEN'],
+    [404, 'PAYMENT_NOT_FOUND'],
+    [409, 'WOMPI_PAYMENT_MISMATCH']
+  ])('al volver con la sesión de otra persona (%i) no muestra el pago como aprobado', (status, code) => {
+    configure('1234-1610641025-49201');
+    let paid: PaymentDetail | undefined;
+    const fixture = render();
+    fixture.componentInstance.paid.subscribe((p) => (paid = p));
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/1234-1610641025-49201`)
+      .flush({ status, code }, { status, statusText: 'Error' });
+    fixture.detectChanges();
+
+    // La interfaz no decide nada: sin confirmación del backend no hay aprobado ni se refresca el pago.
+    backend.expectNone(`${environment.apiOrigin}/payments/pay-1`);
+    expect(paid).toBeUndefined();
+    expect(fixture.componentInstance.lastAttempt()).toBeNull();
+    expect(fixture.componentInstance.error()).toBeTruthy();
+    expect(fixture.componentInstance.wompiChecking()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Pago aprobado');
+  });
+
+  it('una respuesta APPROVED de Wompi con el pago todavía sin aprobar en FixUp no se muestra como aprobado', () => {
+    configure('7-1-X');
+    let paid: PaymentDetail | undefined;
+    const fixture = render();
+    fixture.componentInstance.paid.subscribe((p) => (paid = p));
+    backend.expectOne(`${environment.apiOrigin}/payments/wompi`).flush({ enabled: true, environment: 'sandbox' });
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1/wompi/transactions/7-1-X`).flush({
+      transactionId: '7-1-X', transactionStatus: 'APPROVED', paymentStatus: 'PENDING'
+    });
+    // El estado que queda en pantalla es el que devuelve GET /payments/{id}, no el de la transacción.
+    backend.expectOne(`${environment.apiOrigin}/payments/pay-1`).flush(JSON.stringify(payment({ status: 'PENDING' })));
+
+    expect(paid?.status).toBe('PENDING');
+    expect(fixture.componentInstance.lastFailure()).toBeTruthy();
   });
 
   it('un ?id= alterado no se envía al backend y se limpia de la URL', () => {

@@ -47,7 +47,7 @@ export interface WompiControllerServiceInterface {
 
     /**
      * Wompi event webhook (transaction.updated)
-     * Public. Authenticity comes from the SHA-256 checksum signed with the events secret; the transaction is then read again from the Wompi API.
+     * Public. Authenticity comes from the SHA-256 checksum signed with the sandbox events secret; the transaction is then read again from the Wompi API and applied as the user who opened the checkout. 200 means the event was applied or cannot be applied by retrying (not a FixUp reference, payer no longer authorized, amount mismatch); 503 asks Wompi to send it again.
      * @endpoint post /payments/wompi/events
      * @param body 
      * @param xEventChecksum 
@@ -55,15 +55,15 @@ export interface WompiControllerServiceInterface {
     event(body: string, xEventChecksum?: string, extraHttpRequestParams?: any): Observable<{}>;
 
     /**
-     * Tell whether the Wompi gateway is configured and in which environment
-     * 
+     * Tell whether the Wompi sandbox gateway is configured
+     * environment is always sandbox when enabled; other keys leave the gateway disabled.
      * @endpoint get /payments/wompi
      */
     status(extraHttpRequestParams?: any): Observable<WompiStatus>;
 
     /**
      * List the merchant\&#39;s Wompi transactions reconciled with FixUp payments
-     * Platform administrators only. Reads the Wompi API with the private key (sandbox or production, per the configured keys). Dates are inclusive, default to the last 30 days and span at most 366 days. status is APPROVED (default), DECLINED, VOIDED, ERROR, PENDING or ALL. Buyer data stays in Wompi.
+     * Platform administrators only. Reads the Wompi sandbox API with the private test key (sandbox is the only supported environment). Dates are inclusive, default to the last 30 days and span at most 366 days. status is APPROVED (default), DECLINED, VOIDED, ERROR, PENDING or ALL. Buyer data stays in Wompi.
      * @endpoint get /payments/wompi/transactions
      * @param from 
      * @param until 

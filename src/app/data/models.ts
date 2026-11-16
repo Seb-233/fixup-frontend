@@ -177,10 +177,13 @@ export interface AttemptRequest {
 }
 
 // INT-01: pasarela Wompi. El cliente generado las declara con todos los campos opcionales; aquí
-// se fijan los que el backend siempre envía.
+// se fijan los que el backend siempre envía. `environment` es el texto que manda el backend: el
+// único valor que la interfaz acepta es 'sandbox'; cualquier otro se trata como Wompi apagado.
+export const WOMPI_SANDBOX = 'sandbox';
+
 export interface WompiStatus {
   enabled: boolean;
-  environment?: 'sandbox' | 'production' | null;
+  environment?: string | null;
 }
 
 export interface WompiCheckoutSession {
@@ -188,7 +191,7 @@ export interface WompiCheckoutSession {
   reference: string;
   amountInCents: number | bigint;
   currency: string;
-  environment: 'sandbox' | 'production';
+  environment: string;
   checkoutUrl: string;
 }
 
@@ -225,7 +228,7 @@ export interface WompiTransactionView {
 }
 
 export interface WompiTransactionList {
-  environment: 'sandbox' | 'production';
+  environment: string;
   from: string;
   until: string;
   status: WompiTransactionStatus | 'ALL';
