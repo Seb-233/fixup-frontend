@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { safeReturnUrl } from '../../core/auth/return-url';
 import { ActivatedRoute, Router } from '@angular/router';
 import { filter, take } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -42,7 +43,7 @@ export class CallbackPage implements OnInit {
       }
       this.auth.appState$.pipe(take(1)).subscribe((state) => {
         const raw = state?.target || params.get('returnUrl');
-        const target = raw && raw.startsWith('/') && !raw.startsWith('//') && raw !== '/auth/select-role' ? raw : '/dashboard';
+        const target = safeReturnUrl(raw) ?? '/dashboard';
         this.router.navigateByUrl(target, { replaceUrl: true });
       });
     });

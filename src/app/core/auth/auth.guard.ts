@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { filter, map, switchMap, take, of } from 'rxjs';
 import { AuthService } from './auth.service';
 import { CurrentUserStore } from './current-user.store';
+import { safeReturnUrl } from './return-url';
 
 // Guard de navegación para proteger rutas privadas
 export const authGuard: CanActivateFn = (_route, state) => {
@@ -27,10 +28,7 @@ export const authGuard: CanActivateFn = (_route, state) => {
       }
 
       // Sanitizar returnUrl: únicamente rutas internas válidas
-      const targetUrl =
-        state.url && state.url.startsWith('/') && !state.url.startsWith('//')
-          ? state.url
-          : '/dashboard';
+      const targetUrl = safeReturnUrl(state.url) ?? '/dashboard';
 
       router.navigate(['/auth/login'], {
         queryParams: { returnUrl: targetUrl }

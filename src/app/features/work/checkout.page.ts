@@ -21,7 +21,7 @@ import { PaymentPanelComponent } from './payment-panel.component';
       <header class="page-header">
         <div>
           <h1>Pasarela de pago digital</h1>
-          <p class="lede">Simulación académica: no se mueve dinero ni se piden datos bancarios reales. Selecciona tu instrumento simulado (Tarjeta, PSE o Nequi).</p>
+          <p class="lede">Paga el servicio con Wompi en ambiente de pruebas o con la pasarela simulada. No se mueve dinero real y FixUp nunca recibe tus datos bancarios.</p>
         </div>
         <div class="actions">
           @if (payment.hasValue() && payment.value().requestId) {

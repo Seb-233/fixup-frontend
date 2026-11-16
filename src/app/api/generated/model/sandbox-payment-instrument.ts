@@ -13,6 +13,7 @@ export const SandboxPaymentInstrument = {
     SandboxCard: 'SANDBOX_CARD',
     SandboxPse: 'SANDBOX_PSE',
     SandboxNequi: 'SANDBOX_NEQUI',
+    Wompi: 'WOMPI',
 } as const;
 export type SandboxPaymentInstrument = typeof SandboxPaymentInstrument[keyof typeof SandboxPaymentInstrument];
 

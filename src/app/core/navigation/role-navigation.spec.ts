@@ -53,7 +53,9 @@ describe('Navegación por rol', () => {
   });
 
   it('el administrador revisa técnicos y plazos', () => {
-    expect(paths('PLATFORM_ADMIN')).toEqual(expect.arrayContaining(['/administration/fixer-review', '/administration/sla-board']));
+    expect(paths('PLATFORM_ADMIN')).toEqual(
+      expect.arrayContaining(['/administration/fixer-review', '/administration/sla-board', '/administration/wompi-transactions'])
+    );
   });
 
   it('un técnico sin verificar ve sus destinos bloqueados apuntando a la verificación', () => {
