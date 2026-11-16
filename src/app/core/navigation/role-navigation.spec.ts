@@ -63,6 +63,13 @@ describe('Navegación por rol', () => {
     );
   });
 
+  it('solo el administrador tiene la conciliación de pagos en el menú (SAF-01)', () => {
+    for (const role of ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] as const) {
+      expect(paths(role)).not.toContain('/administration/payments/reconciliation');
+      expect(paths(role, false)).not.toContain('/administration/payments/reconciliation');
+    }
+  });
+
   it('un técnico sin verificar ve sus destinos bloqueados apuntando a la verificación', () => {
     const items = getNavigationForRole('FIXER', false);
     const gated = items.filter((item) => item.requiresVerification);

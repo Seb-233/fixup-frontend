@@ -254,17 +254,56 @@ export interface PortfolioFeedResponse {
   hasMore: boolean;
 }
 
-/** Safety (SAF-01): conciliación del libro de pagos. Los montos son pesos enteros. */
+/**
+ * Safety (SAF-01): conciliación del libro de pagos. Mismo contrato que `LedgerReconciliation` en el
+ * OpenAPI del backend. Los importes son pesos colombianos enteros, sin decimales ni redondeo; los
+ * que no caben en un `number` exacto llegan como `bigint` (ver `losslessParse`).
+ */
+export type LedgerAmount = number | bigint;
+
 export interface LedgerTotals {
-  collected: number | bigint;
-  earningsGross: number | bigint;
-  commission: number | bigint;
-  net: number | bigint;
-  heldNet: number | bigint;
-  availableNet: number | bigint;
-  paidOutNet: number | bigint;
-  payouts: number | bigint;
-  outstandingDebts: number | bigint;
+  collected: LedgerAmount;
+  serviceCollected: LedgerAmount;
+  debtCollected: LedgerAmount;
+  earningsGross: LedgerAmount;
+  serviceEarningsGross: LedgerAmount;
+  debtEarningsGross: LedgerAmount;
+  legacyEarningsGross: LedgerAmount;
+  commission: LedgerAmount;
+  net: LedgerAmount;
+  heldNet: LedgerAmount;
+  availableNet: LedgerAmount;
+  paidOutNet: LedgerAmount;
+  payouts: LedgerAmount;
+  composedPayouts: LedgerAmount;
+  legacyPayouts: LedgerAmount;
+  payoutEntriesNet: LedgerAmount;
+  legacyPaidOutNet: LedgerAmount;
+  paidDebts: LedgerAmount;
+  outstandingDebts: LedgerAmount;
+  cashAgreed: LedgerAmount;
+  cashReceived: LedgerAmount;
+  cashOutstanding: LedgerAmount;
+}
+
+/** Filas que el backend leyó en cada tabla durante la corrida. */
+export interface LedgerScanned {
+  payments: number;
+  paymentAttempts: number;
+  earnings: number;
+  payouts: number;
+  payoutEntries: number;
+  debts: number;
+  cashSettlements: number;
+}
+
+/** Una ecuación de conservación: `holds` es `expected === actual`. */
+export interface LedgerBalance {
+  code: string;
+  description: string;
+  expected: LedgerAmount;
+  actual: LedgerAmount;
+  holds: boolean;
 }
 
 export interface LedgerFinding {
@@ -279,5 +318,7 @@ export interface LedgerReconciliation {
   consistent: boolean;
   balanced: boolean;
   totals: LedgerTotals;
+  scanned: LedgerScanned;
+  balances: LedgerBalance[];
   findings: LedgerFinding[];
 }

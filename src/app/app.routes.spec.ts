@@ -152,4 +152,13 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(expensesRoute).toBeDefined();
     expect(expensesRoute?.data?.['roles']).toEqual(['OWNER', 'REAL_ESTATE_MANAGER']);
   });
+
+  it('11. /administration/payments/reconciliation (SAF-01) es solo de PLATFORM_ADMIN y carga diferida', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const route = privateLayoutRoute?.children?.find((child) => child.path === 'administration/payments/reconciliation');
+
+    expect(route).toBeDefined();
+    expect(route?.data?.['roles']).toEqual(['PLATFORM_ADMIN']);
+    expect(route?.loadComponent).toBeDefined();
+  });
 });
