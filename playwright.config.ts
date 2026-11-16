@@ -29,7 +29,10 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     // Sin reintentos, 'on-first-retry' nunca guardaría nada: se conserva la traza de cada fallo.
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure'
+    screenshot: 'only-on-failure',
+    // Apagado salvo que se pida. PLAYWRIGHT_VIDEO=on graba la corrida completa, que sirve como
+    // respaldo para una demostración en vivo: si el ambiente no levanta, se muestra el video.
+    video: (process.env.PLAYWRIGHT_VIDEO as 'on' | 'off' | 'retain-on-failure' | undefined) ?? 'off'
   },
   projects: [
     {
