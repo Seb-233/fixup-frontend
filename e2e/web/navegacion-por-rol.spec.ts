@@ -1,159 +1,268 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-// E2-S2 · Validar navegación y errores por rol.
-// Recorre el menú completo de cada rol en escritorio, la barra inferior en móvil, rutas de otros roles,
-// rutas inexistentes, enlaces viejos de notificaciones y fallas simuladas del servidor (500 y 503).
-// Los resultados y capturas van a test-results/ (ignorado por git) salvo que NAV_OUT indique otra carpeta.
-const OUT = process.env.NAV_OUT ?? path.resolve('test-results/navegacion-por-rol');
-fs.mkdirSync(path.join(OUT, 'capturas'), { recursive: true });
+// E2-S2 · Navegación y errores por rol (RNF-14 usabilidad, RNF-17 comprobabilidad).
+//
+// Usa las cuentas de demostración y la semilla del perfil `demo` del backend, así que solo
+// corre cuando se pide explícitamente (E2E_DEMO=1) y contra un host autorizado: localhost por
+// defecto, o los que liste E2E_DEMO_HOSTS. Nunca debe apuntar a producción ni a un ambiente
+// con datos reales.
+//
+//   @smoke     → un rol, rápido: entrada, Inicio, una ruta ajena y una inexistente.
+//   @completo  → los cinco roles: menú entero, rutas ajenas, redirecciones, 500/503 con
+//                recuperación y barra móvil.
+//
+// Cada comprobación es una aserción de Playwright: si algo no cumple, la prueba falla.
+// El JSON que se adjunta es evidencia complementaria, no el veredicto.
 
+const DEMO_ENABLED = process.env.E2E_DEMO === '1';
+const ALLOWED_HOSTS = (process.env.E2E_DEMO_HOSTS ?? 'localhost,127.0.0.1')
+  .split(',')
+  .map((h) => h.trim())
+  .filter(Boolean);
+const OUT = process.env.NAV_OUT ?? path.resolve('test-results/navegacion-por-rol');
+
+// Rutas de la API que sirve el mismo origen de la app (proxy de ng serve o de nginx).
 const API = /^\/(auth|payments|requests|quotations|jobs|media|fixers|properties|locations|contracts|notifications|remodelings|administration|management|visits|ratings|analytics)(\/|$|\?)/;
+// Llamadas que el marco hace en cualquier pantalla y que no son datos de la pantalla.
+const SHELL_CALLS = /^\/(auth|notifications)(\/|$|\?)/;
+const ACCESS_DENIED = '/auth/access-denied';
+const ALERT = '.alert-danger:visible, .error:visible';
+const RETRY = /reintentar|volver a intentar/i;
 
 type Role = 'OWNER' | 'TENANT' | 'FIXER' | 'REAL_ESTATE_MANAGER' | 'PLATFORM_ADMIN';
-const ACCOUNTS: { role: Role; name: string; slug: string; foreign: string[] }[] = [
-  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me'] },
-  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management'] },
-  { role: 'FIXER', name: 'Jhon Fredy Cárdenas Ospina', slug: 'tecnico', foreign: ['/properties', '/administration/fixer-review', '/expenses'] },
-  { role: 'REAL_ESTATE_MANAGER', name: 'Inmobiliaria Cordillera', slug: 'inmobiliaria', foreign: ['/administration/sla-board', '/jobs/me', '/fixers/portfolio'] },
-  { role: 'PLATFORM_ADMIN', name: 'Soporte Fix&Rent', slug: 'administrador', foreign: ['/requests/new', '/payments/earnings', '/properties/new'] }
+interface Account {
+  role: Role;
+  name: string;
+  slug: string;
+  /** Rutas de otros roles: deben terminar en «Acceso denegado» sin pedir datos. */
+  foreign: string[];
+  /** Pantalla en la que se simulan las fallas del servidor. */
+  failureTarget: string;
+  /** Destino esperado del enlace viejo /visits/:id. */
+  legacyVisits: string;
+  /**
+   * Defecto conocido y trazable: rótulos de la barra móvil que se cortan a 375 px.
+   * Mientras esté abierto, la comprobación se marca como fallo esperado (test.fail):
+   * si alguien lo arregla, la prueba avisa para quitar la excepción.
+   */
+  knownTruncatedLabels?: string[];
+}
+
+const KNOWN_TRUNCATION = 'Defecto conocido E2-S2-D1 (issue #53): rótulos cortados en la barra móvil, falta shortLabel en role-navigation.ts';
+
+const ACCOUNTS: Account[] = [
+  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me'], failureTarget: '/properties', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management'], failureTarget: '/contracts', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'FIXER', name: 'Jhon Fredy Cárdenas Ospina', slug: 'tecnico', foreign: ['/properties', '/administration/fixer-review', '/expenses'], failureTarget: '/requests/inbox', legacyVisits: '/visits', knownTruncatedLabels: ['Disponibles'] },
+  { role: 'REAL_ESTATE_MANAGER', name: 'Inmobiliaria Cordillera', slug: 'inmobiliaria', foreign: ['/administration/sla-board', '/jobs/me', '/fixers/portfolio'], failureTarget: '/management', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'PLATFORM_ADMIN', name: 'Soporte Fix&Rent', slug: 'administrador', foreign: ['/requests/new', '/payments/earnings', '/properties/new'], failureTarget: '/administration/sla-board', legacyVisits: ACCESS_DENIED }
 ];
 
-interface PageCheck { href: string; label: string; finalUrl: string; h1: string; alerts: string[]; apiErrors: string[]; consoleErrors: string[]; ms: number; ok: boolean }
-const report: Record<string, unknown> = { fecha: new Date().toISOString(), roles: {} };
+test.skip(!DEMO_ENABLED, 'Requiere E2E_DEMO=1 y un backend con perfil demo en un ambiente de pruebas autorizado.');
 
-function watch(page: Page, appOrigin: string) {
-  const apiErrors: string[] = [];
-  const consoleErrors: string[] = [];
-  page.on('response', (r) => {
-    const u = new URL(r.url());
-    if (u.origin === appOrigin && API.test(u.pathname) && r.status() >= 400) apiErrors.push(`${r.status()} ${r.request().method()} ${u.pathname}`);
+test.beforeEach(async ({ baseURL }) => {
+  const host = new URL(baseURL ?? 'http://localhost').hostname;
+  if (!ALLOWED_HOSTS.includes(host)) {
+    throw new Error(`Host no autorizado para pruebas con cuentas demo: ${host}. Agrégalo a E2E_DEMO_HOSTS solo si es un ambiente de pruebas.`);
+  }
+});
+
+/** Observa la API del mismo origen: errores, llamadas de datos y peticiones en curso. */
+function watchApi(page: Page, appOrigin: string) {
+  const errors: string[] = [];
+  const dataCalls: string[] = [];
+  let pending = 0;
+  const isApi = (url: string) => {
+    const u = new URL(url);
+    return u.origin === appOrigin && API.test(u.pathname) ? u : null;
+  };
+  page.on('request', (r) => {
+    const u = isApi(r.url());
+    if (!u || !['xhr', 'fetch'].includes(r.resourceType())) return;
+    pending++;
+    if (!SHELL_CALLS.test(u.pathname)) dataCalls.push(`${r.method()} ${u.pathname}`);
   });
-  page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
+  const done = (r: { url(): string; resourceType(): string }) => {
+    if (isApi(r.url()) && ['xhr', 'fetch'].includes(r.resourceType())) pending = Math.max(0, pending - 1);
+  };
+  page.on('requestfinished', done);
+  page.on('requestfailed', done);
+  page.on('response', (r) => {
+    const u = isApi(r.url());
+    if (u && r.status() >= 400) errors.push(`${r.status()} ${r.request().method()} ${u.pathname}`);
+  });
   return {
-    take() {
-      const out = { apiErrors: [...apiErrors], consoleErrors: [...consoleErrors] };
-      apiErrors.length = 0; consoleErrors.length = 0;
-      return out;
+    reset() { errors.length = 0; dataCalls.length = 0; },
+    errors: () => [...errors],
+    dataCalls: () => [...dataCalls],
+    /** Espera explícita a que no queden llamadas a la API en curso; falla si no termina. */
+    async idle(message: string) {
+      await expect.poll(() => pending, { message: `${message}: quedaron llamadas a la API sin terminar`, timeout: 15_000 }).toBe(0);
     }
   };
 }
 
-async function settle(page: Page) {
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
-  await page.waitForTimeout(300);
-}
-
-async function login(page: Page, name: string) {
+async function login(page: Page, account: Account) {
   await page.goto('/login');
-  await page.locator('button.demo-row', { hasText: name }).click();
-  await page.waitForURL('**/dashboard', { timeout: 20000 });
-  await settle(page);
+  await page.locator('button.demo-row', { hasText: account.name }).click();
+  await expect(page, `${account.slug}: el ingreso de demostración debe llevar a Inicio`).toHaveURL(/\/dashboard$/, { timeout: 20_000 });
+  await expect(page.locator('main h1, .page-header h1').first()).toBeVisible();
 }
 
-async function visibleAlerts(page: Page) {
-  return page.locator('.alert-danger:visible, .error:visible').allInnerTexts();
+async function capture(page: Page, testInfo: TestInfo, name: string) {
+  const body = await page.screenshot({ type: 'jpeg', quality: 70 });
+  await testInfo.attach(name, { body, contentType: 'image/jpeg' });
+  fs.mkdirSync(path.join(OUT, 'capturas'), { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'capturas', `${name}.jpg`), body);
 }
+
+async function saveEvidence(testInfo: TestInfo, name: string, data: unknown) {
+  const body = JSON.stringify(data, null, 2);
+  await testInfo.attach(`${name}.json`, { body, contentType: 'application/json' });
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, `${name}.json`), body);
+}
+
+const exact = (href: string) => new RegExp(`${href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`);
+
+test('smoke · propietario entra, ve Inicio y es bloqueado fuera de su rol', { tag: '@smoke' }, async ({ page, baseURL }) => {
+  const owner = ACCOUNTS[0];
+  const api = watchApi(page, new URL(baseURL!).origin);
+  await login(page, owner);
+  await expect(page.locator('aside.sidebar nav a').first(), 'el menú lateral debe tener enlaces').toBeVisible();
+
+  api.reset();
+  await page.goto(owner.foreign[0]);
+  await expect(page, 'una ruta de otro rol debe terminar en «Acceso denegado»').toHaveURL(exact(ACCESS_DENIED));
+  expect(api.dataCalls(), 'una ruta ajena no debe pedir datos a la API').toEqual([]);
+
+  await page.goto('/esta-ruta-no-existe');
+  await expect(page, 'una ruta inexistente debe llevar a Inicio').toHaveURL(/\/dashboard$/);
+});
 
 for (const account of ACCOUNTS) {
-  test(`navegación y errores · ${account.slug}`, async ({ page }) => {
-    test.setTimeout(240000);
-    const w = watch(page, new URL(test.info().project.use.baseURL ?? 'http://localhost:4200').origin);
-    const roleReport: Record<string, unknown> = {};
-    (report.roles as Record<string, unknown>)[account.role] = roleReport;
+  test.describe(`${account.slug}`, { tag: '@completo' }, () => {
+    test('menú, rutas protegidas y redirecciones', async ({ page, baseURL }, testInfo) => {
+      test.setTimeout(240_000);
+      const api = watchApi(page, new URL(baseURL!).origin);
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await login(page, account);
+      await api.idle('Inicio');
 
-    // 1. Escritorio: todo el menú lateral.
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await login(page, account.name);
-    w.take();
-    const links = await page.locator('aside.sidebar nav a').evaluateAll((as) =>
-      as.map((a) => ({ href: a.getAttribute('href') ?? '', label: (a.textContent ?? '').replace(/\s+/g, ' ').trim() })));
-    const pages: PageCheck[] = [];
-    for (const link of links) {
-      const t0 = Date.now();
-      await page.locator(`aside.sidebar nav a[href="${link.href}"]`).first().click();
-      await settle(page);
-      const ms = Date.now() - t0;
-      const finalUrl = new URL(page.url()).pathname;
-      const h1 = (await page.locator('main h1, .page-header h1').first().textContent().catch(() => ''))?.trim() ?? '';
-      const alerts = await visibleAlerts(page);
-      const { apiErrors, consoleErrors } = w.take();
-      const ok = finalUrl === link.href && h1.length > 0 && alerts.length === 0 && apiErrors.length === 0;
-      pages.push({ ...link, finalUrl, h1, alerts, apiErrors, consoleErrors, ms, ok });
-      const shot = `${account.slug}-${link.href.replace(/^\//, '').replace(/\//g, '_') || 'inicio'}.jpg`;
-      await page.screenshot({ path: path.join(OUT, 'capturas', shot), type: 'jpeg', quality: 70 });
-    }
-    roleReport['menu'] = pages;
+      const links = await page.locator('aside.sidebar nav a').evaluateAll((as) =>
+        as.map((a) => ({ href: a.getAttribute('href') ?? '', label: (a.textContent ?? '').replace(/\s+/g, ' ').trim() })));
+      expect(links.length, 'el menú lateral no puede estar vacío').toBeGreaterThan(0);
+      expect(links.map((l) => l.href), 'el menú debe empezar en Inicio').toContain('/dashboard');
 
-    // 2. Rutas de otros roles: deben llevar a "Acceso denegado", nunca mostrar datos.
-    const foreign = [];
-    for (const href of account.foreign) {
-      await page.goto(href);
-      await settle(page);
-      const finalUrl = new URL(page.url()).pathname;
-      const { apiErrors } = w.take();
-      foreign.push({ href, finalUrl, apiErrors, ok: finalUrl === '/auth/access-denied' });
-    }
-    roleReport['rutasAjenas'] = foreign;
-    await page.screenshot({ path: path.join(OUT, 'capturas', `${account.slug}-acceso-denegado.jpg`), type: 'jpeg', quality: 70 });
-
-    // 3. Ruta inexistente y enlace viejo de notificación.
-    await page.goto('/esta-ruta-no-existe');
-    await settle(page);
-    const unknown = new URL(page.url()).pathname;
-    await page.goto('/visits/00000000-0000-0000-0000-000000000000');
-    await settle(page);
-    const legacy = new URL(page.url()).pathname;
-    w.take();
-    roleReport['rutaInexistente'] = { destino: unknown, ok: unknown === '/dashboard' };
-    roleReport['enlaceViejoNotificacion'] = { origen: '/visits/:id', destino: legacy, ok: legacy === '/visits' || legacy === '/auth/access-denied' };
-
-    // 4. Falla del servidor: la primera pantalla del menú con la API respondiendo 500 y después 503.
-    const target = links.find((l) => l.href !== '/dashboard')!;
-    const failures = [];
-    for (const status of [500, 503]) {
-      let calls = 0;
-      await page.route((u) => API.test(u.pathname) && !u.pathname.startsWith('/auth') && !u.pathname.startsWith('/notifications'), (route) => {
-        if (!['xhr', 'fetch'].includes(route.request().resourceType())) return route.continue();
-        calls++;
-        return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ status, error: 'simulado', code: 'SIMULATED_FAILURE', message: 'Falla simulada' }) });
-      });
-      await page.goto(target.href);
-      await settle(page);
-      const callsAfterLoad = calls;
-      await page.waitForTimeout(4000);
-      const callsAfterWait = calls; // si sigue subiendo, hay un ciclo de reintentos
-      const alerts = await visibleAlerts(page);
-      const retry = page.getByRole('button', { name: /reintentar|volver a intentar/i }).first();
-      const hasRetry = await retry.isVisible().catch(() => false);
-      await page.screenshot({ path: path.join(OUT, 'capturas', `${account.slug}-falla-${status}.jpg`), type: 'jpeg', quality: 70 });
-      await page.unrouteAll({ behavior: "ignoreErrors" });
-      let recovered = false;
-      if (hasRetry) {
-        await retry.click();
-        await settle(page);
-        recovered = (await visibleAlerts(page)).length === 0;
+      const evidence: Record<string, unknown>[] = [];
+      for (const link of links) {
+        await test.step(`menú → ${link.label} (${link.href})`, async () => {
+          api.reset();
+          const t0 = Date.now();
+          await page.locator(`aside.sidebar nav a[href="${link.href}"]`).first().click();
+          await expect(page, `${link.label}: la URL debe ser ${link.href}`).toHaveURL(exact(link.href));
+          const h1 = page.locator('main h1, .page-header h1').first();
+          await expect(h1, `${link.label}: la pantalla debe tener título`).toBeVisible();
+          await api.idle(link.label);
+          const ms = Date.now() - t0;
+          await expect.soft(page.locator(ALERT), `${link.label}: no debe mostrar alertas de error`).toHaveCount(0);
+          expect.soft(api.errors(), `${link.label}: la API no debe responder 4xx ni 5xx`).toEqual([]);
+          evidence.push({ ...link, titulo: (await h1.textContent())?.trim(), ms });
+          await capture(page, testInfo, `${account.slug}-${link.href.replace(/^\//, '').replace(/\//g, '_') || 'inicio'}`);
+        });
       }
-      w.take();
-      failures.push({ status, pagina: target.href, alertas: alerts, botonReintentar: hasRetry, recupera: recovered, llamadasAlCargar: callsAfterLoad, llamadas4sDespues: callsAfterWait, sinCiclo: callsAfterWait === callsAfterLoad, ok: alerts.length > 0 && callsAfterWait === callsAfterLoad });
-    }
-    roleReport['fallasServidor'] = failures;
 
-    // 5. Móvil (375 px): barra inferior con máximo cuatro accesos y rótulos completos.
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/dashboard');
-    await settle(page);
-    const readBar = () => page.locator('nav.bottom-nav a').evaluateAll((as) => as.map((a) => {
-      const label = (a.querySelector('span:not([aria-hidden])') ?? a) as HTMLElement;
-      return { href: a.getAttribute('href'), texto: label.textContent?.trim(), truncado: label.scrollWidth > label.clientWidth + 1 };
-    }));
-    const bottomAlCargar = await readBar();
-    await page.waitForTimeout(3000);
-    const bottom = await readBar();
-    roleReport['barraMovilAlCargar'] = bottomAlCargar;
-    await page.screenshot({ path: path.join(OUT, 'capturas', `${account.slug}-movil.jpg`), type: 'jpeg', quality: 70 });
-    roleReport['barraMovil'] = { accesos: bottom, ok: bottom.length <= 4 && bottom.every((b) => !b.truncado) };
-    fs.writeFileSync(path.join(OUT, 'resultado.json'), JSON.stringify(report, null, 2));
+      for (const href of account.foreign) {
+        await test.step(`ruta de otro rol ${href}`, async () => {
+          api.reset();
+          await page.goto(href);
+          await expect(page, `${href}: debe terminar en «Acceso denegado»`).toHaveURL(exact(ACCESS_DENIED));
+          await expect(page.locator('main h1, h1').first(), `${href}: la pantalla de acceso denegado debe tener título`).toBeVisible();
+          await api.idle(href);
+          expect.soft(api.dataCalls(), `${href}: no debe pedir datos a la API`).toEqual([]);
+        });
+      }
+      await capture(page, testInfo, `${account.slug}-acceso-denegado`);
+
+      await test.step('ruta inexistente', async () => {
+        await page.goto('/esta-ruta-no-existe');
+        await expect(page, 'una ruta inexistente debe llevar a Inicio').toHaveURL(/\/dashboard$/);
+      });
+      await test.step('enlace viejo de notificación /visits/:id', async () => {
+        await page.goto('/visits/00000000-0000-0000-0000-000000000000');
+        await expect(page, `/visits/:id debe llevar a ${account.legacyVisits}`).toHaveURL(exact(account.legacyVisits));
+      });
+      await saveEvidence(testInfo, `${account.slug}-menu`, evidence);
+    });
+
+    for (const status of [500, 503]) {
+      test(`falla ${status} del servidor: mensaje, Reintentar y recuperación`, async ({ page }, testInfo) => {
+        await login(page, account);
+        let calls = 0;
+        await page.route(
+          (u) => API.test(u.pathname) && !SHELL_CALLS.test(u.pathname),
+          (route) => {
+            if (!['xhr', 'fetch'].includes(route.request().resourceType())) return route.continue();
+            calls++;
+            return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify({ status, code: 'SIMULATED_FAILURE', message: 'Falla simulada' }) });
+          }
+        );
+        try {
+          await page.goto(account.failureTarget);
+          await expect(page).toHaveURL(exact(account.failureTarget));
+          await expect(page.locator(ALERT).first(), `${status}: debe mostrarse un mensaje de error`).toBeVisible();
+          const retry = page.getByRole('button', { name: RETRY }).first();
+          await expect(retry, `${status}: debe ofrecer «Reintentar»`).toBeVisible();
+          const afterLoad = calls;
+          expect(afterLoad, `${status}: la pantalla debe haber llamado a la API`).toBeGreaterThan(0);
+          // Ventana fija para detectar reintentos automáticos sin fin.
+          await page.waitForTimeout(4_000);
+          expect(calls, `${status}: no debe haber reintentos automáticos (ciclo)`).toBe(afterLoad);
+          await capture(page, testInfo, `${account.slug}-falla-${status}`);
+        } finally {
+          await page.unrouteAll({ behavior: 'ignoreErrors' });
+        }
+        await page.getByRole('button', { name: RETRY }).first().click();
+        await expect(page.locator(ALERT), `${status}: al volver la API, «Reintentar» debe recuperar la pantalla`).toHaveCount(0);
+        await expect(page.locator('main h1, .page-header h1').first()).toBeVisible();
+      });
+    }
+
+    test('barra inferior móvil: máximo cuatro accesos', async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: 375, height: 812 });
+      await login(page, account);
+      const items = page.locator('nav.bottom-nav a');
+      await expect(items.first(), 'la barra inferior debe verse a 375 px').toBeVisible();
+      const count = await items.count();
+      expect(count, 'la barra inferior admite máximo cuatro accesos (más «Más»)').toBeLessThanOrEqual(4);
+      await capture(page, testInfo, `${account.slug}-movil`);
+    });
+
+    test('barra inferior móvil: rótulos completos', async ({ page }) => {
+      test.fail(Boolean(account.knownTruncatedLabels?.length), KNOWN_TRUNCATION);
+      if (account.knownTruncatedLabels?.length) {
+        test.info().annotations.push({ type: 'defecto-conocido', description: `${KNOWN_TRUNCATION}: ${account.knownTruncatedLabels.join(', ')}` });
+      }
+      await page.setViewportSize({ width: 375, height: 812 });
+      await login(page, account);
+      await expect(page.locator('nav.bottom-nav a').first()).toBeVisible();
+      const truncated = await page.locator('nav.bottom-nav a').evaluateAll((as) => as
+        .map((a) => {
+          const label = (a.querySelector('span:not([aria-hidden])') ?? a) as HTMLElement;
+          // Con text-overflow: ellipsis el navegador dibuja el texto ya recortado, así que se mide
+          // el ancho natural en una copia fuera de pantalla y se compara con la caja visible.
+          const probe = label.cloneNode(true) as HTMLElement;
+          Object.assign(probe.style, { position: 'absolute', visibility: 'hidden', left: '-9999px', top: '0', width: 'auto', maxWidth: 'none', overflow: 'visible', whiteSpace: 'nowrap' });
+          label.parentElement!.appendChild(probe);
+          const natural = probe.getBoundingClientRect().width;
+          probe.remove();
+          return { text: label.textContent?.trim() ?? '', cut: natural > label.getBoundingClientRect().width + 0.25 };
+        })
+        .filter((l) => l.cut)
+        .map((l) => l.text));
+      expect(truncated, 'ningún rótulo de la barra inferior debe cortarse').toEqual([]);
+    });
   });
 }

@@ -1,50 +1,78 @@
-# Navegación y errores por rol (14/11/2026)
+# Validación de navegación y errores por rol (E2-S2)
 
-Tarea: «Validar navegación y errores por roles» (subtarea de E2-S2). También sirve como evidencia de USA-01, porque muestra que la arquitectura de información se cumple en la app.
+Prueba: `e2e/web/navegacion-por-rol.spec.ts`. Requisitos: RNF-14 (usabilidad) y RNF-17 (comprobabilidad).
 
-**Entorno:** local, con Docker. La base es PostgreSQL 17 (`postgres:17-alpine`, la misma versión de producción). El almacenamiento es S3 con SeaweedFS, porque la imagen de MinIO del proyecto en `ghcr.io` pide credenciales. El backend es de la rama `feat/saf-01-conciliacion-pagos` (develop `d07a2fd` más la conciliación de pagos), con el perfil `demo` y la semilla colombiana: 1200 fotos cargadas en el almacenamiento. El frontend es de la misma rama (`5368e56`) y corre con `ng serve` en el puerto 4400. Las fotos cargan y no hubo ningún error en la consola del navegador.
+## Qué comprueba
 
-**Cómo se hizo:** con Playwright en Chrome (`e2e/web/navegacion-por-rol.spec.ts`), entrando con las cinco cuentas de demostración. Aquí van el resultado completo (`validation-navegacion-por-rol/resultado.json`) y cuatro capturas representativas. Las 67 capturas completas están en el repositorio de pruebas (`FixUp---pruebas-A.S`, `docs/entrega-2/navegacion-por-rol/`).
+Cada comprobación es una aserción de Playwright: si no se cumple, la prueba falla. El JSON y las capturas que se adjuntan son evidencia complementaria, no el veredicto.
 
-## Resultado
+| Conjunto | Etiqueta | Qué hace |
+|---|---|---|
+| Smoke | `@smoke` | Propietario: entrada con la cuenta demo, Inicio con menú, una ruta de otro rol termina en «Acceso denegado» sin pedir datos, y una ruta inexistente vuelve a Inicio |
+| Completo | `@completo` | Los cinco roles, cada uno con las cuatro pruebas de abajo |
 
-| Comprobación | Propietario | Arrendatario | Técnico | Inmobiliaria | Administrador |
-|---|---|---|---|---|---|
-| Menú completo en escritorio: cada enlace abre su pantalla, con título, sin alertas de error y sin respuestas 4xx o 5xx de la API | 11/11 | 7/7 | 8/8 | 12/12 | 9/9 |
-| Tres rutas de otros roles llevan a «Acceso denegado» sin pedir datos | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
-| Ruta inexistente → Inicio | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Enlace viejo de notificación (`/visits/:id`) → pantalla actual | ✓ Agenda | ✓ Agenda | ✓ Agenda | ✓ Agenda | ✓ Acceso denegado (el administrador no tiene agenda) |
-| API con **500**: mensaje de error y «Reintentar», sin ciclo de reintentos; cuando la API vuelve, «Reintentar» recupera la pantalla | ✓ | ✓ | ✓ | ✓ | ✓ |
-| API con **503**: igual que con 500 (sigue funcionando el arreglo del ciclo del 503 en Mercado) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Barra inferior móvil (375 px): máximo cuatro accesos más «Más» | 4 | 4 | 4 | 4 | 4 |
-| Rótulos completos en la barra móvil | ✗ «Solicitud…» | ✗ «Solicitud…» | ✗ «Disponib…» | ✗ «Solicitud…» | ✓ |
-| Errores en la consola del navegador | 0 | 0 | 0 | 0 | 0 |
+Las cuatro pruebas del conjunto completo:
 
-En total se revisaron 47 pantallas del menú. La más lenta tardó 590 ms entre el clic y quedar quieta (Mercado, en local).
+1. **Menú, rutas protegidas y redirecciones.**
+   - Cada enlace del menú lateral abre su URL exacta, con título, sin alertas de error y sin respuestas 4xx o 5xx de la API. La prueba espera a que terminen las llamadas a la API, y si no terminan, falla.
+   - Tres rutas de otros roles terminan en «Acceso denegado» sin ninguna llamada de datos.
+   - Una ruta inexistente vuelve a Inicio.
+   - El enlace viejo `/visits/:id` lleva a la Agenda, o a «Acceso denegado» en el caso del administrador.
+2. **Falla 500 del servidor.** En una pantalla fija por rol:
+   - Se muestra un mensaje de error y el botón «Reintentar».
+   - En una ventana de 4 s no hay reintentos automáticos.
+   - Al quitar la falla, «Reintentar» recupera la pantalla.
+   - La simulación de la falla se retira siempre en un `finally`.
+3. **Falla 503.** Las mismas comprobaciones que con 500.
+4. **Barra inferior móvil a 375 px.**
+   - Tiene como máximo cuatro accesos.
+   - Ningún rótulo se corta: se compara el ancho natural del texto con el de su caja.
 
-**Sobre el propietario:** en la primera corrida, el clic en «Catálogo» no alcanzó a navegar antes de la medición y la pantalla siguió en Gastos. No se repitió ni en una segunda corrida del mismo rol (11/11, Catálogo en 331 ms) ni al probarlo a mano, donde carga con fotos en unos 260 ms. La tabla usa la segunda corrida y `resultado.json` lo anota en `nota`. Lo más probable es que fuera la primera carga de esa pantalla en `ng serve`, no un error de la app.
+## Defectos conocidos
 
-## Hallazgos
+| Defecto | Issue | Responsable | Cómo lo trata la prueba |
+|---|---|---|---|
+| E2-S2-D1 · «Solicitudes» (propietario, arrendatario e inmobiliaria) y «Disponibles» (técnico) se cortan a 375 px | #53 | Mateo | Excepción trazable: la prueba de rótulos está marcada `test.fail` solo para esos cuatro roles. Cuando se arregle, la prueba pasará, Playwright avisará y habrá que quitar la excepción |
+| E2-S2-D2 · Ante 500 o 503 el mensaje dice «Revisa tu conexión», aunque la falla es del servidor | #54 | Mateo | La prueba exige el mensaje, «Reintentar» y la recuperación, pero no valida el texto. El texto queda registrado como defecto |
 
-1. **Rótulos truncados en la barra móvil** (`validation-navegacion-por-rol/barra-movil-por-rol.png`): «Solicitudes» en propietario, arrendatario e inmobiliaria, y «Disponibles» en el técnico. Se arregla con un `shortLabel` en `role-navigation.ts`, como ya se hizo con «Verificaciones» → «Revisión». Falta que Mateo elija las palabras.
-2. **El mensaje de error culpa a la conexión.** Ante un 500 o un 503, casi todas las pantallas dicen «Revisa tu conexión e inténtalo de nuevo», aunque la falla es del servidor. Solo «Disponibles» del técnico muestra el mensaje que manda la API. Para usabilidad convendría un texto neutro, por ejemplo: «No pudimos cargar esta información. Inténtalo de nuevo en un momento.»
-3. No hubo pantallas rotas, redirecciones equivocadas, ciclos de reintentos ni errores de consola.
+Con estos dos defectos abiertos, la corrida **no** demuestra el cumplimiento total de RNF-14. Demuestra la navegación por rol, el bloqueo de rutas ajenas y la recuperación ante fallas del servidor.
 
-La medida automática del truncado no detecta la elipsis en todos los rótulos (en esta corrida solo marcó «Disponibles»), así que el truncado se confirmó mirando las capturas.
+## Dónde se puede ejecutar
 
-## Capturas
+La suite usa las cuentas de demostración y la semilla sintética del perfil `demo` del backend, así que tiene dos restricciones:
+- Solo corre con `E2E_DEMO=1`. Sin esa variable se omite, y `npm run test:e2e` no la ejecuta.
+- Solo acepta como `baseURL` `localhost` o `127.0.0.1`, o los hosts que liste `E2E_DEMO_HOSTS`, que solo deben ser ambientes de prueba. Nunca debe apuntar a producción ni a un ambiente con datos reales.
 
-- `validation-navegacion-por-rol/barra-movil-por-rol.png`: barra inferior de los cinco roles a 375 px.
-- `validation-navegacion-por-rol/propietario-falla-500.jpg`: Inmuebles con la API respondiendo 500.
-- `validation-navegacion-por-rol/tecnico-falla-503.jpg`: Disponibles del técnico con 503 (es la única pantalla que muestra el mensaje de la API).
-- `validation-navegacion-por-rol/arrendatario-acceso-denegado.jpg`: ruta de otro rol que termina en «Acceso denegado».
-
-## Repetirlo
-
-Se necesita el backend con el perfil `demo` y la semilla (`FIXUP_SEED_ENABLED=true`), con una base PostgreSQL y un almacenamiento S3, y el frontend servido con `ng serve`, que usa `proxy.conf.js` para que `/api` vaya al backend. Luego:
+**En local:**
+1. Levantar el backend con el perfil `demo` y la semilla (`FIXUP_SEED_ENABLED=true`), con PostgreSQL y almacenamiento S3.
+2. Servir la app con `ng serve`; `proxy.conf.js` envía `/api` al backend.
+3. Correr el smoke o la suite completa:
 
 ```bash
-npx playwright test e2e/web/navegacion-por-rol.spec.ts
+npm run test:e2e:nav:smoke
 ```
 
-El script toma la URL de `playwright.config.ts` (`http://localhost:4200`) y deja el resultado y las capturas en `test-results/navegacion-por-rol/`, que git ignora. `NAV_OUT` cambia esa carpeta.
+```bash
+npm run test:e2e:nav
+```
+
+`E2E_BASE_URL` cambia la URL de la app (por defecto `http://localhost:4200`). El resultado y las capturas quedan en `test-results/navegacion-por-rol/`, que git ignora. Si una prueba falla, Playwright guarda la captura y la traza (`trace: 'retain-on-failure'`).
+
+**En CI:** el workflow `.github/workflows/e2e-demo.yml` corre en cada PR que toca `e2e/` o la configuración de Playwright, y también a mano. Arma un ambiente efímero dentro del runner:
+- PostgreSQL 17 y S3 (SeaweedFS).
+- El backend de `develop` con el perfil `demo`.
+- `ng serve`.
+
+Primero corre el smoke y después la suite completa, y sube como artefacto `test-results/`, el reporte HTML y los logs. No usa secretos.
+
+## Corrida de referencia (15/11/2026, local)
+
+**Entorno:** PostgreSQL 17 y S3 en Docker, con el backend y el frontend de la rama `feat/saf-01-conciliacion-pagos`.
+
+**Resultado:** 26 de 26 pruebas con el resultado esperado. Eso incluye cuatro fallos esperados: los rótulos cortados de #53, que se detectaron como «Solicitudes» ×3 y «Disponibles» ×1. El administrador pasa todas sus pruebas.
+
+Del 14/11 se conservan cuatro capturas en `validation-navegacion-por-rol/`, junto con el `resultado.json` del script anterior:
+- `barra-movil-por-rol.png`: la barra de los cinco roles.
+- `propietario-falla-500.jpg`.
+- `tecnico-falla-503.jpg`.
+- `arrendatario-acceso-denegado.jpg`.
