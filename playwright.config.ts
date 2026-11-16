@@ -1,5 +1,17 @@
 import { defineConfig } from '@playwright/test';
 
+// El navegador se puede cambiar sin tocar este archivo ni la línea de comandos de las pruebas:
+//
+//   PLAYWRIGHT_CHANNEL=msedge     → Microsoft Edge, que ya viene instalado en Windows
+//   PLAYWRIGHT_CHANNEL=chromium   → el Chromium que Playwright trae consigo, sin depender de
+//                                   ningún navegador del sistema (npx playwright install chromium)
+//
+// Por omisión sigue siendo Chrome, así que el CI y quien no defina nada se comportan igual que
+// antes. Existe porque no todas las máquinas del equipo tienen Chrome en la ruta estándar y la
+// suite completa quedaba inservible por eso.
+const CANAL = process.env.PLAYWRIGHT_CHANNEL ?? 'chrome';
+const navegador = CANAL === 'chromium' || CANAL === '' ? {} : { channel: CANAL };
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 60000,
@@ -12,7 +24,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
-    channel: 'chrome',
+    ...navegador,
     headless: true,
     viewport: { width: 1280, height: 720 },
     // Sin reintentos, 'on-first-retry' nunca guardaría nada: se conserva la traza de cada fallo.
@@ -22,9 +34,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: {
-        channel: 'chrome'
-      }
+      use: { ...navegador }
     }
   ]
 });

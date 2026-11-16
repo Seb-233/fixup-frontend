@@ -9,6 +9,12 @@ on:
       - "e2e/**"
       - "playwright.config.ts"
       - ".github/workflows/e2e-demo.yml"
+  # RNF-17 pide evidencia de CI de los flujos críticos. El disparador de arriba solo reacciona a
+  # cambios de las propias pruebas, así que en una rama de pruebas se corre también al empujar:
+  # es lo que produce el artefacto que la matriz de trazabilidad cita.
+  push:
+    branches:
+      - "test/**"
   workflow_dispatch:
     inputs:
       backend_ref:
@@ -48,6 +54,7 @@ jobs:
       E2E_DEMO: "1"
       E2E_BASE_URL: http://localhost:4200
       NAV_OUT: ${{ github.workspace }}/test-results/navegacion-por-rol
+      FLUJOS_OUT: ${{ github.workspace }}/test-results/flujos-criticos-rnf17
 
     steps:
       - name: Checkout frontend
@@ -133,6 +140,19 @@ jobs:
 
       - name: Suite completa (@completo)
         run: npx playwright test e2e/web/navegacion-por-rol.spec.ts --grep @completo
+
+      # RNF-17: UC-01, UC-13, UC-16 y UC-19 desde el navegador. Cubre en particular lo que el
+      # backend no verifica del reporte de gastos (los tres desgloses, la comparación con el
+      # periodo anterior y la descarga en CSV).
+      - name: Flujos críticos de RNF-17 (@flujos)
+        run: npx playwright test e2e/web/flujos-criticos-rnf17.spec.ts --grep @flujos
+
+      # La certificación de navegador existe desde el commit 35d5e77 y nunca se había ejecutado en
+      # CI, así que no dejaba evidencia. Entra como informativa: si queda verde en varias corridas
+      # seguidas, quitarle continue-on-error y volverla obligatoria.
+      - name: Certificación de navegador (informativa)
+        continue-on-error: true
+        run: npx playwright test e2e/browser-certification.spec.ts
 
       - name: Collect logs
         if: always()
