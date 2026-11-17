@@ -8,10 +8,20 @@ export type ConnectionState = 'online' | 'offline';
 // VPN caídos (0) y un intermediario que no encuentra la API (502, 503, 504).
 const UNREACHABLE = new Set([0, 502, 503, 504]);
 
-// La API también responde 503 a propósito (Mercado sin dato guardado, geocodificador caído) y lo
-// hace con su cuerpo de error { status, code, message, path }. Ese 503 no es una caída: si se
-// contara como tal, el sondeo de salud "reconectaría" y la pantalla se recargaría sin fin.
+// La API también responde 503 a propósito (Mercado sin dato guardado, geocodificador caído,
+// conciliación apagada) y lo hace con su cuerpo de error { status, code, message, path }. Ese 503
+// no es una caída: si se contara como tal, el sondeo de salud "reconectaría" y la pantalla se
+// recargaría sin fin.
 function isApiErrorBody(body: unknown): boolean {
+  // Las lecturas con responseType 'text' (getText) no parsean el JSON: el cuerpo llega como
+  // cadena. Sin esto, su 503 con código se confundiría con una caída y se reintentaría.
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return false;
+    }
+  }
   return typeof body === 'object' && body !== null && typeof (body as { code?: unknown }).code === 'string';
 }
 

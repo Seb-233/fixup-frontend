@@ -53,6 +53,27 @@ describe('conectividad', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('un 503 leído como texto (getText) también es una respuesta y no reintenta', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    // getText no parsea el JSON, así que el cuerpo del error llega como cadena.
+    const unavailable = new HttpErrorResponse({
+      status: 503,
+      url: `${environment.apiOrigin}/administration/payments/reconciliation`,
+      error: JSON.stringify({ status: 503, code: 'LEDGER_RECONCILIATION_DISABLED', message: 'La conciliación está deshabilitada', path: '/administration/payments/reconciliation' })
+    });
+    expect(isConnectionError(unavailable)).toBe(false);
+
+    let calls = 0;
+    const next = () => defer(() => (calls++, throwError(() => unavailable)));
+    await expect(run(new HttpRequest('GET', unavailable.url!), next)).rejects.toBe(unavailable);
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(calls).toBe(1);
+    expect(connectivity.state()).toBe('online');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('reintenta una lectura que no llegó y no marca caída si el segundo intento contesta', async () => {
     let calls = 0;
     // Como el HttpClient real, cada suscripción repite la petición.

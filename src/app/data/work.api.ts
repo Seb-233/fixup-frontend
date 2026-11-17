@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, timeout } from 'rxjs/operators';
 import { Api } from './http';
+import { LEDGER_TIMEOUT_MS, parseLedgerReconciliation } from './ledger-reconciliation';
 import { losslessParse, losslessStringify, toInt64Token } from './lossless-json';
 import {
   AttemptRequest,
@@ -11,6 +12,7 @@ import {
   FixerReviews,
   JobDetail,
   JobResponse,
+  LedgerReconciliation,
   OwnerDebtDetail,
   PaymentAttemptResult,
   PaymentDetail,
@@ -194,6 +196,17 @@ export class WorkApi {
   earnings(): Observable<EarningsResponse> {
     return this.api.getText('/payments/me/earnings').pipe(
       map(text => losslessParse<EarningsResponse>(text))
+    );
+  }
+
+  /**
+   * Solo PLATFORM_ADMIN. Cada llamada corre una conciliación nueva en el backend. La respuesta se
+   * valida contra el contrato: si llega incompleta o contradictoria es un error, no un resultado.
+   */
+  ledgerReconciliation(): Observable<LedgerReconciliation> {
+    return this.api.getText('/administration/payments/reconciliation').pipe(
+      timeout(LEDGER_TIMEOUT_MS),
+      map(parseLedgerReconciliation)
     );
   }
 

@@ -54,8 +54,21 @@ describe('Navegación por rol', () => {
 
   it('el administrador revisa técnicos y plazos', () => {
     expect(paths('PLATFORM_ADMIN')).toEqual(
-      expect.arrayContaining(['/administration/fixer-review', '/administration/sla-board', '/administration/audit', '/administration/wompi-transactions'])
+      expect.arrayContaining([
+        '/administration/fixer-review',
+        '/administration/sla-board',
+        '/administration/audit',
+        '/administration/wompi-transactions',
+        '/administration/payments/reconciliation'
+      ])
     );
+  });
+
+  it('solo el administrador tiene la conciliación de pagos en el menú (SAF-01)', () => {
+    for (const role of ['OWNER', 'TENANT', 'FIXER', 'REAL_ESTATE_MANAGER'] as const) {
+      expect(paths(role)).not.toContain('/administration/payments/reconciliation');
+      expect(paths(role, false)).not.toContain('/administration/payments/reconciliation');
+    }
   });
 
   it('un técnico sin verificar ve sus destinos bloqueados apuntando a la verificación', () => {
