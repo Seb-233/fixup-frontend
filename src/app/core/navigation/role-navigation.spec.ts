@@ -57,6 +57,7 @@ describe('Navegación por rol', () => {
       expect.arrayContaining([
         '/administration/fixer-review',
         '/administration/sla-board',
+        '/administration/audit',
         '/administration/wompi-transactions',
         '/administration/payments/reconciliation'
       ])

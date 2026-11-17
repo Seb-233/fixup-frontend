@@ -161,4 +161,13 @@ describe('Enrutamiento y Separación de Layouts (Requerimientos 1, 2 y 3)', () =
     expect(route?.data?.['roles']).toEqual(['PLATFORM_ADMIN']);
     expect(route?.loadComponent).toBeDefined();
   });
+
+  it('12. /administration/audit restringe la bitácora a PLATFORM_ADMIN y carga de forma diferida', () => {
+    const privateLayoutRoute = routes.find((route) => route.children && route.canActivate);
+    const auditRoute = privateLayoutRoute?.children?.find((route) => route.path === 'administration/audit');
+
+    expect(auditRoute).toBeDefined();
+    expect(auditRoute?.loadComponent).toBeDefined();
+    expect(auditRoute?.data?.['roles']).toEqual(['PLATFORM_ADMIN']);
+  });
 });

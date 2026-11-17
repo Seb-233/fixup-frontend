@@ -56,6 +56,9 @@ jobs:
       - name: Lint code
         run: npm run lint
 
+      - name: Verify architecture boundaries
+        run: npm run arch:check
+
       - name: Run unit tests
         run: npm run test -- --watch=false
 

@@ -7,7 +7,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
 import { DayPipe, LabelPipe } from '../../shared/ui/pipes';
 import { ErrorStateComponent, LoadingComponent } from '../../shared/ui/states.component';
 import { StatusComponent } from '../../shared/ui/status.component';
-import { FixerVerificationStore } from './pages/verification/fixer-verification.store';
+import { FixerVerificationStore } from '../../core/verification/fixer-verification.store';
 import { CONSENT_VERSION, VERIFICATION_DOCUMENT_TYPES } from './utils/fixer-verification-ui.helpers';
 
 // Verificación del técnico (FR-UC-23): especialidades, documentos y estado de la revisión.

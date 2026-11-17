@@ -176,6 +176,20 @@ export interface AttemptRequest {
   instrument: SandboxPaymentInstrument;
 }
 
+export type AuditedResourceType = 'REPAIR_REQUEST' | 'REPAIR_PAYMENT' | 'RENTAL_CONTRACT' | 'JOB';
+
+export interface StatusChangeEntry {
+  id: string;
+  resourceType: AuditedResourceType;
+  resourceId: string;
+  previousStatus: string | null;
+  newStatus: string;
+  changedByUserId: string | null;
+  changedBySubject: string;
+  changedByDisplayName: string;
+  changedAt: string;
+}
+
 // INT-01: pasarela Wompi. El cliente generado las declara con todos los campos opcionales; aquí
 // se fijan los que el backend siempre envía. `environment` es el texto que manda el backend: el
 // único valor que la interfaz acepta es 'sandbox'; cualquier otro se trata como Wompi apagado.
