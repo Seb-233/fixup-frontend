@@ -8,7 +8,7 @@ import { CurrentUserStore } from '../../core/auth/current-user.store';
 import { ROLE_PANEL, getNavigationGroupsForRole } from '../../core/navigation/role-navigation';
 import { NotificationsStore } from '../../core/notifications/notifications.store';
 import { ThemeService } from '../../core/theme/theme.service';
-import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
+import { FixerVerificationStore } from '../../core/verification/fixer-verification.store';
 import { ROLE_NAME, initials } from '../../shared/format';
 import { IconComponent } from '../../shared/ui/icon.component';
 

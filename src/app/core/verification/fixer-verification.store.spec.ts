@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { FixerVerificationStore } from './fixer-verification.store';
-import { provideApi, Specialty, VerificationResponse } from '../../../../api/generated';
-import { environment } from '../../../../../environments/environment';
+import { provideApi, Specialty, VerificationResponse } from '../../api/generated';
+import { environment } from '../../../environments/environment';
 
 describe('FixerVerificationStore', () => {
   let store: FixerVerificationStore;

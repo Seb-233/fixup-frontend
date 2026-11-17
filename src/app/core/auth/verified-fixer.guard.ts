@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { firstValueFrom, filter, take } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { FixerVerificationStore } from '../../features/fixers/pages/verification/fixer-verification.store';
+import { FixerVerificationStore } from '../verification/fixer-verification.store';
 
 export const verifiedFixerGuard: CanActivateFn = async () => {
   const store = inject(FixerVerificationStore);
