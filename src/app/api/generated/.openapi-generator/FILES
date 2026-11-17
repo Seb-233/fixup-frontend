@@ -49,6 +49,8 @@ api/sla-board-controller.service.ts
 api/sla-board-controller.serviceInterface.ts
 api/visit-controller.service.ts
 api/visit-controller.serviceInterface.ts
+api/wompi-controller.service.ts
+api/wompi-controller.serviceInterface.ts
 configuration.ts
 encoder.ts
 git_push.sh
@@ -181,6 +183,13 @@ model/verification-response.ts
 model/visit-kind.ts
 model/visit-response.ts
 model/visit-status.ts
+model/wompi-checkout-request.ts
+model/wompi-checkout-session.ts
+model/wompi-reconciliation.ts
+model/wompi-status.ts
+model/wompi-transaction-list.ts
+model/wompi-transaction-result.ts
+model/wompi-transaction-view.ts
 model/work.ts
 param.ts
 provide-api.ts

@@ -270,6 +270,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/administration/fixer-review.page').then((m) => m.FixerReviewPage)
       },
       {
+        path: 'administration/wompi-transactions',
+        title: 'Transacciones Wompi',
+        data: { roles: ['PLATFORM_ADMIN'] },
+        loadComponent: () => import('./features/administration/wompi-transactions.page').then((m) => m.WompiTransactionsPage)
+      },
+      {
         path: 'administration/sla-board',
         title: 'Plazos de atención',
         data: { roles: ['PLATFORM_ADMIN'] },
