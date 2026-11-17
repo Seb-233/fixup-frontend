@@ -42,21 +42,13 @@ interface Account {
   failureTarget: string;
   /** Destino esperado del enlace viejo /visits/:id. */
   legacyVisits: string;
-  /**
-   * Defecto conocido y trazable: rótulos de la barra móvil que se cortan a 375 px.
-   * Mientras esté abierto, la comprobación se marca como fallo esperado (test.fail):
-   * si alguien lo arregla, la prueba avisa para quitar la excepción.
-   */
-  knownTruncatedLabels?: string[];
 }
 
-const KNOWN_TRUNCATION = 'Defecto conocido E2-S2-D1 (issue #53): rótulos cortados en la barra móvil, falta shortLabel en role-navigation.ts';
-
 const ACCOUNTS: Account[] = [
-  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me'], failureTarget: '/properties', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
-  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management'], failureTarget: '/contracts', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
-  { role: 'FIXER', name: 'Jhon Fredy Cárdenas Ospina', slug: 'tecnico', foreign: ['/properties', '/administration/fixer-review', '/expenses'], failureTarget: '/requests/inbox', legacyVisits: '/visits', knownTruncatedLabels: ['Disponibles'] },
-  { role: 'REAL_ESTATE_MANAGER', name: 'Inmobiliaria Cordillera', slug: 'inmobiliaria', foreign: ['/administration/sla-board', '/jobs/me', '/fixers/portfolio'], failureTarget: '/management', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me'], failureTarget: '/properties', legacyVisits: '/visits' },
+  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management'], failureTarget: '/contracts', legacyVisits: '/visits' },
+  { role: 'FIXER', name: 'Jhon Fredy Cárdenas Ospina', slug: 'tecnico', foreign: ['/properties', '/administration/fixer-review', '/expenses'], failureTarget: '/requests/inbox', legacyVisits: '/visits' },
+  { role: 'REAL_ESTATE_MANAGER', name: 'Inmobiliaria Cordillera', slug: 'inmobiliaria', foreign: ['/administration/sla-board', '/jobs/me', '/fixers/portfolio'], failureTarget: '/management', legacyVisits: '/visits' },
   { role: 'PLATFORM_ADMIN', name: 'Soporte Fix&Rent', slug: 'administrador', foreign: ['/requests/new', '/payments/earnings', '/properties/new'], failureTarget: '/administration/sla-board', legacyVisits: ACCESS_DENIED }
 ];
 
@@ -240,11 +232,8 @@ for (const account of ACCOUNTS) {
       await capture(page, testInfo, `${account.slug}-movil`);
     });
 
+    // Issue #53 (E2-S2-D1): los rótulos largos usan shortLabel en role-navigation.ts.
     test('barra inferior móvil: rótulos completos', async ({ page }) => {
-      test.fail(Boolean(account.knownTruncatedLabels?.length), KNOWN_TRUNCATION);
-      if (account.knownTruncatedLabels?.length) {
-        test.info().annotations.push({ type: 'defecto-conocido', description: `${KNOWN_TRUNCATION}: ${account.knownTruncatedLabels.join(', ')}` });
-      }
       await page.setViewportSize({ width: 375, height: 812 });
       await login(page, account);
       await expect(page.locator('nav.bottom-nav a').first()).toBeVisible();

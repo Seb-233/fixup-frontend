@@ -3,7 +3,11 @@ import { Role } from '../auth/auth.types';
 export interface RoleNavigationItem {
   path: string;
   label: string;
-  /** Versión corta para la barra inferior del móvil, donde cada acceso mide un quinto del ancho. */
+  /**
+   * Versión corta para la barra inferior del móvil, donde cada acceso mide un quinto del ancho
+   * (unos 62 px de texto a 375 px). Va cuando el rótulo completo no cabe; el completo queda en el
+   * aria-label y en el menú. Máximo MOBILE_LABEL_MAX_LENGTH caracteres.
+   */
   shortLabel?: string;
   icon: string;
   /** Aparece en la barra inferior del móvil (máximo cuatro por rol). */
@@ -17,6 +21,9 @@ export interface RoleNavigationGroup {
   label: string | null;
   items: readonly RoleNavigationItem[];
 }
+
+/** Tope de caracteres del rótulo que se ve en la barra inferior (shortLabel o, si no hay, label). */
+export const MOBILE_LABEL_MAX_LENGTH = 9;
 
 const item = (path: string, label: string, icon: string, mobilePrimary = false, shortLabel?: string): RoleNavigationItem => ({
   path,
@@ -43,7 +50,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
     ),
     group(
       'Reparaciones',
-      item('/requests', 'Solicitudes', 'wrench', true),
+      item('/requests', 'Solicitudes', 'wrench', true, 'Solicitud'),
       item('/visits', 'Agenda', 'calendar', true),
       item('/fixers', 'Técnicos', 'users')
     ),
@@ -55,7 +62,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
     group(
       'Mi arriendo',
       item('/contracts', 'Mi contrato', 'file', true, 'Contrato'),
-      item('/requests', 'Solicitudes', 'wrench', true),
+      item('/requests', 'Solicitudes', 'wrench', true, 'Solicitud'),
       item('/visits', 'Agenda', 'calendar')
     ),
     group(
@@ -69,7 +76,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
     group(null, HOME),
     group(
       'Trabajo',
-      item('/requests/inbox', 'Disponibles', 'clipboard', true),
+      item('/requests/inbox', 'Disponibles', 'clipboard', true, 'Cotizar'),
       item('/quotations/me', 'Cotizaciones', 'file'),
       item('/jobs/me', 'Trabajos', 'wrench', true),
       item('/visits', 'Agenda', 'calendar', true)
@@ -86,7 +93,7 @@ const ROLE_NAVIGATION: Record<Role, readonly RoleNavigationGroup[]> = {
     group(
       'Operación',
       item('/management', 'Mantenimiento', 'clipboard', true, 'Tablero'),
-      item('/requests', 'Solicitudes', 'wrench', true),
+      item('/requests', 'Solicitudes', 'wrench', true, 'Solicitud'),
       item('/visits', 'Agenda', 'calendar')
     ),
     group(

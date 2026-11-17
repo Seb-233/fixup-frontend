@@ -1,5 +1,5 @@
 import { Role } from '../auth/auth.types';
-import { ROLE_PANEL, getNavigationForRole, getNavigationGroupsForRole } from './role-navigation';
+import { MOBILE_LABEL_MAX_LENGTH, ROLE_PANEL, getNavigationForRole, getNavigationGroupsForRole } from './role-navigation';
 
 const paths = (role: Role, verified = true) => getNavigationForRole(role, verified).map((item) => item.path);
 
@@ -16,6 +16,34 @@ describe('Navegación por rol', () => {
       expect(items.filter((item) => item.mobilePrimary).length).toBeLessThanOrEqual(4);
     }
   );
+
+  // Issue #53 (E2-S2-D1): a 375 px cada acceso mide un quinto del ancho y un rótulo largo se corta
+  // con elipsis. La medición real en el navegador está en e2e/web/navegacion-por-rol.spec.ts.
+  it.each([
+    ['OWNER', true],
+    ['TENANT', true],
+    ['FIXER', true],
+    ['FIXER', false],
+    ['REAL_ESTATE_MANAGER', true],
+    ['PLATFORM_ADMIN', true]
+  ] as const)('%s (verificado: %s) usa rótulos de la barra inferior que caben sin cortarse', (role, verified) => {
+    for (const entry of getNavigationForRole(role, verified).filter((item) => item.mobilePrimary)) {
+      const visible = entry.shortLabel ?? entry.label;
+      expect(visible.length, `${entry.path}: «${visible}» no cabe en la barra inferior`).toBeLessThanOrEqual(MOBILE_LABEL_MAX_LENGTH);
+      if (entry.shortLabel) expect(entry.shortLabel.length).toBeLessThan(entry.label.length);
+    }
+  });
+
+  it('acorta «Solicitudes» y «Disponibles» en la barra inferior sin cambiar el rótulo del menú', () => {
+    const requests = (role: Role) => getNavigationForRole(role).find((entry) => entry.path === '/requests')!;
+    for (const role of ['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER'] as const) {
+      expect(requests(role)).toEqual(expect.objectContaining({ label: 'Solicitudes', shortLabel: 'Solicitud', mobilePrimary: true }));
+    }
+    const inbox = getNavigationForRole('FIXER').find((entry) => entry.path === '/requests/inbox')!;
+    expect(inbox).toEqual(expect.objectContaining({ label: 'Disponibles', shortLabel: 'Cotizar', mobilePrimary: true }));
+    const gated = getNavigationForRole('FIXER', false).find((entry) => entry.label === 'Disponibles')!;
+    expect(gated.shortLabel).toBe('Cotizar');
+  });
 
   it.each(['OWNER', 'TENANT', 'REAL_ESTATE_MANAGER', 'PLATFORM_ADMIN'] as const)('%s llega al catálogo de inmuebles (FR-UC-02/06)', (role) => {
     expect(paths(role)).toContain('/catalog');
