@@ -281,6 +281,12 @@ export const routes: Routes = [
         data: { roles: ['PLATFORM_ADMIN'] },
         loadComponent: () => import('./features/administration/sla-board.page').then((m) => m.SlaBoardPage)
       },
+      {
+        path: 'administration/audit',
+        title: 'Bitácora de estados',
+        data: { roles: ['PLATFORM_ADMIN'] },
+        loadComponent: () => import('./features/administration/audit-log.page').then((m) => m.AuditLogPage)
+      },
 
       // Transversales
       {
