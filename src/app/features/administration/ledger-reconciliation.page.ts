@@ -182,7 +182,9 @@ export class LedgerReconciliationPage {
     const r = this.report();
     if (!r) return '';
     const rows = this.n(rowsScanned(r.scanned));
-    if (this.verdict() === 'empty') return 'El servidor leyó el libro y no encontró ninguna fila de pagos: todavía no hay nada que conciliar.';
+    if (this.verdict() === 'empty') {
+      return 'El servidor leyó el libro y no encontró ninguna fila de pagos: todavía no hay nada que conciliar. Si ya hay pagos registrados, el servidor no los pudo ver y esto no es un resultado válido.';
+    }
     if (this.verdict() === 'consistent') return `Se revisaron ${rows} filas: todas las ecuaciones cuadran y ninguna regla tiene diferencias.`;
     const rules = r.findings.length;
     const equations = r.balances.filter((b) => !b.holds).length;

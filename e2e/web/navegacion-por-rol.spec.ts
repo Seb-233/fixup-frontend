@@ -53,8 +53,8 @@ interface Account {
 const KNOWN_TRUNCATION = 'Defecto conocido E2-S2-D1 (issue #53): rótulos cortados en la barra móvil, falta shortLabel en role-navigation.ts';
 
 const ACCOUNTS: Account[] = [
-  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me'], failureTarget: '/properties', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
-  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management'], failureTarget: '/contracts', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me', '/administration/payments/reconciliation'], failureTarget: '/properties', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
+  { role: 'TENANT', name: 'Andrés Moreno Rincón', slug: 'arrendatario', foreign: ['/properties', '/payments', '/management', '/administration/payments/reconciliation'], failureTarget: '/contracts', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
   { role: 'FIXER', name: 'Jhon Fredy Cárdenas Ospina', slug: 'tecnico', foreign: ['/properties', '/administration/fixer-review', '/expenses'], failureTarget: '/requests/inbox', legacyVisits: '/visits', knownTruncatedLabels: ['Disponibles'] },
   { role: 'REAL_ESTATE_MANAGER', name: 'Inmobiliaria Cordillera', slug: 'inmobiliaria', foreign: ['/administration/sla-board', '/jobs/me', '/fixers/portfolio'], failureTarget: '/management', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
   { role: 'PLATFORM_ADMIN', name: 'Soporte Fix&Rent', slug: 'administrador', foreign: ['/requests/new', '/payments/earnings', '/properties/new'], failureTarget: '/administration/sla-board', legacyVisits: ACCESS_DENIED }

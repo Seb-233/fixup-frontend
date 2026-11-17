@@ -137,6 +137,7 @@ export function rowsScanned(scanned: LedgerScanned): number {
 export type LedgerFailureKind =
   | 'unreadable'
   | 'busy'
+  | 'disabled'
   | 'timeout'
   | 'offline'
   | 'forbidden'
@@ -161,6 +162,12 @@ const FAILURES: Record<LedgerFailureKind, Omit<LedgerFailure, 'kind'>> = {
     title: 'Ya hay una conciliación en curso',
     message: 'Otra corrida está revisando el libro en este momento. Espera unos segundos y vuelve a intentarlo.',
     retryable: true
+  },
+  disabled: {
+    title: 'La conciliación está deshabilitada en este servidor',
+    message:
+      'El servidor no tiene activa la conciliación del libro de pagos, así que no se revisó nada. Esto no quiere decir que el libro cuadre: hay que habilitarla en el servidor para obtener un resultado.',
+    retryable: false
   },
   timeout: {
     title: 'La conciliación tardó demasiado',
@@ -194,6 +201,9 @@ const FAILURES: Record<LedgerFailureKind, Omit<LedgerFailure, 'kind'>> = {
   }
 };
 
+/** Código del 503 con que el backend responde cuando la conciliación está apagada. */
+export const LEDGER_DISABLED = 'LEDGER_RECONCILIATION_DISABLED';
+
 function errorCode(body: unknown): string | null {
   // La conciliación se pide como texto para no perder montos grandes, así que el cuerpo del error
   // también llega como texto.
@@ -220,12 +230,16 @@ function kindOf(error: unknown): LedgerFailureKind {
       return 'session';
     case 403:
       return 'forbidden';
+    case 404:
+      // Un servidor con la conciliación apagada no expone la ruta.
+      return 'disabled';
     case 504:
       return 'timeout';
     case 503: {
       const code = errorCode(failure.error);
       if (code === 'LEDGER_UNREADABLE') return 'unreadable';
       if (code === 'LEDGER_RECONCILIATION_BUSY') return 'busy';
+      if (code === LEDGER_DISABLED) return 'disabled';
       return 'unavailable';
     }
     default:

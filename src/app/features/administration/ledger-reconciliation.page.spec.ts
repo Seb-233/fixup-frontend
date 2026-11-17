@@ -172,6 +172,7 @@ describe('LedgerReconciliationPage (SAF-01)', () => {
       expect(text()).toContain('El libro está vacío');
       expect(text()).not.toContain('El libro cuadra');
       expect(text()).toContain('No había filas que revisar');
+      expect(text()).toContain('esto no es un resultado válido');
     });
 
     it('muestra completos los montos que no caben en un number', () => {
@@ -193,6 +194,8 @@ describe('LedgerReconciliationPage (SAF-01)', () => {
     const cases: [string, () => Error, string, boolean][] = [
       ['503 LEDGER_UNREADABLE', () => httpError(503, 'LEDGER_UNREADABLE'), 'No se pudo leer el libro de pagos', true],
       ['503 LEDGER_RECONCILIATION_BUSY', () => httpError(503, 'LEDGER_RECONCILIATION_BUSY'), 'Ya hay una conciliación en curso', true],
+      ['503 LEDGER_RECONCILIATION_DISABLED', () => httpError(503, 'LEDGER_RECONCILIATION_DISABLED'), 'La conciliación está deshabilitada', false],
+      ['404 (ruta apagada en el servidor)', () => httpError(404), 'La conciliación está deshabilitada', false],
       ['503 sin código', () => httpError(503), 'No se pudo conciliar el libro', true],
       ['500', () => httpError(500), 'No se pudo conciliar el libro', true],
       ['sin red', () => httpError(0), 'No hay conexión con el servidor', true],
@@ -223,6 +226,15 @@ describe('LedgerReconciliationPage (SAF-01)', () => {
       answer(httpError(503, 'LEDGER_UNREADABLE'));
       expect(text()).not.toContain('El libro cuadra');
       expect(alertText()).toContain('Esto no quiere decir que el libro cuadre');
+    });
+
+    it('con la conciliación deshabilitada no muestra saldos, ecuaciones ni filas revisadas', () => {
+      answer(httpError(503, 'LEDGER_RECONCILIATION_DISABLED'));
+
+      expect(alertText()).toContain('Esto no quiere decir que el libro cuadre');
+      expect(text()).not.toContain('El libro cuadra');
+      expect(text()).not.toContain('Filas revisadas');
+      expect(text()).not.toContain('Ecuaciones del libro');
     });
 
     it('"Reintentar" pide otra corrida y muestra su resultado', () => {

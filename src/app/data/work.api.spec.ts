@@ -207,16 +207,18 @@ describe('WorkApi pagos digitales', () => {
       expect((error as Error).name).toBe('LedgerContractError');
     });
 
-    it('un 503 llega como error con su código para que la pantalla lo distinga', () => {
+    it.each([
+      [503, 'LEDGER_UNREADABLE', 'unreadable'],
+      [503, 'LEDGER_RECONCILIATION_BUSY', 'busy'],
+      [503, 'LEDGER_RECONCILIATION_DISABLED', 'disabled'],
+      [404, 'NOT_FOUND', 'disabled']
+    ])('un %i %s llega como error con su código para que la pantalla lo distinga', (status, code, kind) => {
       let error: unknown;
       api.ledgerReconciliation().subscribe({ error: (e: unknown) => (error = e) });
 
-      backend.expectOne(url).flush('{"code":"LEDGER_UNREADABLE","message":"The ledger could not be read"}', {
-        status: 503,
-        statusText: 'Service Unavailable'
-      });
+      backend.expectOne(url).flush(`{"code":"${code}","message":"technical detail"}`, { status, statusText: 'Error' });
 
-      expect(ledgerFailure(error).kind).toBe('unreadable');
+      expect(ledgerFailure(error).kind).toBe(kind);
     });
 
     it('si el servidor no responde, la espera se corta y se cancela la petición', () => {
