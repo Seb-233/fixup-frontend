@@ -10,20 +10,15 @@ import {
   Specialty,
   UploadTicketDto,
   VerificationResponse
-} from '../../api/generated';
+} from '../../../../api/generated';
 
 /**
  * FR-UC-23 — Verificación de identidad del Fixer (lado del técnico).
  *
  * Guarda y expone el estado reactivo de la verificación del Fixer autenticado: qué documentos ha
  * entregado, cuáles faltan, sus especialidades, y el progreso de la subida de un documento en
- * curso.
- *
- * Vive en `core/` y no en la feature `fixers/` a propósito (RNF-18): su estado lo consumen tres
- * capas distintas —el `verifiedFixerGuard` de navegación, el shell layout y la propia pantalla de
- * verificación—, así que ubicarlo dentro de una feature obligaría a que `core/` y `layout/`
- * importaran archivos internos de una feature, invirtiendo las dependencias. Al ser un singleton
- * transversal es `providedIn: 'root'` y su estado se comparte entre los tres consumidores.
+ * curso. Es un `Injectable()` con proveedor a nivel de componente (no `providedIn: 'root'`)
+ * porque su estado solo tiene sentido mientras la pantalla de verificación está montada.
  *
  * Se diseñó como store separado del componente, en vez de lógica inline, por dos razones:
  *  - Los componentes no deben consumir `HttpClient` ni las APIs generadas directamente

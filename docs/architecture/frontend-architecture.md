@@ -28,7 +28,6 @@ Contiene servicios singleton, configuraciones globales y utilidades transversale
 - **`interceptors/`**: Interceptores HTTP funcionales para telemetría, auditoría y manejo transversal de peticiones.
 - **`errors/`**: Manejo centralizado de errores globales y logging.
 - **`services/`**: Servicios transversales que no pertenecen al dominio de una feature específica.
-- **`verification/`**: `FixerVerificationStore`, store reactivo del estado de verificación del técnico. Vive aquí —y no en la feature `fixers/`— porque lo consumen tres capas: el guard de navegación, el shell y la pantalla de verificación.
 
 ### 2. `src/app/layout/` (Estructura Visual y Navegación)
 Define los contenedores estructurales de la aplicación:
@@ -44,7 +43,6 @@ Elementos visuales y lógicos transversales puramente reutilizables:
 - **`pipes/`**: Transformadores visuales de datos.
 - **`validators/`**: Validadores para Reactive Forms.
 - **`utilities/`**: Funciones puras de utilidad específicas (sin agrupar funciones no relacionadas en archivos genéricos).
-- Es la capa más interna: `shared/` no puede depender de `core/`, `data/`, `layout/`, `features/` ni `api/`. Lo verifica `npm run arch:check`.
 
 ### 4. `src/app/api/` (Acceso a Datos y Clientes Generados)
 - **`generated/`**: Espacio reservado para los modelos y clientes API generados automáticamente a partir de especificaciones OpenAPI del backend de FixUp.
@@ -66,48 +64,7 @@ Cada funcionalidad se aísla en su propio dominio. Una feature no debe importar 
 - `analytics/`: Reportes e inteligencia de negocio.
 - `administration/`: Gestión de usuarios, catálogos y gobernanza.
 
-Aislamiento verificado: una feature no puede importar archivos de otra feature hermana. Lo comprueba
-automáticamente `npm run arch:check` (ver "Verificación de fronteras arquitectónicas").
-
-### 6. `src/app/data/` (Acceso a Datos)
-Servicios de acceso a datos y modelos de la aplicación que no pertenecen al dominio exclusivo de una
-feature: la envoltura `Api` sobre `HttpClient`, los clientes tipados por dominio (`requests.api.ts`,
-`work.api.ts`, `properties.api.ts`, etc.) y los modelos de la aplicación (`models.ts`).
-- Los componentes de las features consumen estos servicios en lugar de llamar al cliente generado o a `HttpClient` directamente.
-- `data/` puede depender de `api/` y `shared/`; nunca de `features/` ni de `layout/`.
-
 ---
-
-## 🧱 Verificación de fronteras arquitectónicas
-
-Las reglas de capas anteriores no son solo documentación: `scripts/check-architecture.mjs`
-(`npm run arch:check`) recorre los imports reales de `src/app`, resuelve cada especificador relativo
-contra su archivo destino y falla si un import cruza una frontera prohibida. El paso se ejecuta en la
-CI del frontend.
-
-El modelo asigna un *tier* a cada capa; una capa solo puede depender de las capas de su tier o de uno
-inferior, nunca de uno superior:
-
-| Tier | Capas | Rol |
-| --- | --- | --- |
-| 4 | `features/` | Dominios de negocio (una feature no importa otra hermana) |
-| 3 | `layout/` | Shells visuales |
-| 2 | `api/`, `core/`, `data/` | Código transversal: cliente API, singletons y acceso a datos |
-| 1 | `shared/` | Reutilizable puro, sin negocio |
-
-Los archivos de composición directamente bajo `src/app/` (`app.routes.ts`, `app.config.ts`,
-`app.component.ts`) están exentos: son el punto donde se cablean todas las capas. El cliente OpenAPI
-generado (`src/app/api/generated/`) también se ignora porque lo produce `npm run api:generate`.
-
-Deuda congelada: los cruces de capa que ya existían al introducir la verificación se listan como
-excepciones justificadas dentro del propio script. Un cruce NUEVO falla; cuando el import que
-justificaba una excepción desaparece, el script también falla para obligar a eliminar la excepción (la
-lista solo puede encogerse):
-
-- `shared/ui/states.component.ts` → `core/` (usa `ConnectivityService`).
-- `shared/ui/photo-picker.component.ts` → `data/` (reutiliza constantes y validador de imágenes de `data/media.service`).
-- `features/requests/request-detail.page.ts` → `features/work/` (embebe los paneles operativos del dominio de trabajo).
-- `features/dashboard/dashboard.page.ts` → `features/ideas/` (reutiliza el feed de ideas como bloque de contenido).
 
 ## 📱 Tecnologías Integradas
 
