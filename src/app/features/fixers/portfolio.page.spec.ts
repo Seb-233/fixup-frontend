@@ -88,6 +88,8 @@ describe('PortfolioPage (FR-UC-17)', () => {
   it('muestra el error con opción de reintentar si el portafolio no carga', async () => {
     await load(new HttpErrorResponse({ status: 500 }));
     expect(text()).toContain('No pudimos cargar esta información');
+    expect(text()).toContain('Inténtalo de nuevo en unos minutos');
+    expect(text()).not.toContain('Revisa tu conexión');
     expect(text()).toContain('Reintentar');
   });
 

@@ -354,10 +354,17 @@ export function name(map: Record<string, string>, key: string | null | undefined
   return (key && map[key]) || key || 'Sin dato';
 }
 
+// Issue #54: un 5xx es una falla del servidor, no de la red de la persona, así que su texto no la
+// manda a revisar su conexión. La falta de conexión (status 0, o el backend inalcanzable) tiene el suyo.
+/** Sin respuesta del backend: sin red, túnel o VPN caídos. */
+export const CONNECTION_ERROR_MESSAGE = 'No hay conexión con el servidor de Fix&Rent.';
+/** El backend respondió con un 5xx. */
+export const SERVER_ERROR_MESSAGE = 'El servidor no pudo responder. Inténtalo de nuevo en unos minutos.';
+
 /** Mensaje legible a partir del error del backend ({code, message}) o de la red. */
 export function errorMessage(error: unknown, fallback = 'No se pudo completar la operación.'): string {
   const failure = error as { status?: number; error?: { code?: string } };
-  if (failure?.status === 0) return 'No hay conexión con el servidor de Fix&Rent.';
+  if (failure?.status === 0) return CONNECTION_ERROR_MESSAGE;
   const code = failure?.error?.code;
   if (code && ERROR_CODES[code]) return ERROR_CODES[code];
   if (failure?.status === 403) return 'Tu cuenta no tiene permiso para esta acción.';

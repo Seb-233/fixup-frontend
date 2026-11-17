@@ -51,6 +51,7 @@ describe('formato en español de Colombia', () => {
     expect(errorMessage({ status: 409, error: { code: 'FIXER_BUSY', message: 'The fixer already has a visit' } })).toContain('visita confirmada');
     expect(errorMessage({ status: 409, error: { code: 'SOMETHING_NEW', message: 'English text' } }, 'Texto de la pantalla')).toBe('Texto de la pantalla');
     expect(errorMessage({ status: 0 })).toContain('conexión');
+    expect(errorMessage({ status: 500 }, 'No pudimos cargar el reporte de gastos.')).toBe('No pudimos cargar el reporte de gastos.');
     expect(errorMessage({ status: 403 })).toContain('permiso');
   });
 

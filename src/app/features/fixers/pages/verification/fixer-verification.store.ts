@@ -1,6 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
+import { CONNECTION_ERROR_MESSAGE, SERVER_ERROR_MESSAGE } from '../../../../shared/format';
 import {
   ConfirmResponseDto,
   FixerVerificationControllerService,
@@ -293,6 +294,13 @@ export class FixerVerificationStore {
     }
     if (failure.status === 400) {
       return failure.error?.message || 'Revisa los datos enviados: información incompleta o formato inválido.';
+    }
+    // Sin respuesta o con un 5xx el mensaje del backend es técnico (y en inglés): no se muestra.
+    if (failure.status === 0) {
+      return CONNECTION_ERROR_MESSAGE;
+    }
+    if (failure.status >= 500) {
+      return SERVER_ERROR_MESSAGE;
     }
     return failure.error?.message || 'No se pudo completar la operación. Inténtalo de nuevo.';
   }

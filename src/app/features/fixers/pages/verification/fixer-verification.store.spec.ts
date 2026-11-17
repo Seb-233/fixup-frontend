@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { FixerVerificationStore } from './fixer-verification.store';
 import { provideApi, Specialty, VerificationResponse } from '../../../../api/generated';
 import { environment } from '../../../../../environments/environment';
+import { CONNECTION_ERROR_MESSAGE, SERVER_ERROR_MESSAGE } from '../../../../shared/format';
 
 describe('FixerVerificationStore', () => {
   let store: FixerVerificationStore;
@@ -264,14 +265,35 @@ describe('FixerVerificationStore', () => {
     expect(store.error()).toBe('Perfil de técnico no encontrado.');
   });
 
-  it('debe usar un mensaje genérico ante un error desconocido y no exponer detalles internos', () => {
+  it('debe usar el mensaje de falla del servidor ante un 500 y no exponer detalles internos', () => {
     store.load();
 
     httpTesting
       .expectOne(`${environment.apiOrigin}/fixers/me/verification`)
       .flush({ detalle: 'stack trace interno' }, { status: 500, statusText: 'Server Error' });
 
-    expect(store.error()).toBe('No se pudo completar la operación. Inténtalo de nuevo.');
+    expect(store.error()).toBe(SERVER_ERROR_MESSAGE);
     expect(store.error()).not.toContain('stack');
+  });
+
+  it('no muestra el mensaje técnico del backend en un 5xx ni culpa a la conexión (issue #54)', () => {
+    store.load();
+
+    httpTesting
+      .expectOne(`${environment.apiOrigin}/fixers/me/verification`)
+      .flush({ status: 503, code: 'SIMULATED_FAILURE', message: 'Simulated failure' }, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(store.error()).toBe(SERVER_ERROR_MESSAGE);
+    expect(store.error()).not.toContain('conexión');
+  });
+
+  it('distingue la falta de conexión (status 0) de la falla del servidor', () => {
+    store.load();
+
+    httpTesting
+      .expectOne(`${environment.apiOrigin}/fixers/me/verification`)
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+    expect(store.error()).toBe(CONNECTION_ERROR_MESSAGE);
   });
 });

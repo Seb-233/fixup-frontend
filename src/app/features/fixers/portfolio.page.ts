@@ -171,7 +171,7 @@ export class PortfolioPage {
         },
         error: (failure) => {
           this.progress.set(null);
-          this.fail(failure, uploaded ? 'No pudimos agregar la pieza.' : 'La foto no se pudo subir. Revisa tu conexión e inténtalo de nuevo.');
+          this.fail(failure, uploaded ? 'No pudimos agregar la pieza.' : 'La foto no se pudo subir. Inténtalo de nuevo.');
         }
       });
   }

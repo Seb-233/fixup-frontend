@@ -205,6 +205,9 @@ for (const account of ACCOUNTS) {
           await page.goto(account.failureTarget);
           await expect(page).toHaveURL(exact(account.failureTarget));
           await expect(page.locator(ALERT).first(), `${status}: debe mostrarse un mensaje de error`).toBeVisible();
+          // Issue #54: la API respondió (con su cuerpo de error), así que la falla es del servidor y
+          // el texto no debe mandar a la persona a revisar su conexión.
+          await expect(page.locator(ALERT).first(), `${status}: el mensaje no debe culpar a la conexión`).not.toContainText(/conexi[oó]n/i);
           const retry = page.getByRole('button', { name: RETRY }).first();
           await expect(retry, `${status}: debe ofrecer «Reintentar»`).toBeVisible();
           const afterLoad = calls;

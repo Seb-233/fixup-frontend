@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, untracked } from '@angular/core';
 import { ConnectivityService } from '../../core/connectivity/connectivity.service';
+import { SERVER_ERROR_MESSAGE } from '../format';
 
 @Component({
   selector: 'app-loading',
@@ -31,7 +32,10 @@ export class LoadingComponent {
 })
 export class ErrorStateComponent {
   readonly title = input('No pudimos cargar esta información');
-  readonly message = input('Revisa tu conexión e inténtalo de nuevo.');
+  // Sin conexión con el backend (status 0, o 502/503/504 sin cuerpo de la API) se muestra el aviso
+  // de conexión de arriba. Si el backend sí respondió, el problema no es la red de la persona: el
+  // texto por defecto es el de falla del servidor (issue #54).
+  readonly message = input(SERVER_ERROR_MESSAGE);
   readonly retryable = input(true);
   readonly retry = output<void>();
   private readonly connectivity = inject(ConnectivityService);
