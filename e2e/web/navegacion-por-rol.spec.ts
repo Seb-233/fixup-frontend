@@ -11,7 +11,8 @@ import * as path from 'node:path';
 //
 //   @smoke     → un rol, rápido: entrada, Inicio, una ruta ajena y una inexistente.
 //   @completo  → los cinco roles: menú entero, rutas ajenas, redirecciones, 500/503 con
-//                recuperación y barra móvil.
+//                recuperación y barra móvil. Las rutas apagadas por diseño en demo
+//                (DISABLED_BY_DESIGN) deben avisar «deshabilitada» y responder solo el 503 esperado.
 //
 // Cada comprobación es una aserción de Playwright: si algo no cumple, la prueba falla.
 // El JSON que se adjunta es evidencia complementaria, no el veredicto.
@@ -51,6 +52,18 @@ interface Account {
 }
 
 const KNOWN_TRUNCATION = 'Defecto conocido E2-S2-D1 (issue #53): rótulos cortados en la barra móvil, falta shortLabel en role-navigation.ts';
+
+/**
+ * Rutas del administrador que están apagadas por diseño en el perfil `demo` del backend:
+ * la pantalla avisa que la función está deshabilitada y su único endpoint responde 503
+ * (Wompi sin llaves sandbox, conciliación sin lector). No son fallos de la app, así que el
+ * menú las tolera: exactamente un aviso de «deshabilitada» y solo el 503 esperado.
+ */
+const DISABLED_BY_DESIGN: Record<string, { endpoint: string; detail: string }> = {
+  '/administration/wompi-transactions': { endpoint: '/payments/wompi/transactions', detail: 'Wompi sin llaves sandbox' },
+  '/administration/payments/reconciliation': { endpoint: '/administration/payments/reconciliation', detail: 'LEDGER_RECONCILIATION_DISABLED' }
+};
+const DISABLED_NOTE = 'deshabilitado por diseño en el perfil demo';
 
 const ACCOUNTS: Account[] = [
   { role: 'OWNER', name: 'Carolina Restrepo Arango', slug: 'propietario', foreign: ['/administration/sla-board', '/requests/inbox', '/jobs/me', '/administration/payments/reconciliation'], failureTarget: '/properties', legacyVisits: '/visits', knownTruncatedLabels: ['Solicitudes'] },
@@ -167,8 +180,16 @@ for (const account of ACCOUNTS) {
           await expect(h1, `${link.label}: la pantalla debe tener título`).toBeVisible();
           await api.idle(link.label);
           const ms = Date.now() - t0;
-          await expect.soft(page.locator(ALERT), `${link.label}: no debe mostrar alertas de error`).toHaveCount(0);
-          expect.soft(api.errors(), `${link.label}: la API no debe responder 4xx ni 5xx`).toEqual([]);
+          const disabled = DISABLED_BY_DESIGN[link.href];
+          if (disabled) {
+            await expect.soft(page.locator(ALERT), `${link.label}: debe avisar que está deshabilitado en demo`).toHaveCount(1);
+            expect.soft(api.errors(), `${link.label}: la API solo debe responder el 503 esperado (${disabled.detail})`)
+              .toEqual([`503 GET ${disabled.endpoint}`]);
+            testInfo.annotations.push({ type: 'deshabilitado-por-diseño', description: `${link.href}: ${disabled.detail} (${DISABLED_NOTE})` });
+          } else {
+            await expect.soft(page.locator(ALERT), `${link.label}: no debe mostrar alertas de error`).toHaveCount(0);
+            expect.soft(api.errors(), `${link.label}: la API no debe responder 4xx ni 5xx`).toEqual([]);
+          }
           evidence.push({ ...link, titulo: (await h1.textContent())?.trim(), ms });
           await capture(page, testInfo, `${account.slug}-${link.href.replace(/^\//, '').replace(/\//g, '_') || 'inicio'}`);
         });
