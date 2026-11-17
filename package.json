@@ -12,8 +12,7 @@
     "lint": "ng lint",
     "arch:check": "node scripts/check-architecture.mjs",
     "postinstall": "node -e \"const fs=require('fs'),p='node_modules/@capacitor/android/capacitor/.settings';if(fs.existsSync('node_modules/@capacitor/android/capacitor')){fs.mkdirSync(p,{recursive:true});fs.writeFileSync(p+'/org.eclipse.buildship.core.prefs','connection.project.dir=../../../../android\\neclipse.preferences.version=1\\n');}\"",
-    "api:generate": "node scripts/generate-api.mjs",
-    "api:check": "node scripts/generate-api.mjs --check"
+    "api:generate": "openapi-generator-cli generate -i ${FIXUP_OPENAPI:-../fixup-backend/docs/openapi.json} -g typescript-angular -o src/app/api/generated --additional-properties=ngVersion=22.1.0,providedInRoot=true,fileNaming=kebab-case,supportsES6=true,withInterfaces=true,useSingleRequestParameter=false"
   },
   "private": true,
   "packageManager": "npm@11.17.0",
