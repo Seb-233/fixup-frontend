@@ -36,10 +36,57 @@ jobs:
           fi
           echo "Security audit passed: No forbidden files detected."
 
+  api-contract:
+    name: OpenAPI client compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+
+      - name: Checkout deployed backend contract
+        uses: actions/checkout@v4
+        with:
+          repository: Seb-233/fixup-backend
+          ref: main
+          path: backend-contract
+
+      - name: Use the paired backend branch when it exists
+        working-directory: backend-contract
+        env:
+          PAIRED_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads origin "$PAIRED_REF" > /dev/null 2>&1; then
+            git fetch --depth=1 origin "$PAIRED_REF"
+            git checkout --detach FETCH_HEAD
+            echo "Contract taken from the paired backend branch: $PAIRED_REF"
+          else
+            echo "No paired backend branch '$PAIRED_REF'; validating against main, the deployed contract."
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java for OpenAPI Generator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Reject a stale generated client
+        env:
+          FIXUP_OPENAPI: backend-contract/docs/openapi.json
+        run: npm run api:check
+
   build-and-test:
     name: Build, Lint and Test
     runs-on: ubuntu-latest
-    needs: security-audit
+    needs: [security-audit, api-contract]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,6 +102,9 @@ jobs:
 
       - name: Lint code
         run: npm run lint
+
+      - name: Verify architecture boundaries
+        run: npm run arch:check
 
       - name: Run unit tests
         run: npm run test -- --watch=false
