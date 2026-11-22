@@ -124,6 +124,21 @@ if (-not $SoloPruebas) {
   }
 }
 
+# Con -SoloPruebas no se levanta nada, así que se confirma que el ambiente esté arriba. Sin esto,
+# si alguien se saltó el montaje, las ocho pruebas fallan con "connection refused" y no queda
+# claro que el problema no son las pruebas.
+if ($SoloPruebas) {
+  $faltan = @()
+  if ((CodigoDe 'http://127.0.0.1:8080/demo/token?role=OWNER') -ne 200) { $faltan += 'backend (8080)' }
+  if ((CodigoDe 'http://localhost:4200/') -ne 200) { $faltan += 'frontend (4200)' }
+  if ($faltan.Count) {
+    Write-Host "`nEl ambiente no está arriba: falta $($faltan -join ' y ')." -ForegroundColor Red
+    Write-Host 'Corre primero el script sin -SoloPruebas para levantarlo:' -ForegroundColor Red
+    Write-Host '    .\scripts\demo-pruebas.ps1' -ForegroundColor White
+    exit 1
+  }
+}
+
 # ──────────────────────────────────────────────────────────── 4. pruebas
 Paso '4. Pruebas de interfaz'
 $env:E2E_DEMO = '1'
